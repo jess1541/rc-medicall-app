@@ -9,15 +9,15 @@ import ExecutiveCalendar from './pages/ExecutiveCalendar';
 import ProceduresManager from './pages/ProceduresManager';
 import Login from './components/Login';
 import { Doctor, User, Procedure } from './types';
-import { parseData, fetchRemoteDoctors } from './constants';
-import { Menu, Database, RefreshCcw, Sparkles } from 'lucide-react';
+import { parseData } from './constants';
+import { Menu, Database, RefreshCcw } from 'lucide-react';
 
 const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   
-  // 1. HIDRATACIÓN INICIAL: Se carga desde localStorage (rapidez) o datos maestros (estabilidad)
+  // Hidratación desde caché local o datos maestros
   const [doctors, setDoctors] = useState<Doctor[]>(() => {
     const cached = localStorage.getItem('rc_cache_doctors');
     return cached ? JSON.parse(cached) : parseData();
@@ -30,33 +30,13 @@ const App: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSyncType, setLastSyncType] = useState<'LOCAL' | 'GITHUB' | 'API' | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<'online' | 'local'>('local');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
 
   const syncData = useCallback(async () => {
     setIsSyncing(true);
     try {
-      // INTENTO 1: Sincronizar con GitHub (Fuente de Verdad Maestra)
-      const remoteDocs = await fetchRemoteDoctors();
-      if (remoteDocs) {
-          setDoctors(prev => {
-              // Fusionamos datos locales (como visitas guardadas) con los nuevos doctores de GitHub
-              const merged = remoteDocs.map(remoteDoc => {
-                  const existing = prev.find(p => p.name === remoteDoc.name);
-                  if (existing) {
-                      return { ...remoteDoc, visits: existing.visits, schedule: existing.schedule, id: existing.id };
-                  }
-                  return remoteDoc;
-              });
-              localStorage.setItem('rc_cache_doctors', JSON.stringify(merged));
-              return merged;
-          });
-          setLastSyncType('GITHUB');
-          console.log("✅ Sincronizado con GitHub");
-      }
-
-      // INTENTO 2: Sincronizar con la API local si existe
       const [docsRes, procsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/doctors`).catch(() => null),
         fetch(`${API_BASE_URL}/procedures`).catch(() => null)
@@ -68,14 +48,13 @@ const App: React.FC = () => {
         
         setDoctors(docsData);
         setProcedures(procsData);
-        setLastSyncType('API');
+        setConnectionStatus('online');
         
         localStorage.setItem('rc_cache_doctors', JSON.stringify(docsData));
         localStorage.setItem('rc_cache_procedures', JSON.stringify(procsData));
       }
     } catch (error) {
-      console.warn("⚠️ Modo local activo. GitHub/API no disponibles.");
-      setLastSyncType('LOCAL');
+      console.warn("Operando en modo local (API no disponible).");
     } finally {
       setIsSyncing(false);
       setLoading(false);
@@ -86,10 +65,11 @@ const App: React.FC = () => {
     const savedUser = localStorage.getItem('rc_user');
     if (savedUser) setUser(JSON.parse(savedUser));
     
-    // Sincronización transparente en segundo plano
+    // Sincronización en segundo plano para no bloquear el UI
     syncData();
     
-    const timer = setTimeout(() => setLoading(false), 500);
+    // Timeout de seguridad para ocultar splash
+    const timer = setTimeout(() => setLoading(false), 800);
     return () => clearTimeout(timer);
   }, [syncData]);
 
@@ -127,7 +107,7 @@ const App: React.FC = () => {
         </div>
         <div className="mt-8 flex flex-col items-center gap-2">
             <RefreshCcw className="w-6 h-6 text-blue-400 animate-spin" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Inicializando Inteligencia Comercial...</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Cargando ecosistema...</span>
         </div>
       </div>
     );
@@ -163,15 +143,10 @@ const App: React.FC = () => {
         />
         
         <div className={`flex-1 flex flex-col h-full relative pt-16 md:pt-0 transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
-          {isSyncing ? (
+          {isSyncing && (
              <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-white/80 backdrop-blur px-3 py-1.5 rounded-full shadow-sm border border-slate-100 animate-fadeIn">
                 <RefreshCcw className="w-3 h-3 text-blue-500 animate-spin" />
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Sincronizando GitHub...</span>
-             </div>
-          ) : lastSyncType === 'GITHUB' && (
-             <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full shadow-sm border border-emerald-100 animate-fadeIn">
-                <Sparkles className="w-3 h-3 text-emerald-500" />
-                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Datos de Nube Actualizados</span>
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Sincronizando...</span>
              </div>
           )}
 

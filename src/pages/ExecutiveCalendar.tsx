@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
+// Explicit import from react-router-dom
 import { useLocation } from 'react-router-dom';
 import { Doctor, Visit, User, TimeOffEvent } from '../types';
 import { ChevronLeft, ChevronRight, Plus, Check, Search, Edit3, Calendar, ExternalLink, X, Lock, Clock, MapPin, Coffee, CalendarClock, CheckCircle2, User as UserIcon, Trash2, Building, Briefcase } from 'lucide-react';
@@ -147,7 +148,6 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
       const newDate = new Date(currentDate);
       if (viewMode === 'month') newDate.setMonth(newDate.getMonth() - 1);
       else if (viewMode === 'week') newDate.setDate(newDate.getDate() - 7);
-      // Fix: Error in file src/pages/ExecutiveCalendar.tsx on line 150: Cannot find name 'd'. Use newDate instead.
       else newDate.setDate(newDate.getDate() - 1);
       setCurrentDate(newDate);
   };
@@ -156,7 +156,6 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
       const newDate = new Date(currentDate);
       if (viewMode === 'month') newDate.setMonth(newDate.getMonth() + 1);
       else if (viewMode === 'week') newDate.setDate(newDate.getDate() + 7);
-      // Fix: Error in file src/pages/ExecutiveCalendar.tsx on line 158: Cannot find name 'd'. Use newDate instead.
       else newDate.setDate(newDate.getDate() + 1);
       setCurrentDate(newDate);
   };
@@ -1054,5 +1053,5 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
     </div>
   );
 };
-// Fix: Error in file src/pages/ExecutiveCalendar.tsx on line 1056 & 1058: A module cannot have multiple default exports.
+
 export default ExecutiveCalendar;

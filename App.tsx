@@ -10,7 +10,7 @@ import ProceduresManager from './pages/ProceduresManager';
 import Login from './components/Login';
 import { Doctor, User, Procedure } from './types';
 import { parseData } from './constants';
-import { Menu, RefreshCw, Database, AlertCircle, CloudOff } from 'lucide-react';
+import { Menu, RefreshCw, Database, ShieldCheck, Cpu } from 'lucide-react';
 
 const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
 
@@ -19,6 +19,7 @@ const App: React.FC = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -26,13 +27,24 @@ const App: React.FC = () => {
     return localStorage.getItem('sidebar_collapsed') === 'true';
   });
 
+  const loadingMessages = [
+    "Iniciando protocolos de seguridad...",
+    "Conectando con el servidor de base de datos...",
+    "Descargando directorio de médicos (500+ registros)...",
+    "Sincronizando agendas y calendarios...",
+    "Preparando interfaz de alto rendimiento..."
+  ];
+
   const fetchData = useCallback(async (isBackground = false) => {
     if (!isBackground && doctors.length === 0) setLoading(true);
     setSyncing(true);
     
     try {
+      setLoadingStep(1);
       const docsRes = await fetch(`${API_BASE_URL}/doctors`);
+      setLoadingStep(2);
       const procsRes = await fetch(`${API_BASE_URL}/procedures`);
+      setLoadingStep(3);
 
       if (docsRes.ok && procsRes.ok) {
         const docsData = await docsRes.json();
@@ -40,6 +52,7 @@ const App: React.FC = () => {
         setDoctors(docsData);
         setProcedures(procsData);
         setConnectionError(null);
+        setLoadingStep(4);
       } else {
         throw new Error("API Offline");
       }
@@ -52,7 +65,7 @@ const App: React.FC = () => {
         setDoctors(masterData);
       }
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 800);
       setSyncing(false);
     }
   }, [doctors.length]);
@@ -93,10 +106,36 @@ const App: React.FC = () => {
 
   if (loading && doctors.length === 0) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-900 text-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="font-bold tracking-widest uppercase text-xs">Cargando RC MediCall...</p>
+      <div className="flex flex-col items-center justify-center h-screen bg-[#0f172a] text-white overflow-hidden">
+        <div className="relative mb-12">
+            <div className="absolute inset-0 bg-blue-500/20 blur-[80px] rounded-full animate-pulse"></div>
+            <div className="relative flex items-baseline leading-none">
+                <span className="text-6xl font-black text-blue-400 tracking-tighter">RC</span>
+                <span className="text-6xl font-bold text-slate-200 ml-1">Medi</span>
+                <span className="text-6xl font-bold text-blue-400">Call</span>
+            </div>
+            <p className="text-center text-[10px] tracking-[0.4em] text-slate-500 font-black uppercase mt-4">Endoscopy Services • Elite CRM</p>
+        </div>
+
+        <div className="w-full max-w-xs space-y-6 flex flex-col items-center">
+            <div className="relative w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                <div 
+                    className="absolute h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(37,99,235,0.5)]"
+                    style={{ width: `${((loadingStep + 1) / 5) * 100}%` }}
+                ></div>
+            </div>
+            <div className="flex flex-col items-center gap-4 text-center">
+                <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="font-black tracking-widest uppercase text-[10px] text-blue-400 animate-pulse">
+                        {loadingMessages[loadingStep]}
+                    </p>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600 text-[8px] font-bold uppercase tracking-widest mt-8 border border-slate-800 px-4 py-1.5 rounded-full">
+                    <Cpu className="w-3 h-3" />
+                    v5.0 Stable Build
+                </div>
+            </div>
         </div>
       </div>
     );

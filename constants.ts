@@ -1,6 +1,9 @@
+
 import { Doctor, ScheduleSlot } from './types';
 
-// The raw data string provided by the user (Doctors)
+// URL de GitHub para la base de datos remota (Sustituir por el enlace RAW real si se desea)
+export const GITHUB_DATABASE_URL = "https://raw.githubusercontent.com/usuario/repositorio/main/doctores.txt";
+
 const RAW_DATA = `
 ORALIA	JOSE GUSTAVO MARTINEZ LUGO	GINECOLOGÍA Y OBSTETRICIA	CALZ DE GUADALUPE
 ORALIA	 Denys Elizabeth Delgado Amador	Ginecologia y Obstetricia	Rio Bamaba 639. Lindavista
@@ -37,6 +40,7 @@ TALINA	ALEJANDRO  ORTIZ DE LA PEÑA Y CARRANZA	GINECOLOGÍA Y OBSTETRICIA	CAMINO
 TALINA	Alejandro Alias Melgar	Urología 	Hosp. Ángeles del Pedregal
 TALINA	Alejandro Cumming Martínez Báez	Urología	Hosp. Ángeles del Pedregal
 ANGEL	ALEJANDRO ESCOBEDO DIAZ	GINECO OBSTETRICIA	TORRE DURANGO 290
+ORALIA	Alejandro Labastida	Gineco _Obstetricia	Alexander Von Humboldt 88, Lomas Verdes 3ra Secc, 53120 Naucalpan de Juárez, Méx
 ORALIA	Alejandro Labastida	Gineco _Obstetricia	Alexander Von Humboldt 88, Lomas Verdes 3ra Secc, 53120 Naucalpan de Juárez, Méx
 ORALIA	Alejandro Lopez Monter	Ginecologia	Av. montevideo 303, Lindavista
 LUIS	ALEJANDRO NOYOLA GUADARRAMA	UROLOGÍA	AV DIVISION DEL NORTE
@@ -127,7 +131,7 @@ ANGEL	CARLA AMERICA SUAREZ JUAREZ	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
 TALINA	Carlos Alberto González Espinosa	Urología	Hospital Ángeles Acoxpa
 ANGEL	CARLOS ALBERTO SERVIN HERNANDEZ	GINECOLOGÍA ONCOLÓGICA	TEHUANTEPEC
 LUIS	Carlos Andres Sanchez Arreola	Ginecologia y Obstetricia	MAC La Viga
-TALINA	Carlos Antonio Godínez Nava	Urología	Hosp. Ángeles del Pedregal
+TALINA	Carlos Antonio Godínez Nava	Urología 	Hosp. Ángeles del Pedregal
 ANGEL	CARLOS BENJAMIN CASTAÑEDA VALDIVIA	GINECO OBSTETRICIA	QUERETARO 58 ROMA NORTE
 ANGEL	CARLOS ENRIQUE GALICIA GARCIA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
 LUIS	Carlos Enrique Perez Serna	Ginecologia y Obstetricia	MAC La Viga
@@ -197,7 +201,7 @@ ANGEL	DIOGENES RAMIREZ PALACIOS	GINECO OBSTETRICIA	TORRE TUXPAN 6
 LUIS	Dionisio Mora Hernández	Ginecologia y Obstetricia	MAC La Viga
 ANGEL	DORI RIVERA	GINECO OBSTETRICIA	QUERETARO 58 ROMA NORTE
 ANGEL	DR. PALMA	GINECO OBSTETRICIA	TORRE TUXPAN 16
-LUIS	Dulce Dalia Hernández Hernández	Ginecologia y Obstetricia	MAC La Viga
+LUIS	Dulce Dalia Hernández Hernández	Ginecología y Obstetricia	MAC La Viga
 LUIS	Dulce Gonzalez Miranda	Ginecología y Obstetricia	Ángeles Universidad
 LUIS	Dulce Maria Camarena Cabrera	Ginecología y Obstetricia	HMG
 ANGEL	EDGAR ARELLANO	GINECO OBSTETRICIA	TORRE TUXPAN 16
@@ -400,7 +404,7 @@ ANGEL	JUAN ERNESTO SANCHEZ TAPIA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON 
 LUIS	Juan Francisco Mendez Sanchez	Ginecología y Obstetricia	San Angel Inn Acora
 LUIS	Juan Gabriel Perez Vazquez	Ginecología y Obstetricia	San Angel Inn Acora
 ANGEL	JUAN HURTADO GOROSTIETA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-TALINA	Juan Ignacio Monjaras Guerra	Urología	Hosp. Ángeles del Pedregal
+TALINA	Juan Ignacio Monjaras Guerra	Urología 	Hosp. Ángeles del Pedregal
 TALINA	JUAN IGNACIO STENNER PEREZ GAVILAN	UROLOGÍA	PUENTE DE PIEDRA
 TALINA	Daniel Fabián Ramírez Moreno	Ginecología y Obstetricia	Hospital Ángeles Acoxpa
 ANGEL	JUAN JIMENEZ HUERTA	GINECOLOGÍA Y OBSTETRICIA	DURANGO
@@ -454,256 +458,258 @@ ORALIA	Leopoldo Rio de la Loza Cava	Gineco _Obstetricia	Alexander Von Humboldt 8
 ORALIA	Lesli Pamela González Domínguez	Ginecología	Temístocles 210, Polanco IV Secc, CDMX
 ANGEL	LESLIE EUNICE OMAÑA YOVAL	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
 ORALIA	MAGDA ICEL SALGADO JACOBO	GINECOLOGÍA Y OBSTETRICIA	AV PRIMERO DE MAYO
-TALINA	Malenys Sánchez	Ginecología y Obstetricia (consulta privada)	Hospital MAC Periférico Sur
-LUIS	Jessica Jazmin Chavez	Ginecología y Obstetricia	San Angel Inn Acora
-TALINA	Jorge Alberto Campos Cañas	Biología de Reproducción, Ginecología y Obstetricia	Hospital Ángeles Acoxpa
-ORALIA	MANUEL DE JESUS ARRIOLA ZAMARRIPA	GINECOLOGÍA Y OBSTETRICIA	RIO BAMBA
-ANGEL	MANUEL GOMEZ RODRIGUEZ	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-ORALIA	Manuel Lozano	Ginecologia	Ejercito Nacional 613, Polanco
-ORALIA	Manuel Ramos Garduza	Ginecologia	Circuitos Centro Comercial 20, Tlalnepantla
-ORALIA	Marcela Gonzalez Espejel	Ginecologia	Sor Juan Ines de la Cruz 280, Tlalnepantla
-TALINA	MARCO ANTONIO PEREZ CISNEROS 	GINECOLOGÍA Y OBSTETRICIA	PERIFERICO SUR
-ANGEL	MARGARITA ELIZABETH FLORES ZALETA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-LUIS	MARIA BELEM MARTINEZ ROMERO	GINECOLOGÍA Y OBSTETRICIA	MONTECITO
-TALINA	María de la Caridad Carranco Salinas	Ginecología y Obstetricia	Hospital Angeles Pedregal Con715 D
-ANGEL	MARIA DE LOS ANGELES PEREZ RAMIREZ	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-ANGEL	MARIA DEL CARMEN MARTINEZ CHIÑAS	GINECO OBSTETRICIA	TEPIC 139
-ANGEL	MARIA DEL CARMEN PEREZ REYES	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-ANGEL	MARIA DEL PILAR VELAZQUEZ SANCHEZ	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-ORALIA	María Digna Nava Barahona	Ginecología y Obstetricia	Temístocles 210, Polanco IV Secc, CDMX
-ORALIA	Maria Dolores Alarcon Alcantara	Ginecologia	Enrique Sada Muguerza 17
-ANGEL	MARIA EUGENIA GONZALES MORALES	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-LUIS	Maria Fernanda Fernandez Corzas	Ginecología y Obstetricia	Ángeles Universidad
-ORALIA	Maria Fernanda Rio de la Loza	Gineco _Obstetricia	Alexander Von Humboldt 88, Lomas Verdes 3ra Secc, 53120 Naucalpan de Juárez, Méx
-ANGEL	MARIA ISABEL PEREZ ORTEGA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-ORALIA	Maria Jose Rodriguez Gutierres	Ginecologia	Sor Juan Ines de la Cruz 280, Tlalnepantla
-ANGEL	MARIA JUANA HERNANDEZ VALENCIA	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-ANGEL	MARIA JULETA HERNANDEZ CUMINGS	GINECO OBSTETRICIA	TORRE TEPIC 113
-LUIS	Maria Luisa Fuentes	Ginecología y Obstetricia	Consultorio privado
-LUIS	Maria Rossana Valiente Aguilar	Ginecología y Obstetricia	San Angel Inn Acora
-ANGEL	MARIA TERESA MENDEZ GOMEZ	GINECO OBSTETRICIA	TUXPAN 39
-ANGEL	MARIA TERESA SOLANO	GINECO OBSTETRICIA	MANZANILLO 101
-TALINA	María Victoria Marchese	Ginecología y Obstetricia	Paseo de los Tamarindos 384 p9, col, Bosques de las Lomas, Cuajimalpa de Morelos
-ANGEL	MARIBEL IBARRA SARLATCONS	GINECO OBSTETRICIA	TEPIC 116
-ANGEL	MARICRUZ BARRAZA	GINECO OBSTETRICIA	QUERETARO 156, ROMA NORTE
-LUIS	Maricruz Dañino Montes	Ginecología y Obstetricia	San Angel Inn Acora
-TALINA	Mario Alberto Ramírez Negrín	Urología	Hosp. Ángeles del Pedregal
-ORALIA	Mario Antonio Lopez Salas	Ginecologia	Ejercito Nacional 613, Polanco
-ANGEL	MARIO GARAY ENRIQUEZ	GINECOLOGÍA Y OBSTETRICIA	RIO PANUCO
-ORALIA	MARIO LUGO RANGEL	UROLOGÍA	VIA GUSTAVO BAZ PRADA
-ANGEL	MARIO MARTINEZ RUIZ	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-LUIS	Marisol Ayala Juarez	Ginecología y Obstetricia	Ángeles Universidad
-ANGEL	MARISOL RIVERA HERNANDEZ	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-TALINA	Marlene de la Peña Gutierrez	Ginecología	Hospital Ángeles Acoxpa
-LUIS	Marlene Lizbeth Zamora Ramirez	Ginecología y Obstetricia	Ángeles Universidad
-LUIS	Martha Espinoza Esparza	Ginecología y Obstetricia	San Ángel Inn Universidad
-LUIS	Martha Leticia Zancatl Diaz	Ginecología y Obstetricia	HMG
-TALINA	Martha Lilia Rodríguez García	Ginecología y Obstetricia	Hospital Ángeles Acoxpa
-TALINA	Martha Olivia Gómez Alvarado	Urología	Hosp. Ángeles del Pedregal
-ANGEL	MARTHA SUSANA MACIAS GALVAN	GINECOLOGÍA Y OBSTETRICIA	AV CHAPULTEPEC
-TALINA	MARTIN TELICH VIDAL	UROLOGÍA / BAJA	CAMINO STA TERESA
-ORALIA	Jorge Siller Nieto	Ginecologia	Circuitos Centro Comercial 20, Tlalnepantla
-TALINA	Mauricio Cantellano Orozco	Urología	Hospital Ángeles Acoxpa
-ORALIA	MAURICIO MANCILLA CASTELAN	GINECOLOGÍA Y OBSTETRICIA	CTO JURISTAS
-ANGEL	MAURICIO MARX ORTA	GINECO OBSTETRICIA	TORRE QUERETARO
-TALINA	Mauricio Osorio Caballero	Reproducción / Ginecología	Hosp. Ángeles del Pedregal
-TALINA	Mercedes del Pilar Álvarez Goris	Ginecología y Obstetricia	Hosp. Ángeles del Pedregal
-ORALIA	Mervin Omar Bolivar Cuencas	Ginecologia	Sor Juan Ines de la Cruz 280, Tlalnepantla
-ORALIA	MIGUE ANGEL ZAPATA VILLALBA	UROLOGÍA	AV SOR JUANA INES DE LA CRUZ
-TALINA	Miguel Ángel López Valle	Ginecología y Obstetricia	Hosp. Ángeles del Pedregal
-LUIS	Miguel Angel Maldonado	Ginecología y Obstetricia	Consultorio privado
-ANGEL	MIGUEL ANGEL ROBLES CARMONA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-LUIS	Miguel Ángel Ulloa	Ginecología y Obstetricia	San Ángel Inn Universidad
-ANGEL	MIGUEL ANGEL WALTER TORDECILLAS	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-LUIS	MIGUEL CASTAÑEDA HECTOR	UROLOGÍA	AV CHAPULTEPEC
-ANGEL	MIGUEL CORRES MOLINA	GINECO OBSTETRICIA	FRONTERA 74 ROMA NORTE
-LUIS	Miguel Corres Molina	Ginecología y Obstetricia	Ángeles Universidad
-TALINA	Milagros Clementina Pérez Quintanilla	Ginecología y Obstetricia	Carlos Graef Fernandez 154 -342 (Tlaxala Santa Fe- Consultorio 342), Cuajimalpa de Morelos
-ORALIA	Mireya Ovando Tapia	Ginecologia	Circuitos Centro Comercial 20, Tlalnepantla
-LUIS	Miriam Azenet Carvajal Gonzalez	Ginecología y Obstetricia	San Angel Inn Acora
-ANGEL	JUAN JIMENEZ HUERTA	GINECO OBSTETRICIA	TORRE DURANGO VIS 50
-ANGEL	JUAN LUIS ABOITES	GINECO OBSTETRICIA	TEHUANTEPEC 251
-ORALIA	Monica Mejia Vargas	Ginecologia	Circuitos Centro Comercial 20, Tlalnepantla
-LUIS	Mónica Patrón Mondragón	Ginecologia y Obstetricia	MAC La Viga
-LUIS	Mónica Rodríguez León	Ginecología y Obstetricia	San Ángel Inn Universidad
-LUIS	Montserrat Ariadna Del Castillo Rodriguez	Ginecología y Obstetricia	Ángeles Universidad
-ORALIA	Montserrat Cuevas	Ginecologia	Av. Dr. Gustavo Baz 309-TR A1
-ORALIA	MYRNA FLORES MERCADO	GINECOLOGÍA Y OBSTETRICIA	CASMA
-ORALIA	Nancy Roman Estrada	Gineco _Obstetricia	Rio Bamba 639, Lindavista
-TALINA	Narciso Hernández Toriz	Urología / JEFE ONCO S XXI	Hosp. Ángeles del Pedregal
-ORALIA	Navarrete Horta Teresa	Ginecología y obstetricia	Rio Bmaba 639. Lindavista
-LUIS	Nayeli Cordoba Jimenez		San Ángel Inn Universidad
-ORALIA	Nayeli Martinez Jaime	Gineco _Obstetricia	Calle Matanzas 715, Lindavista
-ORALIA	Nelly Cortina	Ginecologia	Rio Bamba 639, Lindavista
-ANGEL	NESI PEDRAZA	GINECO OBSTETRICIA	TEHUANTEPEC 251
-ANGEL	NICOLAS SALVA PASTER	GINECO OBSTETRICIA	FRONTERA 74 ROMA NORTE
-LUIS	Noemi Raquel Guerrero Patiño	Biología de Reproducción	San Angel Inn Acora
-ORALIA	Norma Angélica Hernández Pineda	Ginecología y Obstetricia	Rio Bmaba 639. Lindavista
-TALINA	Norma Lilia Ramírez Velázquez	Ginecología y Obstetricia	Hospital Ángeles Acoxpa
-ANGEL	NORMA PATRICIA TREJO	GINECO OBSTETRICIA	TORRE TUXPAN 54
-ANGEL	OCTAVIO CEDILLO LEY	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-ORALIA	Oliver Paul Cruz Orozco	Ginecologia	Circuitos Centro Comercial 20, Tlalnepantla
-TALINA	Olivia Natividad López Adame	Ginecología y Obstetricia	Hospital Ángeles Acoxpa
-ANGEL	OLIVIA PEÑA BALLESTEROS	GINECO OBSTETRICIA	TORRE DURANGO 290
-ANGEL	OLIVIA SALAS	GINECO OBSTETRICIA	TORRE TUXPAN 6
-ANGEL	OMAR DIMAS VICTORIO VARGAS	UROLOGÍA	MARCOS CARRILLO
-ORALIA	Oscar Mejia Mendoza	Ginecologia	Av. Dr. Gustavo Baz 309-TR A1
-ORALIA	Oscar Moncada Navarro	Ginecologia	Circuito Misioneros 5, Ciudad Satelite
-ORALIA	Oscar Ruben Guinto Martiarena	Ginecologia	Av. montevideo 303, Lindavista
-ORALIA	Oscar Salvador Sánchez Vazquez	Ginecologia	Rio Bamba 639, Lindavista
-LUIS	Pablo Mariano González Aldeco	Ginecología y Obstetricia	San Ángel Inn Universidad
-TALINA	Paloma de la Torre y Fernández	Ginecología y Obstetricia	Hosp. Ángeles del Pedregal
-ORALIA	Paola Alejandra Vazquez Garcia	Ginecologia	Sor Juan Ines de la Cruz 280, Tlalnepantla
-TALINA	Paola Delfina Rodríguez Estrada	Urología	Hosp. Ángeles del Pedregal
-LUIS	Patricia del Carmen Franco Castañeda	Ginecología y Obstetricia	Consultorio privado
-LUIS	PATRICIA ORIELLE PONCE LICERA 	GINECOLOGÍA Y OBSTETRICIA	MONTECITO
-ANGEL	PATRICIA PEREZ BAILON	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-ANGEL	PATRICIA PEREZ BAILON	GINECOLOGÍA Y OBSTETRICIA	TLACOTALPAN
-TALINA	Patricio Cruz García Villa	Urología	Hosp. Ángeles del Pedregal
-ANGEL	PAULET RENNE FLORES ZARATE	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-LUIS	Paulett Bayona Soriano	Ginecología y Obstetricia	San Ángel Inn Universidad
-LUIS	Paulina Carpio Barcenas	Ginecología y Obstetricia	San Angel Inn Acora
-LUIS	Paulina Gonzalez Peña	Ginecología y Obstetricia	Ángeles Universidad
-ANGEL	PAULINA JANCOR	GINECO OBSTETRICIA	TEHUANTEPEC 251
-ORALIA	Paulina Treviño	Ginecologia	Ejercito Nacional 613, Polanco
-ORALIA	Paulina Treviño Villareal	Ginecologia	Circuitos Centro Comercial 20, Tlalnepantla
-ANGEL	LAURA VANESSA RODRIGUEZ ROCHA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-TALINA	Manuel Alonso Villegas Martínez	Ginecología Oncológica, Ginecología y Obstetricia	Hospital Ángeles Acoxpa
-ANGEL	PERLA DENISSE AGUILAR	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-TALINA	Priscilla Roque Gutiérrez	Biología de Reproducción, Ginecología y Obstetricia	Hospital Ángeles Acoxpa
-ANGEL	RACHEL FIRSMAN AMORA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-ANGEL	RAFAEL ALBERTO GARCIA GUDIÑO	GINECO OBSTETRICIA	TEPIC 117
-TALINA	Ramiro Ordaz Vega	Ginecología y Obstetricia, Perinatal, Colposcopía, Biología de la Reproducción	Hospital Ángeles Acoxpa
-ANGEL	RAMON CELAYA BARRERA	GINECO OBSTETRICIA	TORRE DURANGO 290
-ANGEL	RAMON SALGADO MEDINA	UROLOGÍA / NO VISITAR TIENE CLINICA.	TLACOTALPAN
-ANGEL	RANFERI GAONA ARREOLA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-TALINA	Raul Alonso Martinez Ayala	Ginecología y Obstetricia	Hospital MAC Cuemanco
-ORALIA	Raul Antonio Leon Ochoa	Ginecologia	Rio Bamba 639, Lindavista
-ORALIA	Raul Barrientos Mendoza	Ginecologia	Sor Juan Ines de la Cruz 280, Tlalnepantla
-ORALIA	Raul Padilla Rodas	Ginecologia	Av. Dr. Gustavo Baz 309-TR A1
-ORALIA	RAUL PADILLA RODAS	GINECOLOGÍA Y OBSTETRICIA	AV GUSTAVO BAZ PRADA
-LUIS	RAYMUNDO BERNAL GARCIA	UROLOGÍA	AV UNIVERSIDAD
-LUIS	RAYMUNDO BERNAL GARCIA	UROLOGÍA	AV ARBOL DEL FUEGO
-LUIS	Monica Alejandra Matta Martinez	Ginecología y Obstetricia	Ángeles Universidad
-TALINA	Raymundo Canales de la Fuente	Ginecología y Obstetricia	Hosp. Ángeles del Pedregal
-LUIS	Renata Madrid Zavala	Biología de Reproducción	San Angel Inn Acora
-LUIS	Renata Melina Madrid Zavala	Ginecología y Obstetricia	Ángeles Universidad
-ORALIA	Rene Hernandez Sanchez	Ginecologia	Circuitos Centro Comercial 20, Tlalnepantla
-LUIS	Reyna Erika Franco Laguna	Ginecología y Obstetricia	San Angel Inn Acora
-TALINA	Perla Angelica Silva Palma	Ginecología y Obstetricia	Hospital MAC Cuemanco
-LUIS	Reyna Laura Lopez Sanchez	Ginecología y Obstetricia	Ángeles Universidad
-ORALIA	Reyna Mariel Maclu Zorrero	Ginecologia	Circuito Misioneros 5, Ciudad Satelite
-TALINA	Ricardo Adame Pinacho	Ginecología y Obstetricia	HOSPITAL ANGELES PEDREGAL Camino a Sta. Teresa 1055-S Torre Angeles Piso 7 Consultorio 730,
-TALINA	Ricardo Almeida Magaña	Urología	Hosp. Ángeles del Pedregal
-LUIS	Ricardo Alvarado Ballinas	Ginecologia y Obstetricia	MAC La Viga
-ANGEL	RICARDO CAREAGA BENITEZ	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-ANGEL	RICARDO JAUREGUI TEJEDA	GINECO OBSTETRICIA	FRONTERA 74 ROMA NORTE
-ORALIA	Rivero Corona Juan	Ginecología y obstetricia	Rio Bmaba 639. Lindavista
-TALINA	Roberto Alejandro Carlos Romero y Lomas	Ginecología y Obstetricia	Hospital Ángeles Acoxpa
-TALINA	ROBERTO ALEJANDRO CARLOS ROMERO Y LOMAS	GINECOLOGÍA Y OBSTETRICIA	CALZ ACOXPA
-ANGEL	ROBERTO CARLOS MANRIQUEZ ANGULO	GINECOLOGÍA Y OBSTETRICIA	AV CHAPULTEPEC
-LUIS	Roberto Carmona Librado	Ginecologia y Obstetricia	MAC La Viga
-ANGEL	ROBERTO CISNEROS CHAVEZ	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-ORALIA	Roberto Martinez Alvares	Ginecologia	Circuito Misioneros 5, Ciudad Satelite
-ANGEL	ROCIO GUERRA ARIAS	GINECO OBSTETRICIA	TORRE TUXPAN 10
-LUIS	Rocio Velasquez Falconi	Ginecología y Obstetricia	San Angel Inn Acora
-LUIS	Rodolfo Leonel Vargas Ruiz	Ginecología y Obstetricia	Ángeles Universidad
-ANGEL	RODRIGO EMILIO RUIZ BARRIOS	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-LUIS	Rodrigo Emilio Ruz Barros	Ginecología y Obstetricia	Ángeles Universidad
-TALINA	Rodrigo León Mar	Urología / DARLE SEGUIMIENTO	Hosp. Ángeles del Pedregal
-TALINA	RODRIGO PEREZ BECERRA	UROLOGÍA	CALZ ACOXPA
-TALINA	Rodrigo Pérez Becerra	Urología	Hospital Ángeles Acoxpa
-ANGEL	RODRIGO SILVA	GINECO ONCOLOGO	QUERETARO 156, ROMA NORTE
-TALINA	Romina Elizabeth Schafer Vega	Ginecología y Obstetricia	Hospital Angeles Lomas Vialidad de la Barranca, sn, Valle de las Palmas, Valle De Las Palmas, Huixquilucan
-LUIS	Rosa Elba Mendoza Morales	Ginecología y Obstetricia	Ángeles Universidad
-ORALIA	Rosa Elena Cano Nava	Ginecologia	Av. Dr. Gustavo Baz 309-TR A1
-ANGEL	ROSA ESTELA RODRIGUEZ	GINECO OBSTETRICIA	FRONTERA 74 ROMA NORTE
-ANGEL	ROSA MARIA	GINECO OBSTETRICIA	MANZANILLO 102
-ANGEL	ROSA MARIA ARCE	GINECO OBSTETRICIA	TORRE DURANGO VIS 50
-ANGEL	ROSA MARIA CHI RODRIGUEZ	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-ORALIA	Rosa Maria Sanchez	Gineco _Obstetricia	Homero 527, tercer piso
-ORALIA	Rosa Maria Tufiño Loza	Ginecologia	Av. montevideo 303, Lindavista
-LUIS	Rosa Virginia Sandoval Pirela	Ginecología y Obstetricia	Ángeles Universidad
-LUIS	Rosalia García Ruiz	Ginecología y Obstetricia	HMG
-ANGEL	ROSSANA ARGENTINA VIDAL RAMIREZ	GINECO OBSTETRICIA	QUERETARO 156, ROMA NORTE
-ORALIA	Rossana Argentina Vidal Ramirez	Gineco _Obstetricia	Rio Bamba 639, Lindavista
-ANGEL	RUBEN SAURER RAMIREZ	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-ORALIA	Ruth Camargo Lavaverde	Ginecologia	Circuitos Centro Comercial 20, Tlalnepantla
-ANGEL	SALAVADOR DANIEL	GINECO OBSTETRICIA	TORRE TEPIC 113
-ANGEL	SALVADOR DANIEL CARAPIA	GINECO OBSTETRICIA	TEPIC 118
-LUIS	Salvador Gaviño Ambriz	Ginecología y Obstetricia	San Ángel Inn Universidad
-ANGEL	SANCHEZ	GINECO OBSTETRICIA	COZUMEL 62 ROMA NORTE
-ANGEL	SANDRA ADRIANA VERA VAZQUEZ	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-ORALIA	Sandra Flores Lozada	Ginecologia	Av. montevideo 303, Lindavista
-ORALIA	Sandra Gabriela Rule Gomez	Ginecologia	Circuito Misioneros 5, Ciudad Satelite
-TALINA	Sandra Guadalupe Girón Vargas	Ginecología y Obstetricia	Hospital Ángeles Acoxpa
-LUIS	Sandra Iveth Ramírez Pastrana	Ginecología y Obstetricia	Centro de Especialidades Mixcoac
-ANGEL	SANDRA URIBE FLORES	GINECO OBSTETRICIA	TEPIC 113
-ANGEL	SANDRA URIBE FLORES	GINECO OBSTETRICIA	TORRE TEPIC 113
-LUIS	Sandra Vera	Ginecología y Obstetricia	San Ángel Inn Universidad
-TALINA	SanJuan Padrón Lucio	Urología	Hospital Ángeles Acoxpa
-ANGEL	SANTIAGO ISLAS ESCOTO	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-ORALIA	Santos Regino Uscanga Sanchez	Ginecologia	Circuito Misioneros 5, Ciudad Satelite
-LUIS	Sara Calvillo	Biología de Reproducción	Consultorio privado
-LUIS	Saul Guzman Laguna	Ginecología y Obstetricia	HMG
-TALINA	Sergio Durán Ortiz	Urología	Hospital Ángeles Acoxpa
-TALINA	Sergio Durán Ortiz	Urología /YA TRABAJA CON NOSOTROS	Hospital MAC Periférico Sur
-ANGEL	SERGIO ISRRAEL GARCIA NAVARRO	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-ANGEL	SERGIO MARTIN VELASCO ALVA	GINECO OBSTETRICIA	COZUMEL 62 ROMA NORTE
-ORALIA	Sergio Pedraza	Ginecologia	Ejercito Nacional 613, Polanco
-ANGEL	SILVIA ESCALERA	GINECO OBSTETRICIA	TEHUANTEPEC 251
-ANGEL	SONIA REYNOSO RAMIREZ	GINECO OBSTETRICIA	FRONTERA 74 ROMA NORTE
-LUIS	Stephanie Galicia Lopez	Ginecología y Obstetricia	HMG
-LUIS	Susana Haquet	Ginecología y Obstetricia	San Ángel Inn Universidad
-TALINA	Sylvain Collura Merlier	Urología	Hosp. Ángeles del Pedregal
-ANGEL	TALINA RAMIREZ CARO	GINECO ONCOLOGICA	TEPIC 139
-ORALIA	Tania Pina	Gineco _Obstetricia	Calles Casma #690, Lindavista
-LUIS	Teresa Martínez Guerrero	Ginecología y Obstetricia	San Angel Inn Acora
-ORALIA	Teresa MIchel Morales Montiel	Ginecologia	Sor Juan Ines de la Cruz 280, Tlalnepantla
-ANGEL	TERESA NAVARRETE HORTA	GINECO OBSTETRICIA	TEHUANTEPEC 251
-ORALIA	Teresa Rojas Sanchez	Ginecologia	Rio Bamba 639, Lindavista
-LUIS	Valeria Ventura Quintana	Ginecología y Obstetricia	San Angel Inn Acora
-ANGEL	VENANCIA VAZQUEZ NOLASCO	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-LUIS	Verónica Del Moral Estrada	Ginecología y Obstetricia	San Ángel Inn Universidad
-LUIS	Verónica Diez Martínez Tara	Ginecologia y Obstetricia	MAC La Viga
-ANGEL	VERONICA LARA VACA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-LUIS	Verónica Martínez Ramírez	Ginecología y Obstetricia	HMG
-ANGEL	VERONICA MUÑOZ	GINECO OBSTETRICIA	QUERETARO 156, ROMA NORTE
-ANGEL	VICENTE RODRIGUEZ	GINECO OBSTETRICIA	TORRE TUXPAN 45 A
-ANGEL	VICTOR HUGO CARMONA ORNELAS	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-ORALIA	Víctor Hugo Ortega Pérez 	Ginecología y Obstetricia	Rio Bmaba 639. Lindavista
-TALINA	Víctor Israel Victoria Mejía	Urología	Hosp. Ángeles del Pedregal
-TALINA	Víctor Manuel García González	Urología / TIENE UNA EMPRESA	Hospital Ángeles Acoxpa
-ANGEL	VICTOR MANUEL TOPELE CARMONA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
-TALINA	VICTOR SEVERO HERNANDEZ VALDES	UROLOGÍA / NO VISITAR 	CAMINO A SANTA TERESA
-ORALIA	Violeta Fabiola Machuca Hernandez	Ginecologia	Sor Juan Ines de la Cruz 280, Tlalnepantla
-ANGEL	VIRGINIA CORTES URIBE	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
-LUIS	VIRGINIA ESPINOSA DELGADO	GINECOLOGÍA Y OBSTETRICIA	INSURGENTES SUR
-TALINA	Vitelio Ruiz Bock	Ginecología y Obstetricia	Hospital MAC Periférico Sur
-LUIS	WALDEMAR ALEJANDRO SOLIS LORIA	GINECOLOGÍA Y OBSTETRICIA	AV CHAPULTEPEC
-ANGEL	XOCHIQUETZAL SANDRA CRUZ	UROLOGÍA	MARCOS CARRILLO
-ANGEL	YAMIL ERNESTO OJEDA MORALES	GINECO OBSTETRICIA	TORRE DURANGO 64
-LUIS	Yamile Torres Jasso	Ginecología y Obstetricia	HMG
-LUIS	Yasiu Bustamante Quan	Ginecología y Obstetricia	Ángeles Universidad
-TALINA	YASMIN MIRANDA AGUILAR	GINECOLOGÍA Y OBSTETRICIA	AV CANAL DE MIRAMONTES
-LUIS	Yazmin Hernandez Balderas	Ginecología y Obstetricia	Ángeles Universidad
-ORALIA	Yedid Medina Nava	Ginecologia	Circuitos Centro Comercial 20, Tlalnepantla
-LUIS	Yeni Lovera	Ginecología y Obstetricia	Clínica Santa Margarita
-LUIS	Yolanda Olivia Piña Maciel	Biología de Reproducción	San Angel Inn Acora
-LUIS	Yolitsma Arlet Muciño Manjarrez	Ginecología y Obstetricia	HMG
-LUIS	Yunuen Garcia Cortes	Ginecología y Obstetricia	San Angel Inn Acora
-TALINA	Zaniru Raúl Marín Martínez	Ginecología Oncológica, Ginecología y Obstetricia	Hospital Ángeles Acoxpa
+TALINA	Malenys Sánchez,Ginecología y Obstetricia,,Hospital MAC Periférico Sur
+LUIS,Jessica Jazmín Chávez,Ginecología y Obstetricia,,San Ángel Inn ACORA
+TALINA,Jorge Alberto Campos Cañas,Ginecología y Obstetricia,Biología de la Reproducción,Hospital Ángeles Acoxpa
+ORALIA,Manuel de Jesús Arriola Zamarripa,Ginecología y Obstetricia,,Río Bamba
+ANGEL,Manuel Gómez Rodríguez,Ginecología y Obstetricia,,Cda. Agrarismo 208 Escandón Miguel H.
+ORALIA,Manuel Lozano,Ginecología y Obstetricia,,"Ejército Nacional 613, Polanco"
+ORALIA,Manuel Ramos Garduza,Ginecología y Obstetricia,,"Circuitos Centro Comercial 20, Tlalnepantla"
+ORALIA,Marcela González Espejel,Ginecología y Obstetricia,,"Sor Juana Inés de la Cruz 280, Tlalnepantla"
+TALINA,Marco Antonio Pérez Cisneros,Ginecología y Obstetricia,,Periférico Sur
+ANGEL,Margarita Elizabeth Flores Zaleta,Ginecología y Obstetricia,,Cda. Agrarismo 208 Escandón Miguel H.
+LUIS,María Belem Martínez Romero,Ginecología y Obstetricia,,Montecito
+TALINA,María de la Caridad Carranco Salinas,Ginecología y Obstetricia,,Hospital Ángeles Pedregal Con 715 D
+ANGEL,María de los Ángeles Pérez Ramírez,Ginecología y Obstetricia,,Tlacotalpan 59 Roma Sur
+ANGEL,María del Carmen Martínez Chiñas,Ginecología y Obstetricia,,Tepic 139
+ANGEL,María del Carmen Pérez Reyes,Ginecología y Obstetricia,,Cda. Agrarismo 208 Escandón Miguel H.
+ANGEL,María del Pilar Velázquez Sánchez,Ginecología y Obstetricia,,Cda. Agrarismo 208 Escandón Miguel H.
+ORALIA,María Digna Nava Barahona,Ginecología y Obstetricia,,"Temístocles 210, Polanco IV Secc, CDMX"
+ORALIA,María Dolores Alarcón Alcántara,Ginecología y Obstetricia,,Enrique Sada Muguerza 17
+ANGEL,María Eugenia Gonzales Morales,Ginecología y Obstetricia,,Tlacotalpan 59 Roma Sur
+LUIS,María Fernanda Fernández Corzas,Ginecología y Obstetricia,,Ángeles Universidad
+ORALIA,María Fernanda Río de la Loza,Ginecología y Obstetricia,,"Alexander Von Humboldt 88, Lomas Verdes 3ra Secc, 53120 Naucalpan de Juárez, Méx"
+ANGEL,María Isabel Pérez Ortega,Ginecología y Obstetricia,,Cda. Agrarismo 208 Escandón Miguel H.
+ORALIA,María José Rodríguez Gutiérrez,Ginecología y Obstetricia,,"Sor Juana Inés de la Cruz 280, Tlalnepantla"
+ANGEL,María Juana Hernández Valencia,Ginecología y Obstetricia,,Tlacotalpan 59 Roma Sur
+ANGEL,María Julieta Hernández Cummings,Ginecología y Obstetricia,,Torre Tepic 113
+LUIS,María Luisa Fuentes,Ginecología y Obstetricia,,Consultorio privado
+LUIS,María Rossana Valiente Aguilar,Ginecología y Obstetricia,,San Angel Inn Acora
+ANGEL,María Teresa Méndez Gómez,Ginecología y Obstetricia,,Tuxpan 39
+ANGEL,María Teresa Solano,Ginecología y Obstetricia,,Manzanillo 101
+TALINA,María Victoria Marchese,Ginecología y Obstetricia,,"Paseo de los Tamarindos 384 p9, col, Bosques de las Lomas, Cuajimalpa de Morelos"
+ANGEL,Maribel Ibarra Sarlatcons,Ginecología y Obstetricia,,Tepic 116
+ANGEL,Maricruz Barraza,Ginecología y Obstetricia,,"Querétaro 156, Roma Norte"
+LUIS,Maricruz Dañino Montes,Ginecología y Obstetricia,,San Angel Inn Acora
+TALINA,Mario Alberto Ramírez Negrín,Urología,,Hosp. Ángeles del Pedregal
+ORALIA,Mario Antonio López Salas,Ginecología y Obstetricia,,"Ejército Nacional 613, Polanco"
+ANGEL,Mario Garay Enríquez,Ginecología y Obstetricia,,Río Panuco
+ORALIA,MARIO LUGO RANGEL	UROLOGÍA	VIA GUSTAVO BAZ PRADA
+ANGEL,Mario Martínez Ruiz,Ginecología y Obstetricia,,Cda. Agrarismo 208 Escandón Miguel H.
+LUIS,Marisol Ayala Juárez,Ginecología y Obstetricia,,Ángeles Universidad
+ANGEL,Marisol Rivera Hernández,Ginecología y Obstetricia,,Tlacotalpan 59 Roma Sur
+TALINA,Marlene de la Peña Gutierrez,Ginecología,,Hospital Ángeles Acoxpa
+LUIS,Marlene Lizbeth Zamora Ramirez,Ginecología y Obstetricia,,Ángeles Universidad
+LUIS,Martha Espinoza Esparza,Ginecología y Obstetricia,,San Ángel Inn Universidad
+LUIS,Martha Leticia Zancatl Diaz,Ginecología y Obstetricia,,HMG
+TALINA,Martha Lilia Rodríguez García,Ginecología y Obstetricia,,Hospital Ángeles Acoxpa
+TALINA,Martha Olivia Gómez Alvarado,Urología,,Hosp. Ángeles del Pedregal
+ANGEL,MARTHA SUSANA MACIAS GALVAN	GINECOLOGÍA Y OBSTETRICIA	AV CHAPULTEPEC
+TALINA,MARTIN TELICH VIDAL	UROLOGÍA / BAJA	CAMINO STA TERESA
+ORALIA,Jorge Siller Nieto,Ginecología y Obstetricia,,"Circuitos Centro Comercial 20, Tlalnepantla"
+TALINA,Mauricio Cantellano Orozco,Urología,,Hospital Ángeles Acoxpa
+ORALIA,MAURICIO MANCILLA CASTELAN	GINECOLOGÍA Y OBSTETRICIA	CTO JURISTAS
+ANGEL,Mauricio Marx Orta,Ginecología y Obstetricia,,Torre Querétaro
+TALINA,Mauricio Osorio Caballero,Reproducción / Ginecología,,Hosp. Ángeles del Pedregal
+TALINA,Mercedes del Pilar Álvarez Goris,Ginecología y Obstetricia,,Hosp. Ángeles del Pedregal
+ORALIA,Mervin Omar Bolívar Cuencas,Ginecología y Obstetricia,,"Sor Juana Inés de la Cruz 280, Tlalnepantla"
+ORALIA,MIGUE ANGEL ZAPATA VILLALBA	UROLOGÍA	AV SOR JUANA INES DE LA CRUZ
+TALINA,Miguel Ángel López Valle,Ginecología y Obstetricia,,Hosp. Ángeles del Pedregal
+LUIS,Miguel Angel Maldonado,Ginecología y Obstetricia,,Consultorio privado
+ANGEL,Miguel Angel Robles Carmona,Ginecología y Obstetricia,,Cda. Agrarismo 208 Escandón Miguel H.
+LUIS,Miguel Ángel Ulloa,Ginecología y Obstetricia,,San Ángel Inn Universidad
+ANGEL,Miguel Angel Walter Tordecillas,Ginecología y Obstetricia,,Tlacotalpan 59 Roma Sur
+LUIS,MIGUEL CASTAÑEDA HECTOR	UROLOGÍA	AV CHAPULTEPEC
+ANGEL,Miguel Corres Molina,Ginecología y Obstetricia,,Frontera 74 Roma Norte
+LUIS,Miguel Corres Molina,Ginecología y Obstetricia,,Ángeles Universidad
+TALINA,Milagros Clementina Pérez Quintanilla,Ginecología y Obstetricia,,"Carlos Graef Fernandez 154 -342 (Tlaxala Santa Fe- Consultorio 342), Cuajimalpa de Morelos"
+ORALIA,Mireya Ovando Tapia,Ginecología y Obstetricia,,"Circuitos Centro Comercial 20, Tlalnepantla"
+LUIS,Miriam Azenet Carvajal Gonzalez,Ginecología y Obstetricia,,San Angel Inn Acora
+ANGEL,JUAN JIMENEZ HUERTA	GINECO OBSTETRICIA	TORRE DURANGO VIS 50
+ANGEL,JUAN LUIS ABOITES	GINECO OBSTETRICIA	TEHUANTEPEC 251
+ORALIA,Monica Mejia Vargas,Ginecologia,,"Circuitos Centro Comercial 20, Tlalnepantla"
+LUIS,Mónica Patrón Mondragón,Ginecologia y Obstetricia,,MAC La Viga
+LUIS,Mónica Rodríguez León,Ginecología y Obstetricia,,San Ángel Inn Universidad
+LUIS,Montserrat Ariadna Del Castillo Rodriguez,Ginecología y Obstetricia,,Ángeles Universidad
+ORALIA,Montserrat Cuevas,Ginecologia,,Av. Dr. Gustavo Baz 309-TR A1
+ORALIA,MYRNA FLORES MERCADO	GINECOLOGÍA Y OBSTETRICIA	CASMA
+ORALIA,Nancy Roman Estrada,Gineco _Obstetricia,,"Rio Bamba 639, Lindavista"
+TALINA,Narciso Hernández Toriz,Urología / JEFE ONCO S XXI,,Hosp. Ángeles del Pedregal
+ORALIA,Navarrete Horta Teresa,Ginecología y obstetricia,,Rio Bmaba 639. Lindavista
+LUIS,Nayeli Cordoba Jimenez,,San Ángel Inn Universidad
+ORALIA,Nayeli Martinez Jaime,Gineco _Obstetricia,,"Calle Matanzas 715, Lindavista"
+ORALIA,Nelly Cortina,Ginecologia,,"Rio Bamba 639, Lindavista"
+ANGEL,NESI PEDRAZA	GINECO OBSTETRICIA	TEHUANTEPEC 251
+ANGEL,NICOLAS SALVA PASTER	GINECO OBSTETRICIA	FRONTERA 74 ROMA NORTE
+LUIS,Noemi Raquel Guerrero Patiño,Biología de Reproducción,,San Angel Inn Acora
+ORALIA,Norma Angélica Hernández Pineda,Ginecología y Obstetricia,,Rio Bmaba 639. Lindavista
+TALINA,Norma Lilia Ramírez Velázquez,Ginecología y Obstetricia,,Hospital Ángeles Acoxpa
+ANGEL,NORMA PATRICIA TREJO	GINECO OBSTETRICIA	TORRE TUXPAN 54
+ANGEL,OCTAVIO CEDILLO LEY	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON Miguel H.
+ORALIA,Oliver Paul Cruz Orozco,Ginecologia,,"Circuitos Centro Comercial 20, Tlalnepantla"
+TALINA,Olivia Natividad López Adame,Ginecología y Obstetricia,,Hospital Ángeles Acoxpa
+ANGEL,OLIVIA PEÑA BALLESTEROS	GINECO OBSTETRICIA	TORRE DURANGO 290
+ANGEL,OLIVIA SALAS	GINECO OBSTETRICIA	TORRE TUXPAN 6
+ANGEL,OMAR DIMAS VICTORIO VARGAS	UROLOGÍA	MARCOS CARRILLO
+ORALIA,Oscar Mejia Mendoza,Ginecologia,,Av. Dr. Gustavo Baz 309-TR A1
+ORALIA,Oscar Moncada Navarro,Ginecologia,,"Circuito Misioneros 5, Ciudad Satelite"
+ORALIA,Oscar Ruben Guinto Martiarena,Ginecologia,,"Av. montevideo 303, Lindavista"
+ORALIA,Oscar Salvador Sánchez Vazquez,Ginecologia,,"Rio Bamba 639, Lindavista"
+LUIS,Pablo Mariano González Aldeco,Ginecología y Obstetricia,,San Ángel Inn Universidad
+TALINA,Paloma de la Torre y Fernández,Ginecología y Obstetricia,,Hosp. Ángeles del Pedregal
+ORALIA,Paola Alejandra Vazquez Garcia,Ginecologia,,"Sor Juan Ines de la Cruz 280, Tlalnepantla"
+TALINA,Paola Delfina Rodríguez Estrada,Urología,,Hosp. Ángeles del Pedregal
+LUIS,Patricia del Carmen Franco Castañeda,Ginecología y Obstetricia,,Consultorio privado
+LUIS,PATRICIA ORIELLE PONCE LICERA 	GINECOLOGÍA Y OBSTETRICIA	MONTECITO
+ANGEL,PATRICIA PEREZ BAILON	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
+ANGEL,PATRICIA PEREZ BAILON	GINECOLOGÍA Y OBSTETRICIA	TLACOTALPAN
+TALINA,Patricio Cruz García Villa,Urología,,Hosp. Ángeles del Pedregal
+ANGEL,PAULET RENNE FLORES ZARATE	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
+LUIS,Paulett Bayona Soriano,Ginecología y Obstetricia,,San Ángel Inn Universidad
+LUIS,Paulina Carpio Barcenas,Ginecología y Obstetricia,,San Angel Inn Acora
+LUIS,Paulina Gonzalez Peña,Ginecología y Obstetricia,,Ángeles Universidad
+ANGEL,PAULINA JANCOR	GINECO OBSTETRICIA	TEHUANTEPEC 251
+ORALIA,Paulina Treviño,Ginecologia,,"Ejercito Nacional 613, Polanco"
+ORALIA,Paulina Treviño Villareal,Ginecologia,,"Circuitos Centro Comercial 20, Tlalnepantla"
+ANGEL,LAURA VANESSA RODRIGUEZ ROCHA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+TALINA,Manuel Alonso Villegas Martínez,Ginecología Oncológica, Ginecología y Obstetricia,,Hospital Ángeles Acoxpa
+ANGEL,PERLA DENISSE AGUILAR	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+TALINA,Priscilla Roque Gutiérrez,Biología de Reproducción, Ginecología y Obstetricia,,Hospital Ángeles Acoxpa
+ANGEL,RACHEL FIRSMAN AMORA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+ANGEL,RAFAEL ALBERTO GARCIA GUDIÑO	GINECO OBSTETRICIA	TEPIC 117
+TALINA,Ramiro Ordaz Vega,Ginecología y Obstetricia, Perinatal, Colposcopía, Biología de la Reproducción,,Hospital Ángeles Acoxpa
+ANGEL,RAMON CELAYA BARRERA	GINECO OBSTETRICIA	TORRE DURANGO 290
+ANGEL,RAMON SALGADO MEDINA	UROLOGÍA / NO VISITAR TIENE CLINICA.,,TLACOTALPAN
+ANGEL,RANFERI GAONA ARREOLA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+TALINA,Raul Alonso Martinez Ayala,Ginecología y Obstetricia,,Hospital MAC Cuemanco
+ORALIA,Raul Antonio Leon Ochoa,Ginecologia,,"Rio Bamba 639, Lindavista"
+ORALIA,Raul Barrientos Mendoza,Ginecologia,,"Sor Juan Ines de la Cruz 280, Tlalnepantla"
+ORALIA,Raul Padilla Rodas,Ginecologia,,Av. Dr. Gustavo Baz 309-TR A1
+ORALIA,RAUL PADILLA RODAS	GINECOLOGÍA Y OBSTETRICIA	AV GUSTAVO BAZ PRADA
+LUIS,RAYMUNDO BERNAL GARCIA	UROLOGÍA	AV UNIVERSIDAD
+LUIS,RAYMUNDO BERNAL GARCIA	UROLOGÍA	AV ARBOL DEL FUEGO
+LUIS,Monica Alejandra Matta Martinez,Ginecología y Obstetricia,,Ángeles Universidad
+TALINA,Raymundo Canales de la Fuente,Ginecología y Obstetricia,,Hosp. Ángeles del Pedregal
+LUIS,Renata Madrid Zavala,Biología de Reproducción,,San Angel Inn Acora
+LUIS,Renata Melina Madrid Zavala,Ginecología y Obstetricia,,Ángeles Universidad
+ORALIA,Rene Hernandez Sanchez,Ginecologia,,"Circuitos Centro Comercial 20, Tlalnepantla"
+LUIS,Reyna Erika Franco Laguna,Ginecología y Obstetricia,,San Angel Inn Acora
+TALINA,Perla Angelica Silva Palma,Ginecología y Obstetricia,,Hospital MAC Cuemanco
+LUIS,Reyna Laura Lopez Sanchez,Ginecología y Obstetricia,,Ángeles Universidad
+ORALIA,Reyna Mariel Maclu Zorrero,Ginecologia,,"Circuito Misioneros 5, Ciudad Satelite"
+TALINA,Ricardo Adame Pinacho,Ginecología y Obstetricia,,"HOSPITAL ANGELES PEDREGAL Camino a Sta. Teresa 1055-S Torre Angeles Piso 7 Consultorio 730,"
+TALINA,Ricardo Almeida Magaña,Urología,,Hosp. Ángeles del Pedregal
+LUIS,Ricardo Alvarado Ballinas,Ginecologia y Obstetricia,,MAC La Viga
+ANGEL,RICARDO CAREAGA BENITEZ	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+ANGEL,RICARDO JAUREGUI TEJEDA	GINECO OBSTETRICIA	FRONTERA 74 ROMA NORTE
+ORALIA,Rivero Corona Juan,Ginecología y obstetricia,,Rio Bmaba 639. Lindavista
+TALINA,Roberto Alejandro Carlos Romero y Lomas,Ginecología y Obstetricia,,Hospital Ángeles Acoxpa
+TALINA,ROBERTO ALEJANDRO CARLOS ROMERO Y LOMAS	GINECOLOGÍA Y OBSTETRICIA	CALZ ACOXPA
+ANGEL,ROBERTO CARLOS MANRIQUEZ ANGULO	GINECOLOGÍA Y OBSTETRICIA	AV CHAPULTEPEC
+LUIS,Roberto Carmona Librado,Ginecologia y Obstetricia,,MAC La Viga
+ANGEL,ROBERTO CISNEROS CHAVEZ	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
+ORALIA,Roberto Martinez Alvares,Ginecologia,,"Circuito Misioneros 5, Ciudad Satelite"
+ANGEL,ROCIO GUERRA ARIAS	GINECO OBSTETRICIA	TORRE TUXPAN 10
+LUIS,Rocio Velasquez Falconi,Ginecología y Obstetricia,,San Angel Inn Acora
+LUIS,Rodolfo Leonel Vargas Ruiz,Ginecología y Obstetricia,,Ángeles Universidad
+ANGEL,RODRIGO EMILIO RUIZ BARRIOS	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+LUIS,Rodrigo Emilio Ruz Barros,Ginecología y Obstetricia,,Ángeles Universidad
+TALINA,Rodrigo León Mar,Urología / DARLE SEGUIMIENTO,,Hosp. Ángeles del Pedregal
+TALINA,RODRIGO PEREZ BECERRA	UROLOGÍA	CALZ ACOXPA
+TALINA,Rodrigo Pérez Becerra,Urología,,Hospital Ángeles Acoxpa
+ANGEL,RODRIGO SILVA	GINECO ONCOLOGO	QUERETARO 156, ROMA NORTE
+TALINA,Romina Elizabeth Schafer Vega,Ginecología y Obstetricia,,"Hospital Angeles Lomas Vialidad de la Barranca, sn, Valle de las Palmas, Valle De Las Palmas, Huixquilucan"
+LUIS,Rosa Elba Mendoza Morales,Ginecología y Obstetricia,,Ángeles Universidad
+ORALIA,Rosa Elena Cano Nava,Ginecologia,,Av. Dr. Gustavo Baz 309-TR A1
+ANGEL,ROSA ESTELA RODRIGUEZ	GINECO OBSTETRICIA	FRONTERA 74 ROMA NORTE
+ANGEL,ROSA MARIA	GINECO OBSTETRICIA	MANZANILLO 102
+ANGEL,ROSA MARIA ARCE	GINECO OBSTETRICIA	TORRE DURANGO VIS 50
+ANGEL,ROSA MARIA CHI RODRIGUEZ	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+ORALIA,Rosa Maria Sanchez,Gineco _Obstetricia,,"Homero 527, tercer piso"
+ORALIA,Rosa Maria Tufiño Loza,Ginecologia,,"Av. montevideo 303, Lindavista"
+LUIS,Rosa Virginia Sandoval Pirela,Ginecología y Obstetricia,,Ángeles Universidad
+LUIS,Rosalia García Ruiz,Ginecología y Obstetricia,,HMG
+ANGEL,ROSSANA ARGENTINA VIDAL RAMIREZ	GINECO OBSTETRICIA	QUERETARO 156, ROMA NORTE
+ORALIA,Rossana Argentina Vidal Ramirez,Gineco _Obstetricia,,"Rio Bamba 639, Lindavista"
+ANGEL,RUBEN SAURER RAMIREZ	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+ORALIA,Ruth Camargo Lavaverde,Ginecologia,,"Circuitos Centro Comercial 20, Tlalnepantla"
+ANGEL,SALAVADOR DANIEL	GINECO OBSTETRICIA	TORRE TEPIC 113
+ANGEL,SALVADOR DANIEL CARAPIA	GINECO OBSTETRICIA	TEPIC 118
+LUIS,Salvador Gaviño Ambriz,Ginecología y Obstetricia,,San Ángel Inn Universidad
+ANGEL,SANCHEZ	GINECO OBSTETRICIA	COZUMEL 62 ROMA NORTE
+ANGEL,SANDRA ADRIANA VERA VAZQUEZ	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+ORALIA,Sandra Flores Lozada,Ginecologia,,"Av. montevideo 303, Lindavista"
+ORALIA,Sandra Gabriela Rule Gomez,Ginecologia,,"Circuito Misioneros 5, Ciudad Satelite"
+TALINA,Sandra Guadalupe Girón Vargas,Ginecología y Obstetricia,,Hospital Ángeles Acoxpa
+LUIS,Sandra Iveth Ramírez Pastrana,Ginecología y Obstetricia,,Centro de Especialidades Mixcoac
+ANGEL,SANDRA URIBE FLORES	GINECO OBSTETRICIA	TEPIC 113
+ANGEL,SANDRA URIBE FLORES	GINECO OBSTETRICIA	TORRE TEPIC 113
+LUIS,Sandra Vera,Ginecología y Obstetricia,,San Ángel Inn Universidad
+TALINA,SanJuan Padrón Lucio,Urología,,Hospital Ángeles Acoxpa
+ANGEL,SANTIAGO ISLAS ESCOTO	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
+ORALIA,Santos Regino Uscanga Sánchez,Ginecologia,,"Circuito Misioneros 5, Ciudad Satélite"
+LUIS,Sara Calvillo,Biología de Reproducción,,Consultorio privado
+LUIS,Saul Guzman Laguna,Ginecología y Obstetricia,,HMG
+TALINA,Sergio Durán Ortiz,Urología,,Hospital Ángeles Acoxpa
+TALINA,Sergio Durán Ortiz,Urología /YA TRABAJA CON NOSOTROS,,Hospital MAC Periférico Sur
+ANGEL,SERGIO ISRRAEL GARCIA NAVARRO	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+ANGEL,SERGIO MARTIN VELASCO ALVA	GINECO OBSTETRICIA	COZUMEL 62 ROMA NORTE
+ORALIA,Sergio Pedraza,Ginecologia,,"Ejercito Nacional 613, Polanco"
+ANGEL,SILVIA ESCALERA	GINECO OBSTETRICIA	TEHUANTEPEC 251
+ANGEL,SONIA REYNOSO RAMIREZ	GINECO OBSTETRICIA	FRONTERA 74 ROMA NORTE
+LUIS,Stephanie Galicia Lopez,Ginecología y Obstetricia,,HMG
+LUIS,Susana Haquet,Ginecología y Obstetricia,,San Ángel Inn Universidad
+TALINA,Sylvain Collura Merlier,Urología,,Hosp. Ángeles del Pedregal
+ANGEL,TALINA RAMIREZ CARO	GINECO ONCOLOGICA	TEPIC 139
+ORALIA,Tania Pina,Gineco _Obstetricia,,"Calle Casma #690, Lindavista"
+LUIS,Teresa Martínez Guerrero,Ginecología y Obstetricia,,San Angel Inn Acora
+ORALIA,Teresa MIchel Morales Montiel,Ginecologia,,"Sor Juana Inés de la Cruz 280, Tlalnepantla"
+ANGEL,TERESA NAVARRETE HORTA	GINECO OBSTETRICIA	TEHUANTEPEC 251
+ORALIA,Teresa Rojas Sanchez,Ginecologia,,"Rio Bamba 639, Lindavista"
+LUIS,Valeria Ventura Quintana,Ginecología y Obstetricia,,San Angel Inn Acora
+ANGEL,VENANCIA VAZQUEZ NOLASCO	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
+LUIS,Verónica Del Moral Estrada,Ginecología y Obstetricia,,San Ángel Inn Universidad
+LUIS,Verónica Diez Martínez Tara,Ginecologia y Obstetricia,,MAC La Viga
+ANGEL,VERONICA LARA VACA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+LUIS,Verónica Martínez Ramírez,Ginecología y Obstetricia,,HMG
+ANGEL,VERONICA MUÑOZ	GINECO OBSTETRICIA	QUERETARO 156, ROMA NORTE
+ANGEL,VICENTE RODRIGUEZ	GINECO OBSTETRICIA	TORRE TUXPAN 45 A
+ANGEL,VICTOR HUGO CARMONA ORNELAS	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
+ORALIA,Víctor Hugo Ortega Pérez 	Ginecología y Obstetricia,,Rio Bmaba 639. Lindavista
+TALINA,Víctor Israel Victoria Mejía,Urología,,Hosp. Ángeles del Pedregal
+TALINA,Víctor Manuel García González,Urología / TIENE UNA EMPRESA,,Hospital Ángeles Acoxpa
+ANGEL,VICTOR MANUEL TOPELE CARMONA	GINECO OBSTETRICIA	CDA. AGRARISMO 208 ESCANDON MIGUEL H.
+TALINA,VICTOR SEVERO HERNANDEZ VALDES	UROLOGÍA / NO VISITAR 	,,CAMINO A SANTA TERESA
+ORALIA,Violeta Fabiola Machuca Hernandez,Ginecologia,,"Sor Juana Inés de la Cruz 280, Tlalnepantla"
+ANGEL,VIRGINIA CORTES URIBE	GINECO OBSTETRICIA	TLACOTALPAN 59 ROMA SUR
+LUIS,VIRGINIA ESPINOSA DELGADO	GINECOLOGÍA Y OBSTETRICIA	INSURGENTES SUR
+TALINA,Vitelio Ruiz Bock,Ginecología y Obstetricia,,Hospital MAC Periférico Sur
+LUIS,WALDEMAR ALEJANDRO SOLIS LORIA	GINECOLOGÍA Y OBSTETRICIA	AV CHAPULTEPEC
+ANGEL,XOCHIQUETZAL SANDRA CRUZ	UROLOGÍA	MARCOS CARRILLO
+ANGEL,YAMIL ERNESTO OJEDA MORALES	GINECO OBSTETRICIA	TORRE DURANGO 64
+LUIS,Yamile Torres Jasso,Ginecología y Obstetricia,,HMG
+LUIS,Yasiu Bustamante Quan,Ginecología y Obstetricia,,Ángeles Universidad
+TALINA,YASMIN MIRANDA AGUILAR	GINECOLOGÍA Y OBSTETRICIA	AV CANAL DE MIRAMONTES
+LUIS,Yazmin Hernandez Balderas,Ginecología y Obstetricia,,Ángeles Universidad
+ORALIA,Yedid Medina Nava,Ginecologia,,"Circuitos Centro Comercial 20, Tlalnepantla"
+LUIS,Yeni Lovera,Ginecología y Obstetricia,,Clínica Santa Margarita
+LUIS,Yolanda Olivia Piña Maciel,Biología de Reproducción,,San Angel Inn Acora
+LUIS,Yolitsma Arlet Muciño Manjarrez,Ginecología y Obstetricia,,HMG
+LUIS,Yunuen Garcia Cortes,Ginecología y Obstetricia,,San Angel Inn Acora
+TALINA,Zaniru Raúl Marín Martínez,Ginecología Oncológica, Ginecología y Obstetricia,,Hospital Ángeles Acoxpa
 `;
 
-export const parseData = (): Doctor[] => {
-  const lines = RAW_DATA.trim().split('\n');
+/**
+ * Parsea un string de datos (CSV/Tabulado) a objetos de tipo Doctor.
+ */
+export const parseDataString = (data: string): Doctor[] => {
+  const lines = data.trim().split('\n');
   const doctors: Doctor[] = [];
 
-  // Parse Raw Medico Data
   lines.forEach((line, index) => {
     let parts = line.split('\t');
     if (parts.length < 3) {
-        parts = line.split(/ {2,}/);
+      parts = line.split(/ {2,}/);
     }
 
     if (parts.length >= 2) {
@@ -712,11 +718,11 @@ export const parseData = (): Doctor[] => {
       const specialty = (parts[2]?.trim() || 'MEDICINA GENERAL').toUpperCase();
       const address = (parts[3]?.trim() || '').toUpperCase();
 
-      if (name) {
+      if (name && name !== "NOMBRE") { // Evitar cabeceras
         const initialSchedule: ScheduleSlot[] = Array(7).fill(null).map(() => ({ day: 'Lunes', time: '', active: false }));
 
         doctors.push({
-          id: `doc-${index}`,
+          id: `doc-${index}-${name.slice(0, 3)}`,
           category: 'MEDICO',
           executive,
           name,
@@ -730,9 +736,33 @@ export const parseData = (): Doctor[] => {
     }
   });
 
-  // Additional Hospitals Data
+  return doctors;
+};
+
+/**
+ * Función que intenta descargar la base de datos más reciente de GitHub.
+ */
+export const fetchRemoteDoctors = async (): Promise<Doctor[] | null> => {
+    try {
+        const response = await fetch(GITHUB_DATABASE_URL + "?t=" + Date.now(), { cache: "no-store" });
+        if (!response.ok) return null;
+        const text = await response.text();
+        if (text && text.length > 50) {
+            return parseDataString(text);
+        }
+        return null;
+    } catch (e) {
+        console.warn("⚠️ No se pudo acceder a GitHub, usando cache local.");
+        return null;
+    }
+};
+
+export const parseData = (): Doctor[] => {
+  // Datos base (Hardcoded)
+  const baseDoctors = parseDataString(RAW_DATA);
+
+  // Hospitales estáticos adicionales
   const hospitalsToAdd = [
-      // ANGEL
       { executive: 'ANGEL', name: 'HOSPITAL DALINDE' },
       { executive: 'ANGEL', name: 'HOSPITAL METROPOLITANO' },
       { executive: 'ANGEL', name: 'ANGELES ROMA' },
@@ -741,7 +771,6 @@ export const parseData = (): Doctor[] => {
       { executive: 'ANGEL', name: 'HOSPITAL MARIA JOSE ROMA' },
       { executive: 'ANGEL', name: 'HOSPITAL MÉXICO' },
       { executive: 'ANGEL', name: 'HOSPITAL MOCEL' },
-      // LUIS
       { executive: 'LUIS', name: 'ANGELES UNIVERSIDAD', address: 'Av. Universidad 1080, Xoco, Benito Juárez, 03330 Ciudad de México, CDMX', phone: '55 7256 9800' },
       { executive: 'LUIS', name: 'SAN ANGEL INN UNIVERSIDAD' },
       { executive: 'LUIS', name: 'SAN ANGEL INN HMG' },
@@ -749,7 +778,6 @@ export const parseData = (): Doctor[] => {
       { executive: 'LUIS', name: 'SAN ANGEL INN CHAPULTEPEC' },
       { executive: 'LUIS', name: 'SAN ANGEL INN PATRIOTISMO' },
       { executive: 'LUIS', name: 'SAN ANGEL INN DEL VALLE' },
-      // ORALIA
       { executive: 'ORALIA', name: 'ANGELES SANTA MONICA' },
       { executive: 'ORALIA', name: 'STAR MÉDICA TLALNEPANTLA' },
       { executive: 'ORALIA', name: 'STAR MÉDICA LOMAS VERDES' },
@@ -758,7 +786,6 @@ export const parseData = (): Doctor[] => {
       { executive: 'ORALIA', name: 'MAC LOMAS VERDES' },
       { executive: 'ORALIA', name: 'MAC TLALNEPANTLA' },
       { executive: 'ORALIA', name: 'ANGELES LINDAVISTA' },
-      // TALINA
       { executive: 'TALINA', name: 'ANGELES PEDREGAL' },
       { executive: 'TALINA', name: 'STAR MEDICA PEDREGAL' },
       { executive: 'TALINA', name: 'MEDICA SUR' },
@@ -769,12 +796,10 @@ export const parseData = (): Doctor[] => {
       { executive: 'TALINA', name: 'STAR MÉDICA SANTA FE' },
   ];
 
-  // Process Hospitals
   hospitalsToAdd.forEach((hosp: any, idx) => {
       const initialSchedule: ScheduleSlot[] = Array(7).fill(null).map(() => ({ day: 'Lunes', time: '', active: false }));
-      
-      doctors.push({
-          id: `hosp-${idx}-${Date.now()}`,
+      baseDoctors.push({
+          id: `hosp-${idx}`,
           category: 'HOSPITAL',
           executive: hosp.executive,
           name: hosp.name,
@@ -787,5 +812,5 @@ export const parseData = (): Doctor[] => {
       });
   });
 
-  return doctors;
+  return baseDoctors;
 };

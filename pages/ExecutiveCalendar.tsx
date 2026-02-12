@@ -1,13 +1,7 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Doctor, Visit, User, TimeOffEvent } from '../types';
-import { 
-  ChevronLeft, ChevronRight, Plus, Search, Calendar, X, 
-  Clock, Coffee, CheckCircle2, User as UserIcon, Trash2, 
-  Building, Briefcase, CalendarDays, Star, MapPin, Lock, AlertTriangle,
-  Stethoscope 
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Check, Search, Edit3, Calendar, ExternalLink, X, Lock, Clock, MapPin, Coffee, CalendarClock, CheckCircle2, User as UserIcon, Trash2, Building, Briefcase } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import es from 'date-fns/locale/es';
 
@@ -21,631 +15,1069 @@ interface ExecutiveCalendarProps {
 }
 
 type ViewMode = 'month' | 'week' | 'day';
-type EventType = 'visita' | 'cita' | 'ausencia';
 
 const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdateDoctors, onDeleteVisit, user }) => {
   const location = useLocation();
   const [selectedExecutive, setSelectedExecutive] = useState(user.role === 'executive' ? user.name : '');
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [viewMode, setViewMode] = useState<ViewMode>('day');
   const [isDragging, setIsDragging] = useState(false);
 
-  // Modales
-  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
-
-  // Formulario de Agendado
-  const [eventType, setEventType] = useState<EventType>('visita');
-  const [planDate, setPlanDate] = useState(new Date());
-  const [planTime, setPlanTime] = useState('09:00');
+  // Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAppointmentMode, setIsAppointmentMode] = useState(false); 
+  const [selectedDayForPlan, setSelectedDayForPlan] = useState<number | null>(null);
+  const [planDate, setPlanDate] = useState(''); // NEW STATE FOR DATE SELECTOR
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
   const [searchDoctorTerm, setSearchDoctorTerm] = useState('');
   const [planObjective, setPlanObjective] = useState('');
-  const [absenceReason, setAbsenceReason] = useState('VACACIONES');
+  const [appointmentTime, setAppointmentTime] = useState('09:00');
+
+  // Edit Appointment State (Stores the original state before editing)
+  const [editingAppointment, setEditingAppointment] = useState<{docId: string, visit: Visit} | null>(null);
+
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [selectedVisitToReport, setSelectedVisitToReport] = useState<{docId: string, visit: Visit} | null>(null);
+  const [reportNote, setReportNote] = useState('');
+  const [reportOutcome, setReportOutcome] = useState('SEGUIMIENTO');
+  const [reportFollowUp, setReportFollowUp] = useState('');
+  const [reportDate, setReportDate] = useState('');
+  const [reportTime, setReportTime] = useState('');
+  const [isEditingPlan, setIsEditingPlan] = useState(false);
+  const [editObjective, setEditObjective] = useState('');
+  
+  // Next Visit Planning State
+  const [nextVisitDate, setNextVisitDate] = useState<Date | null>(null);
+  const [nextVisitTime, setNextVisitTime] = useState('09:00');
+
+  const [timeOffEvents, setTimeOffEvents] = useState<TimeOffEvent[]>([]);
+  const [isTimeOffModalOpen, setIsTimeOffModalOpen] = useState(false);
+  const [newTimeOff, setNewTimeOff] = useState<Partial<TimeOffEvent>>({
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date().toISOString().split('T')[0],
+      duration: 'TODO EL DÍA',
+      reason: 'JUNTA',
+      notes: ''
+  });
+  const [selectedTimeOff, setSelectedTimeOff] = useState<TimeOffEvent | null>(null);
 
   const TIMEOFF_STORAGE_KEY = 'rc_medicall_timeoff_v5';
-  const [timeOffEvents, setTimeOffEvents] = useState<TimeOffEvent[]>([]);
+
+  // Updated Time Slots: 09:00 - 20:00 every 30 mins
+  const generateTimeSlots = () => {
+      const slots = [];
+      for (let hour = 9; hour <= 20; hour++) {
+          slots.push(`${hour.toString().padStart(2, '0')}:00`);
+          if (hour !== 20) {
+              slots.push(`${hour.toString().padStart(2, '0')}:30`);
+          }
+      }
+      return slots;
+  };
+  const visitTimeSlots = useMemo(() => generateTimeSlots(), []);
+  
+  // Restricted slots for Appointments (Citas)
+  const appointmentTimeSlots = ['09:00', '16:00'];
+
+  const executives = useMemo(() => {
+    const execs = new Set(doctors.map(d => d.executive));
+    return Array.from(execs).sort();
+  }, [doctors]);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const execParam = params.get('exec');
-    if (user.role === 'executive') setSelectedExecutive(user.name);
-    else if (execParam) setSelectedExecutive(execParam);
-    else if (executives.length > 0 && !selectedExecutive) setSelectedExecutive(executives[0]);
-    
-    const stored = localStorage.getItem(TIMEOFF_STORAGE_KEY);
-    if (stored) setTimeOffEvents(JSON.parse(stored));
-  }, [location, user]);
+      if (user.role === 'executive') {
+          setSelectedExecutive(user.name);
+      } else {
+          const params = new URLSearchParams(location.search);
+          const execParam = params.get('exec');
+          if (execParam) setSelectedExecutive(execParam);
+          else if (!selectedExecutive && executives.length > 0) setSelectedExecutive(executives[0]);
+      }
+  }, [location, executives, selectedExecutive, user]);
 
-  const executives = useMemo(() => Array.from(new Set(doctors.map(d => d.executive))).sort(), [doctors]);
-  const myDoctors = useMemo(() => doctors.filter(d => d.executive === selectedExecutive), [doctors, selectedExecutive]);
-  
-  const timeSlots = useMemo(() => {
-    const slots = [];
-    for (let i = 8; i <= 20; i++) {
-      slots.push(`${i.toString().padStart(2, '0')}:00`);
-      slots.push(`${i.toString().padStart(2, '0')}:30`);
-    }
-    return slots;
+  useEffect(() => {
+      const storedTimeOff = localStorage.getItem(TIMEOFF_STORAGE_KEY);
+      if (storedTimeOff) {
+          setTimeOffEvents(JSON.parse(storedTimeOff));
+      }
   }, []);
 
-  const filteredDoctors = useMemo(() => {
-    if (!searchDoctorTerm) return [];
-    return myDoctors.filter(d => 
-      d.name.toLowerCase().includes(searchDoctorTerm.toLowerCase()) ||
-      (d.specialty || '').toLowerCase().includes(searchDoctorTerm.toLowerCase())
-    );
+  const myDoctors = useMemo(() => {
+      return doctors.filter(d => d.executive === selectedExecutive);
+  }, [doctors, selectedExecutive]);
+
+  const myTimeOffs = useMemo(() => {
+      return timeOffEvents.filter(t => t.executive === selectedExecutive);
+  }, [timeOffEvents, selectedExecutive]);
+
+  const filteredDoctorsForModal = useMemo(() => {
+      if (!searchDoctorTerm) return [];
+      return myDoctors.filter(d => d.name.toLowerCase().includes(searchDoctorTerm.toLowerCase()));
   }, [myDoctors, searchDoctorTerm]);
 
-  const toDateStr = (date: Date) => {
-    const d = new Date(date);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().split('T')[0];
+  const getDaysForView = (): (Date | null)[] => {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      if (viewMode === 'month') {
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          const firstDayOfMonth = new Date(year, month, 1).getDay(); 
+          const days: (Date | null)[] = [];
+          for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
+          for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
+          return days;
+      } else if (viewMode === 'week') {
+          const startOfWeek = new Date(currentDate);
+          startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+          const days: Date[] = [];
+          for (let i = 0; i < 7; i++) {
+              const d = new Date(startOfWeek);
+              d.setDate(startOfWeek.getDate() + i);
+              days.push(d);
+          }
+          return days;
+      } else { 
+          return [new Date(currentDate)];
+      }
   };
 
-  const allEvents = useMemo(() => {
-    const events: any[] = [];
-    myDoctors.forEach(doc => {
-      (doc.visits || []).forEach(v => {
-        events.push({ 
-          type: 'visit', 
-          data: v, 
-          docName: doc.name, 
-          docId: doc.id, 
-          doctor: doc,
-          isLocked: v.outcome === 'CITA' 
-        });
-      });
-    });
-    timeOffEvents.filter(t => t.executive === selectedExecutive).forEach(toff => {
-      events.push({ 
-        type: 'absence', 
-        data: toff, 
-        isLocked: false 
-      });
-    });
-    return events;
-  }, [myDoctors, timeOffEvents, selectedExecutive]);
-
-  const getEventsForDay = (date: Date) => {
-    const dStr = toDateStr(date);
-    return allEvents.filter(e => {
-      if (e.type === 'absence') return dStr >= e.data.startDate && dStr <= e.data.endDate;
-      return e.data.date === dStr;
-    }).sort((a, b) => (a.data.time || '00:00').localeCompare(b.data.time || '00:00'));
-  };
+  const calendarDays = getDaysForView();
 
   const prevPeriod = () => {
-    const newDate = new Date(currentDate);
-    if (viewMode === 'month') newDate.setMonth(newDate.getMonth() - 1);
-    else if (viewMode === 'week') newDate.setDate(newDate.getDate() - 7);
-    else newDate.setDate(newDate.getDate() - 1);
-    setCurrentDate(newDate);
+      const newDate = new Date(currentDate);
+      if (viewMode === 'month') newDate.setMonth(newDate.getMonth() - 1);
+      else if (viewMode === 'week') newDate.setDate(newDate.getDate() - 7);
+      else newDate.setDate(newDate.getDate() - 1);
+      setCurrentDate(newDate);
   };
 
   const nextPeriod = () => {
-    const newDate = new Date(currentDate);
-    if (viewMode === 'month') newDate.setMonth(newDate.getMonth() + 1);
-    else if (viewMode === 'week') newDate.setDate(newDate.getDate() + 7);
-    else newDate.setDate(newDate.getDate() + 1);
-    setCurrentDate(newDate);
+      const newDate = new Date(currentDate);
+      if (viewMode === 'month') newDate.setMonth(newDate.getMonth() + 1);
+      else if (viewMode === 'week') newDate.setDate(newDate.getDate() + 7);
+      else newDate.setDate(newDate.getDate() + 1);
+      setCurrentDate(newDate);
   };
 
-  const handleSaveEvent = () => {
-    if (eventType === 'ausencia') {
-      const newToff: TimeOffEvent = {
-        id: `toff-${Date.now()}`,
-        executive: selectedExecutive,
-        startDate: toDateStr(planDate),
-        endDate: toDateStr(planDate),
-        duration: 'TODO EL DÍA',
-        reason: (absenceReason as any) || 'PERMISO',
-        notes: planObjective
-      };
-      const updated = [...timeOffEvents, newToff];
-      setTimeOffEvents(updated);
-      localStorage.setItem(TIMEOFF_STORAGE_KEY, JSON.stringify(updated));
-    } else {
-      if (!selectedDoctorId || !planObjective) return alert("Médico y Objetivo son obligatorios");
-      const newVisit: Visit = {
-        id: `v-${Date.now()}`,
-        date: toDateStr(planDate),
-        time: planTime,
-        objective: planObjective.toUpperCase(),
-        outcome: eventType === 'cita' ? 'CITA' : 'PLANEADA',
-        note: eventType === 'cita' ? 'CITA PROGRAMADA' : 'VISITA PLANEADA',
-        status: 'planned'
-      };
-      const updatedDocs = doctors.map(d => d.id === selectedDoctorId ? { ...d, visits: [...(d.visits || []), newVisit] } : d);
-      onUpdateDoctors(updatedDocs);
-    }
-    setIsPlanModalOpen(false);
-    resetForm();
+  const toLocalDateString = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
   };
 
-  const resetForm = () => {
-    setSelectedDoctorId('');
-    setSearchDoctorTerm('');
-    setPlanObjective('');
-    setPlanTime('09:00');
-    setEventType('visita');
+  const isDateInRange = (checkDate: string, start: string, end: string) => {
+      return checkDate >= start && checkDate <= end;
   };
 
-  const handleDragStart = (e: React.DragEvent, eventObj: any) => {
-    if (eventObj.isLocked) {
-      e.preventDefault();
-      return;
-    }
-    setIsDragging(true);
-    e.dataTransfer.setData("text/plain", JSON.stringify(eventObj));
-    e.dataTransfer.effectAllowed = "move";
+  const parseDateString = (dateStr: string) => {
+      if (!dateStr) return new Date();
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day);
   };
 
-  const handleDragEnd = () => setIsDragging(false);
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
+  const formatDateToString = (date: Date | null) => {
+      if (!date) return '';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
   };
 
-  const handleDrop = (e: React.DragEvent, targetDate: Date) => {
-    e.preventDefault();
-    setIsDragging(false);
-    try {
-      const data = e.dataTransfer.getData("text/plain");
-      if (!data) return;
-      const eventObj = JSON.parse(data);
-      const newDateStr = toDateStr(targetDate);
+  const getEventsForDate = (date: Date) => {
+      const dateStr = toLocalDateString(date);
+      const events: { type: 'visit' | 'timeoff', data: any }[] = [];
+      
+      myDoctors.forEach(doc => {
+          const visits = doc.visits || [];
+          visits.forEach(visit => {
+              if (visit.date === dateStr) {
+                  events.push({ type: 'visit', data: { docId: doc.id, docName: doc.name, docCategory: doc.category, visit, address: doc.address } });
+              }
+          });
+      });
 
-      if (eventObj.type === 'absence') {
-        const updated = timeOffEvents.map(t => 
-          t.id === eventObj.data.id ? { ...t, startDate: newDateStr, endDate: newDateStr } : t
-        );
-        setTimeOffEvents(updated);
-        localStorage.setItem(TIMEOFF_STORAGE_KEY, JSON.stringify(updated));
+      myTimeOffs.forEach(toff => {
+          if (isDateInRange(dateStr, toff.startDate, toff.endDate)) {
+              events.push({ type: 'timeoff', data: toff });
+          }
+      });
+
+      return events.sort((a, b) => {
+          if (a.type === 'timeoff' && b.type !== 'timeoff') return -1;
+          if (a.type !== 'timeoff' && b.type === 'timeoff') return 1;
+
+          if (a.type === 'visit' && b.type === 'visit') {
+              const timeA = a.data.visit.time || '23:59';
+              const timeB = b.data.visit.time || '23:59';
+              if (timeA !== timeB) return timeA.localeCompare(timeB);
+              if (a.data.visit.status === 'completed' && b.data.visit.status !== 'completed') return 1;
+              if (a.data.visit.status !== 'completed' && b.data.visit.status === 'completed') return -1;
+          }
+          return 0;
+      });
+  };
+
+  // Triggered when clicking a day or "Programar Cita" button
+  const handleDayClick = (date: Date, asAppointment = false) => {
+      setSelectedDayForPlan(date.getDate());
+      setPlanDate(toLocalDateString(date)); // Set Initial Date for Modal
+      setCurrentDate(new Date(date)); 
+      setIsAppointmentMode(asAppointment);
+      setIsModalOpen(true); 
+      setSelectedDoctorId('');
+      setSearchDoctorTerm('');
+      setEditingAppointment(null); // Reset editing state
+      
+      if (asAppointment) {
+          setPlanObjective('CITA DE CONTACTO');
+          setAppointmentTime('09:00'); // Default to allowed slot
       } else {
-        const updatedDocs = doctors.map(doc => {
-          if (doc.id === eventObj.docId) {
-            const updatedVisits = doc.visits.map(v => 
-              v.id === eventObj.data.id ? { ...v, date: newDateStr } : v
-            );
-            return { ...doc, visits: updatedVisits };
+          setPlanObjective('');
+          setAppointmentTime('09:00');
+      }
+  };
+
+  const handleTimeSlotClick = (time: string) => {
+      setAppointmentTime(time);
+      handleDayClick(currentDate, false);
+  };
+
+  // Triggered when clicking a "CITA" chip (pink event)
+  const handleEditAppointment = (docId: string, visit: Visit) => {
+      const doc = doctors.find(d => d.id === docId);
+      
+      setSelectedDayForPlan(parseDateString(visit.date).getDate());
+      setPlanDate(visit.date); // Set existing date
+      setCurrentDate(parseDateString(visit.date));
+      setIsAppointmentMode(true);
+      setIsModalOpen(true);
+      
+      setSelectedDoctorId(docId);
+      setSearchDoctorTerm(doc ? doc.name : '');
+      setAppointmentTime(visit.time || '09:00');
+      setPlanObjective(visit.objective || 'CITA DE CONTACTO');
+      
+      setEditingAppointment({ docId, visit });
+  };
+
+  const savePlan = () => {
+      if (!planDate || !selectedDoctorId) {
+          alert("Seleccione una fecha y un contacto.");
+          return;
+      }
+      if (!planObjective.trim()) {
+          alert("El objetivo es obligatorio.");
+          return;
+      }
+      
+      const dateStr = planDate;
+      
+      if (editingAppointment) {
+          // Reassign Logic: Remove from old doctor, add to new doctor
+          const doctorsWithoutOldVisit = doctors.map(doc => {
+              if (doc.id === editingAppointment.docId) {
+                  return { ...doc, visits: doc.visits.filter(v => v.id !== editingAppointment.visit.id) };
+              }
+              return doc;
+          });
+
+          const finalDoctors = doctorsWithoutOldVisit.map(doc => {
+               if (doc.id === selectedDoctorId) {
+                   const updatedVisit: Visit = {
+                       ...editingAppointment.visit,
+                       date: dateStr,
+                       time: appointmentTime, // Will be 9:00 or 16:00
+                       objective: planObjective.toUpperCase(), // Will be 'CITA DE CONTACTO'
+                       outcome: 'CITA',
+                       status: 'planned'
+                   };
+                   return { ...doc, visits: [...doc.visits, updatedVisit] };
+               }
+               return doc;
+          });
+
+          onUpdateDoctors(finalDoctors);
+          setIsModalOpen(false);
+          alert("Cita reasignada correctamente.");
+
+      } else {
+          // Create New Logic
+          const updatedDoctors = doctors.map(doc => {
+              if (doc.id === selectedDoctorId) {
+                  const newVisit: Visit = {
+                      id: Date.now().toString(),
+                      date: dateStr,
+                      time: appointmentTime,
+                      note: isAppointmentMode ? 'CITA PROGRAMADA' : 'Visita Planeada',
+                      objective: planObjective.toUpperCase(),
+                      outcome: isAppointmentMode ? 'CITA' : 'PLANEADA',
+                      status: 'planned'
+                  };
+                  const currentVisits = doc.visits || [];
+                  return { ...doc, visits: [...currentVisits, newVisit] };
+              }
+              return doc;
+          });
+
+          onUpdateDoctors(updatedDoctors);
+          setIsModalOpen(false);
+          alert(isAppointmentMode ? "Cita programada correctamente." : "Visita agendada correctamente.");
+      }
+  };
+
+  const openReportModal = (docId: string, visit: Visit) => {
+      // Do not open report modal for Appointments, redirect to edit handler instead or do nothing (handled by click logic)
+      if ((visit.outcome as string) === 'CITA') return; 
+
+      setSelectedVisitToReport({ docId, visit });
+      setReportNote(visit.note === 'Visita Planeada' || visit.note === 'CITA PROGRAMADA' ? '' : visit.note);
+      
+      const outcome = visit.outcome as string;
+      setReportOutcome(outcome === 'PLANEADA' || outcome === 'CITA' ? 'SEGUIMIENTO' : outcome);
+      
+      setReportFollowUp(visit.followUp || '');
+      setReportDate(visit.date);
+      setReportTime(visit.time || '');
+      setIsEditingPlan(false);
+      setEditObjective(visit.objective || '');
+      setNextVisitDate(null);
+      setNextVisitTime('09:00'); 
+      setReportModalOpen(true);
+  };
+
+  const confirmDeleteVisit = () => {
+      if (!selectedVisitToReport) return;
+      const { docId, visit } = selectedVisitToReport;
+      if (window.confirm("¿Eliminar este registro permanentemente del calendario y sistema?")) {
+          onDeleteVisit(docId, visit.id);
+          setReportModalOpen(false);
+          setSelectedVisitToReport(null);
+      }
+  }
+
+  const savePlanChanges = () => {
+      if (!selectedVisitToReport) return;
+      if (!editObjective.trim()) {
+          alert("El objetivo es obligatorio.");
+          return;
+      }
+
+      const updatedDoctors = doctors.map(doc => {
+          if (doc.id === selectedVisitToReport.docId) {
+              const updatedVisits = (doc.visits || []).map(v => {
+                  if (v.id === selectedVisitToReport.visit.id) {
+                      return { ...v, date: reportDate, time: reportTime, objective: editObjective.toUpperCase() };
+                  }
+                  return v;
+              });
+              return { ...doc, visits: updatedVisits };
           }
           return doc;
-        });
-        onUpdateDoctors(updatedDocs);
+      });
+      onUpdateDoctors(updatedDoctors);
+      setReportModalOpen(false);
+  }
+
+  const saveReport = () => {
+      if (!selectedVisitToReport) return;
+      if (!reportNote.trim() || !reportFollowUp.trim()) {
+          alert("Reporte y Siguiente Paso son obligatorios.");
+          return;
       }
-    } catch (err) {
-      console.error("Drop error", err);
-    }
+      
+      const updatedDoctors = doctors.map(doc => {
+          if (doc.id === selectedVisitToReport.docId) {
+              let updatedVisits = (doc.visits || []).map(v => {
+                  if (v.id === selectedVisitToReport.visit.id) {
+                      return {
+                          ...v,
+                          date: reportDate,
+                          time: reportTime, 
+                          note: reportNote.toUpperCase(),
+                          outcome: reportOutcome as any,
+                          followUp: reportFollowUp.toUpperCase(),
+                          status: 'completed' as const
+                      };
+                  }
+                  return v;
+              });
+
+              if (nextVisitDate) {
+                  const newVisit: Visit = {
+                      id: `nv-${Date.now()}`,
+                      date: formatDateToString(nextVisitDate),
+                      time: nextVisitTime, 
+                      note: 'Visita Planeada',
+                      objective: reportFollowUp.toUpperCase(), 
+                      outcome: 'PLANEADA',
+                      status: 'planned'
+                  };
+                  updatedVisits = [...updatedVisits, newVisit];
+              }
+
+              return { ...doc, visits: updatedVisits };
+          }
+          return doc;
+      });
+
+      onUpdateDoctors(updatedDoctors);
+      setReportModalOpen(false);
+      if (nextVisitDate) alert("Reporte guardado y próxima visita agendada.");
+  };
+
+  const handleDragStart = (e: React.DragEvent, docId: string, visit: Visit) => {
+      setIsDragging(true);
+      const data = JSON.stringify({ docId, visitId: visit.id });
+      e.dataTransfer.setData("text/plain", data);
+      e.dataTransfer.effectAllowed = "move";
+  };
+  
+  const handleDragEnd = () => setIsDragging(false);
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; };
+  
+  const handleDrop = (e: React.DragEvent, targetDate: Date, targetTime?: string) => {
+      e.preventDefault();
+      setIsDragging(false);
+      try {
+          const data = e.dataTransfer.getData("text/plain");
+          if (!data) return;
+          const { docId, visitId } = JSON.parse(data);
+          const newDateStr = toLocalDateString(targetDate);
+          
+          const updatedDoctors = doctors.map(doc => {
+              if (doc.id === docId) {
+                  const updatedVisits = (doc.visits || []).map(v => {
+                      if (v.id === visitId) {
+                          return { ...v, date: newDateStr, time: targetTime || v.time };
+                      }
+                      return v;
+                  });
+                  return { ...doc, visits: updatedVisits };
+              }
+              return doc;
+          });
+          onUpdateDoctors(updatedDoctors);
+      } catch (error) { console.error("Drop error:", error); }
   };
 
   const handleTrashDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    try {
+      e.preventDefault();
+      setIsDragging(false);
       const data = e.dataTransfer.getData("text/plain");
       if (!data) return;
-      const eventObj = JSON.parse(data);
       
-      if (eventObj.isLocked) {
-        alert("Las CITAS no pueden ser eliminadas una vez programadas.");
-        return;
+      try {
+          const parsed = JSON.parse(data);
+          const { docId, visitId } = parsed;
+          
+          if (docId && visitId) {
+              if (window.confirm("¿Confirmas que deseas eliminar este elemento permanentemente del sistema?")) {
+                  onDeleteVisit(docId, visitId);
+              }
+          }
+      } catch (error) {
+          console.error("Error al eliminar elemento:", error);
       }
+  };
 
-      if (window.confirm("¿Seguro que deseas eliminar este evento del calendario?")) {
-        if (eventObj.type === 'absence') {
-          const updated = timeOffEvents.filter(t => t.id !== eventObj.data.id);
+  const handleOpenTimeOffModal = () => {
+      setNewTimeOff({
+          startDate: new Date().toISOString().split('T')[0],
+          endDate: new Date().toISOString().split('T')[0],
+          duration: 'TODO EL DÍA',
+          reason: 'JUNTA',
+          notes: ''
+      });
+      setIsTimeOffModalOpen(true);
+  };
+
+  const handleSaveTimeOff = () => {
+      const event: TimeOffEvent = {
+          id: `toff-${Date.now()}`,
+          executive: selectedExecutive,
+          startDate: newTimeOff.startDate || new Date().toISOString().split('T')[0],
+          endDate: newTimeOff.endDate || new Date().toISOString().split('T')[0],
+          duration: newTimeOff.duration as any || 'TODO EL DÍA',
+          reason: newTimeOff.reason as any || 'JUNTA',
+          notes: newTimeOff.notes || ''
+      };
+
+      const updated = [...timeOffEvents, event];
+      setTimeOffEvents(updated);
+      localStorage.setItem(TIMEOFF_STORAGE_KEY, JSON.stringify(updated));
+      setIsTimeOffModalOpen(false);
+  };
+
+  const handleDeleteTimeOff = (id: string) => {
+      if (window.confirm("¿Eliminar este registro?")) {
+          const updated = timeOffEvents.filter(t => t.id !== id);
           setTimeOffEvents(updated);
           localStorage.setItem(TIMEOFF_STORAGE_KEY, JSON.stringify(updated));
-        } else {
-          onDeleteVisit(eventObj.docId, eventObj.data.id);
-        }
+          setSelectedTimeOff(null);
       }
-    } catch (err) {}
   };
 
-  const renderEventChip = (e: any, idx: number) => {
-    const isCita = e.type === 'visit' && e.data.outcome === 'CITA';
-    const isAbsence = e.type === 'absence';
-    const isCompleted = e.type === 'visit' && e.data.status === 'completed';
+  const getHeaderTitle = () => {
+      if (viewMode === 'day') return currentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  }
 
-    return (
-      <div 
-        key={idx} 
-        draggable={!e.isLocked}
-        onDragStart={(ev) => handleDragStart(ev, e)}
-        onDragEnd={handleDragEnd}
-        onClick={(ev) => { ev.stopPropagation(); setSelectedEvent(e); setIsDetailModalOpen(true); }} 
-        className={`text-[8px] p-1.5 rounded-lg font-black truncate border shadow-sm transition-all group flex items-center gap-1 mb-1 ${
-          isAbsence ? 'bg-orange-100 text-orange-700 border-orange-200 cursor-grab active:cursor-grabbing' : 
-          isCita ? 'bg-pink-600 text-white border-transparent cursor-default' :
-          isCompleted ? 'bg-emerald-500 text-white border-transparent cursor-grab active:cursor-grabbing' : 
-          'bg-blue-600 text-white border-transparent cursor-grab active:cursor-grabbing'
-        } ${!e.isLocked ? 'hover:scale-[1.02] hover:brightness-110' : ''}`}
-      >
-        {e.isLocked ? <Lock className="w-2 h-2" /> : (isAbsence ? <Coffee className="w-2 h-2" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/40"></div>)}
-        <span className="flex-1 truncate">
-          {isAbsence ? `[ABS] ${e.data.reason}` : `${e.data.time || ''} ${e.docName}`}
-        </span>
-      </div>
-    );
-  };
+  const isCita = (visit: Visit) => (visit.outcome as string) === 'CITA';
 
-  const renderMonthView = () => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const days = [];
-    
-    for (let i = 0; i < firstDay; i++) days.push(<div key={`empty-${i}`} className="h-32 bg-slate-50/30 border border-slate-100"></div>);
-    
-    for (let i = 1; i <= daysInMonth; i++) {
-      const dayDate = new Date(year, month, i);
-      const dayEvents = getEventsForDay(dayDate);
-      const isToday = dayDate.toDateString() === new Date().toDateString();
+  const renderEventChip = (evt: any, i: number, isSlot: boolean = false) => {
+      const isTimeOff = evt.type === 'timeoff';
+      const isCompleted = !isTimeOff && evt.data.visit.status === 'completed';
+      const isAppointment = !isTimeOff && isCita(evt.data.visit);
       
-      days.push(
+      const chipClasses = isSlot 
+        ? `absolute left-0 right-0 mx-2 p-2 rounded shadow-sm cursor-pointer transition-colors z-10 border-l-4 ${
+            isAppointment 
+            ? 'bg-pink-100 border-pink-500 hover:bg-pink-200 cursor-default' 
+            : (isCompleted 
+                ? 'bg-green-100 border-green-500 hover:bg-green-200' 
+                : 'bg-blue-100 border-blue-500 hover:bg-blue-200')
+          }`
+        : `px-2 py-1 rounded text-[8px] font-bold border shadow-sm flex items-center gap-1 transition-all hover:scale-[1.02] relative pr-1 cursor-grab active:cursor-grabbing w-full mb-1 ${
+            isTimeOff 
+            ? 'bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200 text-orange-800'
+            : (isAppointment 
+                ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-transparent shadow-pink-300' 
+                : (isCompleted
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-transparent shadow-emerald-300' 
+                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-transparent shadow-blue-200'))
+        }`;
+
+      return (
         <div 
-          key={i} 
-          onDragOver={handleDragOver}
-          onDrop={(ev) => handleDrop(ev, dayDate)}
-          onClick={() => { setPlanDate(dayDate); setIsPlanModalOpen(true); }} 
-          className={`h-32 bg-white border border-slate-100 p-1 hover:bg-blue-50/20 transition-colors cursor-pointer group flex flex-col ${isToday ? 'ring-1 ring-inset ring-blue-500 bg-blue-50/10' : ''}`}
+            key={i}
+            draggable
+            onDragStart={(e) => handleDragStart(e, evt.data.docId, evt.data.visit)}
+            onDragEnd={handleDragEnd}
+            onClick={(e) => { 
+                e.stopPropagation(); 
+                if (isTimeOff) setSelectedTimeOff(evt.data);
+                else if (isAppointment) handleEditAppointment(evt.data.docId, evt.data.visit);
+                else openReportModal(evt.data.docId, evt.data.visit); 
+            }}
+            className={chipClasses}
         >
-          <div className="flex justify-between items-center mb-1">
-            <span className={`text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>{i}</span>
-            <Plus className="w-3 h-3 text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <div className="flex-1 overflow-y-auto no-scrollbar space-y-0.5">
-            {dayEvents.map((e, idx) => renderEventChip(e, idx))}
-          </div>
+            {isSlot ? (
+                <>
+                    <span className={`text-xs font-bold block ${
+                        isAppointment ? 'text-pink-900' : (isCompleted ? 'text-green-900' : 'text-blue-900')
+                    }`}>{evt.data.docName} ({evt.data.docCategory || 'MEDICO'})</span>
+                    <span className={`text-[10px] uppercase ${
+                        isAppointment ? 'text-pink-700' : (isCompleted ? 'text-green-700' : 'text-blue-700')
+                    }`}>{evt.data.visit.objective}</span>
+                </>
+            ) : (
+                <>
+                    <span className="truncate leading-tight flex-1">
+                        {!isTimeOff && <span className="font-black mr-1 opacity-90">{evt.data.visit.time || '??:??'}</span>}
+                        {isTimeOff ? evt.data.reason : evt.data.docName}
+                    </span>
+                    {isCompleted && <CheckCircle2 className="w-2.5 h-2.5 text-white flex-shrink-0" />}
+                    {isAppointment && <Lock className="w-2 h-2 text-white/80 ml-1" />}
+                </>
+            )}
         </div>
       );
-    }
-    return <div className="grid grid-cols-7 border-l border-t border-slate-100">{days}</div>;
-  };
-
-  const renderWeekView = () => {
-    const start = new Date(currentDate);
-    start.setDate(currentDate.getDate() - currentDate.getDay());
-    const days = Array.from({length: 7}).map((_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return d;
-    });
-
-    return (
-      <div className="grid grid-cols-7 h-full overflow-y-auto border-l border-slate-100 bg-slate-50/20">
-        {days.map((day, idx) => (
-          <div 
-            key={idx} 
-            onDragOver={handleDragOver}
-            onDrop={(ev) => handleDrop(ev, day)}
-            className="border-r border-slate-100 min-h-[500px] flex flex-col"
-          >
-            <div className="p-3 border-b border-slate-100 text-center bg-white sticky top-0 z-10 shadow-sm">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{day.toLocaleDateString('es-ES', { weekday: 'short' })}</p>
-              <p className={`text-sm font-black mt-0.5 ${day.toDateString() === new Date().toDateString() ? 'text-blue-600' : 'text-slate-800'}`}>{day.getDate()}</p>
-            </div>
-            <div className="p-1.5 space-y-1 flex-1">
-              {getEventsForDay(day).map((e, idx) => (
-                <div 
-                  key={idx} 
-                  draggable={!e.isLocked}
-                  onDragStart={(ev) => handleDragStart(ev, e)}
-                  onDragEnd={handleDragEnd}
-                  onClick={() => { setSelectedEvent(e); setIsDetailModalOpen(true); }} 
-                  className={`p-2.5 rounded-xl text-[9px] font-bold border cursor-pointer shadow-sm transition-all group ${
-                    e.type === 'absence' ? 'bg-orange-50 text-orange-700 border-orange-200' : 
-                    e.data.outcome === 'CITA' ? 'bg-pink-100 text-pink-700 border-pink-200' :
-                    e.data.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
-                    'bg-blue-50 text-blue-700 border-blue-200'
-                  } ${!e.isLocked ? 'hover:scale-[1.02] hover:bg-white' : ''}`}
-                >
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="opacity-70">{e.data.time || '8:00'}</span>
-                    {e.isLocked ? <Lock className="w-3 h-3 text-pink-400" /> : (e.data.outcome === 'CITA' && <Star className="w-3 h-3 fill-pink-500" />)}
-                  </div>
-                  <p className="truncate uppercase font-black">{e.type === 'absence' ? e.data.reason : e.docName}</p>
-                  {e.type !== 'absence' && <p className="text-[8px] text-slate-400 truncate mt-1 italic">"{e.data.objective}"</p>}
-                </div>
-              ))}
-              <button onClick={() => { setPlanDate(day); setIsPlanModalOpen(true); }} className="w-full py-6 border-2 border-dashed border-slate-200 rounded-2xl text-slate-300 hover:border-blue-300 hover:bg-blue-50/50 hover:text-blue-400 transition-all flex flex-col items-center justify-center gap-2">
-                <Plus className="w-5 h-5" />
-                <span className="text-[9px] font-black uppercase tracking-tighter">Programar</span>
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-10">
-      {/* Header Toolbar */}
-      <div className="flex flex-col xl:flex-row justify-between items-center bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-            <CalendarDays className="w-8 h-8 text-blue-600" />
-            Agenda RC
-          </h1>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">
-            {selectedExecutive} • {currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
-          </p>
-        </div>
+    <div className="space-y-6 pb-10 relative">
 
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          <div 
-            onDragOver={handleDragOver}
-            onDrop={handleTrashDrop}
-            className={`w-14 h-14 rounded-2xl flex items-center justify-center border-2 border-dashed transition-all ${isDragging ? 'bg-red-50 border-red-500 text-red-500 scale-110 shadow-lg shadow-red-200' : 'bg-slate-50 border-slate-200 text-slate-300 hover:border-red-300 hover:text-red-300'}`}
-            title="Arrastra aquí para eliminar visitas o ausencias"
-          >
-            <Trash2 className="w-6 h-6" />
-          </div>
+       {/* TOOLBAR */}
+       <div className="flex flex-col xl:flex-row justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-lg shadow-blue-500/5 gap-4">
+           {/* ... (Toolbar code same as before) ... */}
+           <div className="text-center xl:text-left">
+               <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Calendario</h1>
+               <p className="text-xs md:text-sm text-slate-500 font-medium">Gestión de rutas y tiempos.</p>
+           </div>
+           
+           <div className="flex flex-col md:flex-row gap-3 items-center w-full xl:w-auto">
+               <button 
+                   onClick={() => handleDayClick(currentDate, true)}
+                   className="bg-gradient-to-r from-pink-600 to-rose-600 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg shadow-pink-500/30 transition-all active:scale-95 flex items-center w-full md:w-auto justify-center"
+               >
+                   <Clock className="w-4 h-4 mr-2" />
+                   Programar Cita
+               </button>
 
-          <div className="bg-slate-100 p-1.5 rounded-2xl flex shadow-inner border border-slate-200/50">
-            {(['month', 'week', 'day'] as ViewMode[]).map(v => (
-              <button key={v} onClick={() => setViewMode(v)} className={`px-6 py-2.5 text-xs font-black uppercase rounded-xl transition-all ${viewMode === v ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>{v === 'month' ? 'Mes' : v === 'week' ? 'Semana' : 'Día'}</button>
-            ))}
-          </div>
-          
-          <button onClick={() => { setPlanDate(new Date()); setIsPlanModalOpen(true); }} className="bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/30 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            Agendar Evento
-          </button>
-        </div>
-      </div>
+               <button 
+                   onClick={handleOpenTimeOffModal}
+                   className="bg-gradient-to-r from-orange-400 to-orange-600 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg shadow-orange-500/20 transition-all active:scale-95 flex items-center w-full md:w-auto justify-center"
+               >
+                   <Coffee className="w-4 h-4 mr-2" />
+                   Ausencia
+               </button>
 
-      {/* Main Calendar Body */}
-      <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden min-h-[650px] flex flex-col">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/40 backdrop-blur-sm">
-          <button onClick={prevPeriod} className="p-3 bg-white hover:bg-blue-50 rounded-2xl shadow-sm transition-all border border-slate-100"><ChevronLeft className="w-6 h-6 text-slate-600" /></button>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter flex items-center gap-3">
-            <Calendar className="w-6 h-6 text-blue-500" />
-            {currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', day: viewMode === 'day' ? 'numeric' : undefined })}
-          </h2>
-          <button onClick={nextPeriod} className="p-3 bg-white hover:bg-blue-50 rounded-2xl shadow-sm transition-all border border-slate-100"><ChevronRight className="w-6 h-6 text-slate-600" /></button>
-        </div>
+               <div className="bg-slate-100/50 p-1 rounded-xl flex shadow-inner w-full md:w-auto border border-slate-200/50">
+                   <button onClick={() => setViewMode('month')} className={`flex-1 md:flex-none px-4 py-2 text-[10px] md:text-xs font-bold rounded-lg transition-all ${viewMode === 'month' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Mes</button>
+                   <button onClick={() => setViewMode('week')} className={`flex-1 md:flex-none px-4 py-2 text-[10px] md:text-xs font-bold rounded-lg transition-all ${viewMode === 'week' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Semana</button>
+                   <button onClick={() => setViewMode('day')} className={`flex-1 md:flex-none px-4 py-2 text-[10px] md:text-xs font-bold rounded-lg transition-all ${viewMode === 'day' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Día</button>
+               </div>
 
-        <div className="flex-1">
-          {viewMode === 'month' ? (
-            <>
-              <div className="grid grid-cols-7 bg-slate-50/50 border-b border-slate-100">
-                {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
-                  <div key={d} className="py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{d}</div>
-                ))}
-              </div>
-              {renderMonthView()}
-            </>
-          ) : viewMode === 'week' ? renderWeekView() : (
-            <div className="p-8 space-y-6 max-w-4xl mx-auto h-full overflow-y-auto">
-              {getEventsForDay(currentDate).length > 0 ? getEventsForDay(currentDate).map((e, i) => (
-                <div key={i} onClick={() => { setSelectedEvent(e); setIsDetailModalOpen(true); }} className={`flex items-center gap-8 p-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-lg hover:shadow-2xl transition-all group cursor-pointer border-l-[12px] ${
-                  e.type === 'absence' ? 'border-l-orange-500' : 
-                  e.data.outcome === 'CITA' ? 'border-l-pink-600' : 
-                  e.data.status === 'completed' ? 'border-l-emerald-500' : 'border-l-blue-600'
-                }`}>
-                  <div className="text-center min-w-[100px] border-r border-slate-100 pr-8">
-                    <p className="text-2xl font-black text-slate-800 tracking-tighter">{e.data.time || 'TODO EL DÍA'}</p>
-                    <p className={`text-[10px] font-black uppercase tracking-widest mt-1 ${e.data.status === 'completed' ? 'text-emerald-500' : 'text-slate-400'}`}>{e.data.status === 'completed' ? 'Realizado' : 'Pendiente'}</p>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                       <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">{e.type === 'absence' ? e.data.reason : e.docName}</h3>
-                       {e.isLocked && <Lock className="w-4 h-4 text-pink-500" />}
-                    </div>
-                    <p className="text-xs font-bold text-slate-400 uppercase mt-2 flex items-center gap-2">
-                      {e.type === 'absence' ? <Briefcase className="w-4 h-4 text-orange-400" /> : <Building className="w-4 h-4 text-blue-400" />}
-                      {e.type === 'absence' ? e.data.duration : e.doctor?.hospital || e.doctor?.address}
-                    </p>
-                    {e.data.objective && <p className="mt-3 text-sm text-slate-600 font-medium italic">"{e.data.objective}"</p>}
-                  </div>
-                  <div className={`p-5 rounded-2xl transition-transform group-hover:scale-110 ${e.type === 'absence' ? 'bg-orange-100 text-orange-600' : e.data.outcome === 'CITA' ? 'bg-pink-100 text-pink-600' : 'bg-blue-100 text-blue-600'}`}>
-                    {e.type === 'absence' ? <Coffee className="w-8 h-8" /> : e.data.outcome === 'CITA' ? <Star className="w-8 h-8 fill-pink-600" /> : <UserIcon className="w-8 h-8" />}
-                  </div>
-                </div>
-              )) : (
-                <div className="text-center py-48 bg-slate-50/50 rounded-[4rem] border-4 border-dashed border-slate-100">
-                  <div className="bg-white w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl border border-slate-100 text-slate-200">
-                    <Calendar className="w-12 h-12" />
-                  </div>
-                  <p className="text-2xl font-black text-slate-300 uppercase tracking-widest">Día sin eventos</p>
-                  <button onClick={() => setIsPlanModalOpen(true)} className="mt-8 bg-white border border-slate-200 px-10 py-4 rounded-2xl text-blue-600 font-black uppercase text-xs shadow-sm hover:shadow-md transition-all active:scale-95">+ Agendar Nuevo Evento</button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+               <div 
+                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                    onDrop={handleTrashDrop}
+                    className={`w-full md:w-16 h-10 md:h-auto rounded-xl flex items-center justify-center transition-all border-2 border-dashed cursor-pointer ${isDragging ? 'bg-red-50 border-red-400 text-red-500 scale-110 shadow-lg shadow-red-200' : 'bg-slate-50 border-slate-200 text-slate-300 hover:border-red-300 hover:text-red-300'}`}
+                    title="Arrastra aquí para eliminar"
+               >
+                   <Trash2 className="h-5 w-5 pointer-events-none" />
+               </div>
 
-      {/* PLAN MODAL */}
-      {isPlanModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden animate-fadeIn border border-white/20">
-            <div className={`p-8 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r ${eventType === 'cita' ? 'from-pink-50 to-white' : eventType === 'ausencia' ? 'from-orange-50 to-white' : 'from-blue-50 to-white'}`}>
-              <div>
-                <h3 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                  {eventType === 'cita' ? <Star className="w-6 h-6 text-pink-600 fill-pink-600" /> : eventType === 'ausencia' ? <Coffee className="w-6 h-6 text-orange-600" /> : <CalendarDays className="w-6 h-6 text-blue-600" />}
-                  Agendar Nuevo Evento
-                </h3>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1 ml-9">Defina los detalles del evento</p>
-              </div>
-              <button onClick={() => setIsPlanModalOpen(false)} className="p-3 bg-slate-200/40 rounded-2xl text-slate-500 hover:text-slate-800 transition-all"><X className="w-6 h-6" /></button>
-            </div>
-            
-            <div className="p-8 space-y-6">
-              <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl">
-                {(['visita', 'cita', 'ausencia'] as EventType[]).map(t => (
-                  <button key={t} onClick={() => setEventType(t)} className={`flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${eventType === t ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}>
-                    {t}
-                  </button>
-                ))}
-              </div>
+               {user.role === 'admin' && (
+                   <div className="flex items-center bg-blue-50/50 p-1.5 pl-3 rounded-xl border border-blue-100/50 w-full md:w-auto">
+                       <span className="text-[10px] font-black text-blue-600 mr-2 uppercase tracking-wide">Vista:</span>
+                       <select className="bg-transparent border-0 text-blue-900 text-sm font-bold focus:ring-0 block p-1 cursor-pointer w-full" value={selectedExecutive} onChange={(e) => setSelectedExecutive(e.target.value)}>
+                           {executives.map(e => <option key={e} value={e}>{e}</option>)}
+                       </select>
+                   </div>
+               )}
+           </div>
+       </div>
 
-              {eventType !== 'ausencia' ? (
-                <>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Seleccionar Médico o Contacto</label>
-                    <div className="relative">
-                      <Search className="absolute left-4 top-4 h-5 w-5 text-slate-300" />
-                      <input 
-                        type="text" 
-                        placeholder="BUSCAR POR NOMBRE O ESPECIALIDAD..." 
-                        value={searchDoctorTerm} 
-                        onChange={(e) => { setSearchDoctorTerm(e.target.value); setSelectedDoctorId(''); }} 
-                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold uppercase text-sm focus:ring-2 focus:ring-blue-500 transition-all shadow-inner outline-none" 
-                      />
-                    </div>
-                    {searchDoctorTerm && !selectedDoctorId && (
-                      <div className="mt-3 max-h-52 overflow-y-auto bg-white border border-slate-100 rounded-2xl shadow-2xl z-30 divide-y divide-slate-50">
-                        {filteredDoctors.map(d => (
-                          <div key={d.id} onClick={() => { setSelectedDoctorId(d.id); setSearchDoctorTerm(d.name); }} className="p-4 hover:bg-blue-50 cursor-pointer transition-colors group">
-                            <div className="flex justify-between items-center">
-                              <p className="font-black text-slate-800 uppercase text-xs group-hover:text-blue-600">{d.name}</p>
-                              <span className="text-[8px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-400 uppercase">{d.category}</span>
+       {/* CALENDAR VIEW */}
+       <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-white/50 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[600px]">
+           {/* ... Header Navigation ... */}
+           <div className="flex justify-between items-center p-4 md:p-6 border-b border-slate-100 sticky top-0 z-20 bg-white/95 backdrop-blur">
+               <button onClick={prevPeriod} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors text-slate-600"><ChevronLeft className="h-5 w-5" /></button>
+               <h2 className="text-lg md:text-xl font-black text-slate-800 capitalize tracking-tight text-center">{getHeaderTitle()}</h2>
+               <button onClick={nextPeriod} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors text-slate-600"><ChevronRight className="h-5 w-5" /></button>
+           </div>
+
+           <div className="flex-1 overflow-auto bg-slate-50/30">
+               <div className={`h-full flex flex-col ${viewMode !== 'day' ? 'min-w-[800px]' : 'min-w-full'}`}>
+                   {/* Headers for Month/Week */}
+                   {viewMode !== 'day' && (
+                       <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
+                           {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
+                               <div key={d} className="py-2 text-center text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">{d}</div>
+                           ))}
+                       </div>
+                   )}
+
+                   <div className={`flex-1 ${viewMode === 'day' ? 'flex flex-col' : 'grid grid-cols-7 auto-rows-fr gap-px'}`}>
+                       {calendarDays.map((day, idx) => {
+                           if (viewMode !== 'day' && day === null) return <div key={`empty-${idx}`} className="bg-slate-50/20 min-h-[100px]"></div>;
+                           
+                           const events = day ? getEventsForDate(day) : [];
+                           const isToday = day ? new Date().toDateString() === day.toDateString() : false;
+
+                           if (viewMode === 'day' && day) {
+                               return (
+                                   <div key={idx} className="flex-1 bg-white p-4 md:p-8 animate-fadeIn flex">
+                                       {/* Time Column */}
+                                       <div className="w-24 flex-shrink-0 border-r border-slate-100 pr-4 pt-2">
+                                           {visitTimeSlots.map(time => (
+                                               <div key={time} className="h-24 text-xs font-bold text-slate-400 flex items-start justify-between group relative">
+                                                   <span className="-mt-3 bg-white pr-2 z-10">{time}</span>
+                                                   <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleTimeSlotClick(time); }}
+                                                        className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-full p-1 transition-all transform hover:scale-110 z-20"
+                                                        title="Planear Visita aquí"
+                                                   >
+                                                       <Plus className="h-3 w-3" />
+                                                   </button>
+                                               </div>
+                                           ))}
+                                       </div>
+
+                                       {/* Events Column */}
+                                       <div className="flex-1 pl-4 relative pt-2">
+                                            {/* Grid Lines */}
+                                            {visitTimeSlots.map((time, tIdx) => (
+                                                 <div 
+                                                    key={`line-${time}`} 
+                                                    className="absolute w-full border-t border-slate-100"
+                                                    style={{ top: `${tIdx * 6}rem` }} // h-24 is 6rem
+                                                 ></div>
+                                            ))}
+                                            
+                                            {visitTimeSlots.map((time, tIdx) => {
+                                                const slotEvents = events.filter(e => e.type === 'visit' && e.data.visit.time === time);
+                                                return (
+                                                    <div 
+                                                        key={time} 
+                                                        onDragOver={handleDragOver}
+                                                        onDrop={(e) => handleDrop(e, day, time)}
+                                                        className="absolute w-full hover:bg-blue-50/30 transition-colors z-0"
+                                                        style={{ top: `${tIdx * 6}rem`, height: '6rem' }}
+                                                    >
+                                                        {slotEvents.map((evt, i) => renderEventChip(evt, i, true))}
+                                                    </div>
+                                                )
+                                            })}
+                                       </div>
+                                   </div>
+                               )
+                           }
+                           
+                           if (!day) return null;
+
+                           // Month/Week View Cell
+                           return (
+                               <div key={idx} 
+                                   onDragOver={handleDragOver}
+                                   onDrop={(e) => handleDrop(e, day)}
+                                   onClick={() => handleDayClick(day)}
+                                   className={`min-h-[120px] bg-white p-2 border border-slate-100 hover:bg-blue-50/20 transition-colors cursor-pointer relative group flex flex-col gap-1 ${isToday ? 'ring-1 ring-inset ring-blue-200 bg-blue-50/10' : ''}`}
+                               >
+                                   <div className="flex justify-between items-start">
+                                        <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
+                                            {day.getDate()}
+                                        </span>
+                                        <button className="opacity-0 group-hover:opacity-100 bg-slate-100 p-1 rounded-full text-slate-400 hover:text-blue-500 transition-all">
+                                            <Plus className="h-3 w-3" />
+                                        </button>
+                                   </div>
+                                   
+                                   <div className="flex-1 w-full overflow-y-auto max-h-[120px] no-scrollbar space-y-1">
+                                       {events.map((evt, i) => renderEventChip(evt, i))}
+                                   </div>
+                               </div>
+                           )
+                       })}
+                   </div>
+               </div>
+           </div>
+       </div>
+
+       {/* 1. Plan Visit Modal */}
+       {isModalOpen && (
+           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+               <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                   <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                       <h3 className="text-lg font-black text-slate-800 flex items-center">
+                           {isAppointmentMode ? <Clock className="w-5 h-5 mr-2 text-pink-500" /> : <Calendar className="w-5 h-5 mr-2 text-blue-500" />}
+                           {isAppointmentMode ? (editingAppointment ? 'Editar Cita' : 'Programar Cita') : 'Planear Visita'}
+                       </h3>
+                       <button onClick={() => setIsModalOpen(false)}><X className="w-6 h-6 text-slate-400 hover:text-slate-600" /></button>
+                   </div>
+                   <div className="p-6 space-y-4 overflow-y-auto">
+                        {isAppointmentMode && (
+                           <div className="bg-pink-50 p-3 rounded-xl border border-pink-100 flex items-center text-pink-700 text-xs font-bold">
+                               <Lock className="w-4 h-4 mr-2" />
+                               {editingAppointment ? 'Modo Edición - Cambio de Contacto' : 'Cita Bloqueada - Prioridad Alta'}
+                           </div>
+                        )}
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Fecha</label>
+                            <div className="relative">
+                                <Calendar className="absolute left-3 top-3.5 h-4 w-4 text-slate-400 z-10 pointer-events-none" />
+                                <DatePicker 
+                                    selected={parseDateString(planDate)} 
+                                    onChange={(date: Date) => {
+                                        if(date) {
+                                            const dateStr = toLocalDateString(date);
+                                            setPlanDate(dateStr);
+                                            setSelectedDayForPlan(date.getDate());
+                                            setCurrentDate(date);
+                                        }
+                                    }}
+                                    dateFormat="dd/MM/yyyy"
+                                    locale="es"
+                                    className="w-full pl-10 border border-slate-200 bg-white rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer uppercase"
+                                    placeholderText="DD/MM/AAAA"
+                                />
                             </div>
-                            <p className="text-[10px] text-slate-400 uppercase font-bold mt-1 flex items-center gap-1"><Stethoscope className="w-3 h-3"/>{d.specialty || 'General'} • {d.hospital || d.address}</p>
-                          </div>
-                        ))}
-                        {filteredDoctors.length === 0 && <p className="p-6 text-center text-xs font-bold text-slate-300 uppercase tracking-widest">Sin resultados</p>}
-                      </div>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Fecha del Evento</label>
-                      <DatePicker selected={planDate} onChange={(d) => d && setPlanDate(d)} dateFormat="dd/MM/yyyy" locale="es" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-black text-slate-700 outline-none shadow-inner" />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Contacto</label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                                <input 
+                                    type="text" 
+                                    placeholder="BUSCAR MÉDICO..." 
+                                    value={searchDoctorTerm} 
+                                    onChange={(e) => setSearchDoctorTerm(e.target.value.toUpperCase())}
+                                    className="w-full pl-10 border border-slate-200 bg-slate-50 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                            </div>
+                            {searchDoctorTerm && (
+                                <div className="mt-2 max-h-40 overflow-y-auto border border-slate-100 rounded-xl bg-white shadow-lg">
+                                    {filteredDoctorsForModal.map(doc => (
+                                        <div 
+                                            key={doc.id} 
+                                            onClick={() => { setSelectedDoctorId(doc.id); setSearchDoctorTerm(doc.name); }}
+                                            className={`p-3 text-xs font-bold border-b last:border-0 cursor-pointer ${selectedDoctorId === doc.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                                        >
+                                            <div className="uppercase">{doc.name}</div>
+                                            <div className="text-[10px] text-slate-400 font-normal flex items-center mt-1">
+                                                <Building className="w-3 h-3 mr-1" /> {doc.hospital || doc.address}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {filteredDoctorsForModal.length === 0 && <div className="p-4 text-xs text-slate-400 text-center">No encontrado</div>}
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Hora</label>
+                            <select 
+                                value={appointmentTime} 
+                                onChange={(e) => setAppointmentTime(e.target.value)}
+                                disabled={!!editingAppointment} // Locked if editing existing appointment
+                                className={`w-full border border-slate-200 bg-white rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none ${!!editingAppointment ? 'bg-slate-100 cursor-not-allowed text-slate-500' : ''}`}
+                            >
+                                {(isAppointmentMode ? appointmentTimeSlots : visitTimeSlots).map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Objetivo</label>
+                            <textarea 
+                                rows={2}
+                                value={planObjective}
+                                onChange={(e) => setPlanObjective(e.target.value.toUpperCase())}
+                                disabled={isAppointmentMode} // Locked if Appointment mode
+                                className={`w-full border border-slate-200 rounded-xl p-3 text-sm uppercase font-medium focus:ring-2 focus:ring-blue-500 outline-none resize-none ${isAppointmentMode ? 'bg-slate-100 cursor-not-allowed text-slate-500' : 'bg-white'}`}
+                                placeholder={isAppointmentMode ? "MOTIVO DE LA CITA..." : "OBJETIVO DE LA VISITA..."}
+                            />
+                        </div>
+                   </div>
+                   <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+                       <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+                       <button onClick={savePlan} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">Guardar</button>
+                   </div>
+               </div>
+           </div>
+       )}
+
+       {/* 2. Report/Edit Modal */}
+       {reportModalOpen && selectedVisitToReport && (
+           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+               <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                   <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                       <div>
+                           <div className="flex space-x-4 mb-2">
+                                <button onClick={() => setIsEditingPlan(false)} className={`text-sm font-black uppercase border-b-2 pb-1 transition-colors ${!isEditingPlan ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
+                                    Reportar
+                                </button>
+                                <button onClick={() => setIsEditingPlan(true)} className={`text-sm font-black uppercase border-b-2 pb-1 transition-colors ${isEditingPlan ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
+                                    Editar Plan
+                                </button>
+                           </div>
+                           <h3 className="text-base font-bold text-slate-800 uppercase flex items-center">
+                               {isEditingPlan ? 'Modificar Planificación' : 'Reportar Resultado'}
+                           </h3>
+                       </div>
+                       <div className="flex items-center gap-2">
+                            <button onClick={confirmDeleteVisit} className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors" title="Eliminar Visita">
+                                <Trash2 className="w-5 h-5" />
+                            </button>
+                            <button onClick={() => setReportModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+                                <X className="w-6 h-6" />
+                            </button>
+                       </div>
+                   </div>
+
+                   <div className="p-6 space-y-5 overflow-y-auto">
+                       {/* Common Fields */}
+                       <div className="grid grid-cols-2 gap-4">
+                           <div>
+                               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
+                               <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-slate-50" />
+                           </div>
+                           <div>
+                               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hora</label>
+                               <select value={reportTime} onChange={(e) => setReportTime(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-slate-50">
+                                   {visitTimeSlots.map(t => <option key={t} value={t}>{t}</option>)}
+                               </select>
+                           </div>
+                       </div>
+
+                       {isEditingPlan ? (
+                           <div>
+                               <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Objetivo (Editar)</label>
+                               <textarea 
+                                   rows={3}
+                                   value={editObjective}
+                                   onChange={(e) => setEditObjective(e.target.value.toUpperCase())}
+                                   className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase"
+                               />
+                           </div>
+                       ) : (
+                           <>
+                               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                   <span className="text-xs font-black text-slate-400 uppercase block mb-1">Objetivo Original</span>
+                                   <p className="text-sm font-bold text-slate-700 uppercase">{editObjective}</p>
+                               </div>
+
+                               <div>
+                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Resultado</label>
+                                   <select value={reportOutcome} onChange={(e) => setReportOutcome(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                       <option value="SEGUIMIENTO">SEGUIMIENTO</option>
+                                       <option value="COTIZACIÓN">COTIZACIÓN</option>
+                                       <option value="INTERESADO">INTERESADO</option>
+                                       <option value="PROGRAMAR PROCEDIMIENTO">PROGRAMAR PROCEDIMIENTO</option>
+                                       <option value="AUSENTE">AUSENTE</option>
+                                   </select>
+                               </div>
+
+                               <div>
+                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Reporte / Notas</label>
+                                   <textarea 
+                                       rows={3}
+                                       value={reportNote}
+                                       onChange={(e) => setReportNote(e.target.value.toUpperCase())}
+                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none"
+                                       placeholder="DETALLES DE LA VISITA..."
+                                   />
+                               </div>
+
+                               <div>
+                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Siguiente Paso</label>
+                                   <textarea 
+                                       rows={2}
+                                       value={reportFollowUp}
+                                       onChange={(e) => setReportFollowUp(e.target.value.toUpperCase())}
+                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none"
+                                       placeholder="COMPROMISOS..."
+                                   />
+                               </div>
+                               
+                               <div className="border-t border-slate-100 pt-4">
+                                   <div className="flex items-center mb-2">
+                                       <input 
+                                            type="checkbox" 
+                                            id="scheduleNext" 
+                                            checked={!!nextVisitDate} 
+                                            onChange={(e) => {
+                                                if(e.target.checked) setNextVisitDate(new Date());
+                                                else setNextVisitDate(null);
+                                            }}
+                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mr-2"
+                                       />
+                                       <label htmlFor="scheduleNext" className="text-sm font-bold text-slate-700">Agendar Próxima Visita</label>
+                                   </div>
+                                   
+                                   {nextVisitDate && (
+                                       <div className="grid grid-cols-2 gap-4 mt-2 bg-blue-50 p-3 rounded-xl">
+                                           <div>
+                                               <label className="block text-[10px] font-black text-blue-400 uppercase mb-1">Fecha</label>
+                                               <DatePicker 
+                                                    selected={nextVisitDate} 
+                                                    onChange={(date) => setNextVisitDate(date)} 
+                                                    dateFormat="dd/MM/yyyy"
+                                                    locale="es"
+                                                    className="w-full text-xs font-bold p-2 rounded border border-blue-200"
+                                               />
+                                           </div>
+                                           <div>
+                                               <label className="block text-[10px] font-black text-blue-400 uppercase mb-1">Hora</label>
+                                               <select 
+                                                    value={nextVisitTime} 
+                                                    onChange={(e) => setNextVisitTime(e.target.value)}
+                                                    className="w-full text-xs font-bold p-2 rounded border border-blue-200"
+                                               >
+                                                   {visitTimeSlots.map(t => <option key={t} value={t}>{t}</option>)}
+                                               </select>
+                                           </div>
+                                       </div>
+                                   )}
+                               </div>
+                           </>
+                       )}
+                   </div>
+
+                   <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+                       <button onClick={() => setReportModalOpen(false)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+                       {isEditingPlan ? (
+                           <button onClick={savePlanChanges} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">Guardar Cambios</button>
+                       ) : (
+                           <button onClick={saveReport} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">Finalizar Reporte</button>
+                       )}
+                   </div>
+               </div>
+           </div>
+       )}
+
+       {/* 3. Time Off Modal */}
+       {isTimeOffModalOpen && (
+           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+               <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+                   <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-orange-50">
+                       <h3 className="text-lg font-black text-orange-800 flex items-center">
+                           <Coffee className="w-5 h-5 mr-2" />
+                           Registrar Ausencia
+                       </h3>
+                       <button onClick={() => setIsTimeOffModalOpen(false)}><X className="w-6 h-6 text-orange-400 hover:text-orange-600" /></button>
+                   </div>
+                   <div className="p-6 space-y-4">
+                       <div className="grid grid-cols-2 gap-4">
+                           <div>
+                               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Desde</label>
+                               <input type="date" value={newTimeOff.startDate} onChange={(e) => setNewTimeOff({...newTimeOff, startDate: e.target.value})} className="w-full border border-slate-200 rounded-xl p-2 text-sm font-bold" />
+                           </div>
+                           <div>
+                               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hasta</label>
+                               <input type="date" value={newTimeOff.endDate} onChange={(e) => setNewTimeOff({...newTimeOff, endDate: e.target.value})} className="w-full border border-slate-200 rounded-xl p-2 text-sm font-bold" />
+                           </div>
+                       </div>
+                       
+                       <div>
+                           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Duración</label>
+                           <select value={newTimeOff.duration} onChange={(e) => setNewTimeOff({...newTimeOff, duration: e.target.value as any})} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none">
+                               <option value="TODO EL DÍA">TODO EL DÍA</option>
+                               <option value="2 A 4 HRS">2 A 4 HRS</option>
+                               <option value="6 A 8 HRS">6 A 8 HRS</option>
+                           </select>
+                       </div>
+
+                       <div>
+                           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Motivo</label>
+                           <select value={newTimeOff.reason} onChange={(e) => setNewTimeOff({...newTimeOff, reason: e.target.value as any})} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none">
+                               <option value="JUNTA">JUNTA</option>
+                               <option value="CAPACITACIÓN">CAPACITACIÓN</option>
+                               <option value="PERMISO">PERMISO</option>
+                               <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
+                           </select>
+                       </div>
+
+                       <div>
+                           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Notas</label>
+                           <textarea rows={2} value={newTimeOff.notes} onChange={(e) => setNewTimeOff({...newTimeOff, notes: e.target.value.toUpperCase()})} className="w-full border border-slate-200 rounded-xl p-3 text-sm uppercase outline-none resize-none" />
+                       </div>
+                   </div>
+                   <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+                       <button onClick={() => setIsTimeOffModalOpen(false)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+                       <button onClick={handleSaveTimeOff} className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">Guardar Ausencia</button>
+                   </div>
+               </div>
+           </div>
+       )}
+
+       {/* 4. Time Off Detail/Delete Modal */}
+       {selectedTimeOff && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-3xl shadow-xl p-6 w-full max-w-sm">
+                    <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-lg font-black text-slate-800 uppercase">{selectedTimeOff.reason}</h3>
+                        <button onClick={() => setSelectedTimeOff(null)}><X className="w-5 h-5 text-slate-400" /></button>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Horario Estimado</label>
-                      <div className="relative">
-                        <Clock className="absolute left-4 top-4 h-4 w-4 text-slate-300 pointer-events-none" />
-                        <select value={planTime} onChange={(e) => setPlanTime(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 pl-11 font-black text-slate-700 outline-none shadow-inner appearance-none">
-                          {timeSlots.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                      </div>
+                    <div className="space-y-2 mb-6 text-sm text-slate-600">
+                        <p><span className="font-bold">Periodo:</span> {selectedTimeOff.startDate} - {selectedTimeOff.endDate}</p>
+                        <p><span className="font-bold">Duración:</span> {selectedTimeOff.duration}</p>
+                        {selectedTimeOff.notes && <p className="italic bg-slate-50 p-2 rounded border border-slate-100">"{selectedTimeOff.notes}"</p>}
                     </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Motivo de Ausencia</label>
-                      <select value={absenceReason} onChange={(e) => setAbsenceReason(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-black text-slate-700 outline-none shadow-inner appearance-none">
-                        <option value="VACACIONES">VACACIONES</option>
-                        <option value="JUNTA">JUNTA DE EQUIPO</option>
-                        <option value="CAPACITACIÓN">CAPACITACIÓN</option>
-                        <option value="PERMISO">PERMISO ESPECIAL</option>
-                        <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
-                      </select>
+                    <div className="flex justify-end">
+                        <button 
+                            onClick={() => handleDeleteTimeOff(selectedTimeOff.id)}
+                            className="flex items-center text-red-500 hover:text-red-700 font-bold text-sm px-4 py-2 hover:bg-red-50 rounded-xl transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" /> Eliminar Evento
+                        </button>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Día Solicitado</label>
-                      <DatePicker selected={planDate} onChange={(d) => d && setPlanDate(d)} dateFormat="dd/MM/yyyy" locale="es" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-black text-slate-700 outline-none shadow-inner" />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Objetivo del Evento</label>
-                <textarea rows={3} value={planObjective} onChange={(e) => setPlanObjective(e.target.value.toUpperCase())} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 font-bold text-slate-700 outline-none shadow-inner uppercase text-sm resize-none" placeholder="DESCRIBA QUÉ ESPERA LOGRAR EN ESTA ACTIVIDAD..." />
-              </div>
-
-              {eventType === 'cita' && (
-                <div className="bg-pink-50 p-4 rounded-2xl border border-pink-100 flex gap-4">
-                  <div className="p-2 bg-pink-100 rounded-xl flex-shrink-0 h-fit">
-                    <AlertTriangle className="w-5 h-5 text-pink-600" />
-                  </div>
-                  <p className="text-[10px] font-bold text-pink-700 leading-relaxed uppercase">
-                    Aviso: Las CITAS programadas se consideran compromisos inamovibles. No podrán ser movidas ni eliminadas del calendario una vez confirmadas.
-                  </p>
                 </div>
-              )}
             </div>
+       )}
 
-            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-4">
-              <button onClick={() => setIsPlanModalOpen(false)} className="px-8 py-3.5 font-black text-slate-400 uppercase text-[10px] tracking-widest hover:text-slate-600 transition-all">Descartar</button>
-              <button onClick={handleSaveEvent} className={`px-10 py-3.5 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl transition-all active:scale-95 ${eventType === 'cita' ? 'bg-pink-600 text-white shadow-pink-500/20' : 'bg-blue-600 text-white shadow-blue-500/20'}`}>Confirmar Evento</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DETAIL MODAL */}
-      {isDetailModalOpen && selectedEvent && (
-        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-2xl flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn border border-white/10">
-            <div className={`p-10 ${selectedEvent.type === 'absence' ? 'bg-orange-500' : selectedEvent.data.outcome === 'CITA' ? 'bg-pink-600' : 'bg-blue-600'} text-white relative`}>
-              <div className="flex justify-between items-start">
-                <div className="p-4 bg-white/20 rounded-3xl backdrop-blur-md">
-                  {selectedEvent.type === 'absence' ? <Coffee className="w-10 h-10" /> : selectedEvent.data.outcome === 'CITA' ? <Star className="w-10 h-10 fill-white" /> : <CalendarDays className="w-10 h-10" />}
-                </div>
-                <button onClick={() => setIsDetailModalOpen(false)} className="p-3 bg-black/10 rounded-2xl text-white/80 hover:text-white hover:bg-black/20 transition-all"><X className="w-6 h-6" /></button>
-              </div>
-              <div className="mt-8">
-                 <h3 className="text-3xl font-black uppercase tracking-tighter leading-none">{selectedEvent.type === 'absence' ? selectedEvent.data.reason : selectedEvent.docName}</h3>
-                 <div className="flex items-center gap-3 mt-4">
-                    <span className="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">{selectedEvent.data.date || selectedEvent.data.startDate}</span>
-                    <span className="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><Clock className="w-3 h-3"/>{selectedEvent.data.time || 'TODO EL DÍA'}</span>
-                 </div>
-              </div>
-            </div>
-            
-            <div className="p-10 space-y-8">
-              <div className="space-y-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Objetivo del Evento</p>
-                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
-                   <p className="text-slate-800 font-bold uppercase leading-relaxed text-sm">"{selectedEvent.type === 'absence' ? (selectedEvent.data.notes || 'REGISTRO DE AUSENCIA LABORAL') : (selectedEvent.data.objective || 'VISITA DE SEGUIMIENTO ESTÁNDAR')}"</p>
-                </div>
-              </div>
-              
-              {selectedEvent.doctor && (
-                <div className="flex items-start gap-5 pt-6 border-t border-slate-50">
-                  <div className="p-3 bg-blue-50 rounded-2xl text-blue-500">
-                    <MapPin className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Ubicación / Dirección</p>
-                    <p className="text-slate-700 font-black text-xs uppercase leading-tight">{selectedEvent.doctor.hospital || 'Consultorio Privado'}</p>
-                    <p className="text-slate-400 font-medium text-[10px] uppercase mt-1">{selectedEvent.doctor.address}</p>
-                  </div>
-                </div>
-              )}
-
-              {selectedEvent.isLocked && (
-                <div className="bg-pink-50 p-4 rounded-2xl border border-pink-100 flex items-center gap-3">
-                   <Lock className="w-5 h-5 text-pink-500" />
-                   <span className="text-[10px] font-black text-pink-700 uppercase tracking-widest">Este evento está bloqueado y no puede ser movido</span>
-                </div>
-              )}
-            </div>
-
-            <div className="p-10 bg-slate-50 border-t border-slate-100 flex gap-4">
-              {(!selectedEvent.isLocked && selectedEvent.type !== 'absence') && (
-                <button 
-                  onClick={() => {
-                    if (window.confirm("¿Seguro que deseas eliminar esta visita?")) {
-                      onDeleteVisit(selectedEvent.docId, selectedEvent.data.id);
-                      setIsDetailModalOpen(false);
-                    }
-                  }}
-                  className="flex-1 py-4 bg-white border border-red-100 text-red-500 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-sm hover:bg-red-50 transition-all flex items-center justify-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" /> Eliminar
-                </button>
-              )}
-              <button onClick={() => setIsDetailModalOpen(false)} className={`flex-1 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-sm transition-all active:scale-95 ${selectedEvent.isLocked ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'}`}>Cerrar</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

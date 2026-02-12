@@ -1,6 +1,4 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
-// Explicit import from react-router-dom
 import { useLocation } from 'react-router-dom';
 import { Doctor, Visit, User, TimeOffEvent } from '../types';
 import { ChevronLeft, ChevronRight, Plus, Check, Search, Edit3, Calendar, ExternalLink, X, Lock, Clock, MapPin, Coffee, CalendarClock, CheckCircle2, User as UserIcon, Trash2, Building, Briefcase } from 'lucide-react';
@@ -219,6 +217,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
       });
   };
 
+  // Triggered when clicking a day or "Programar Cita" button
   const handleDayClick = (date: Date, asAppointment = false) => {
       setSelectedDayForPlan(date.getDate());
       setCurrentDate(new Date(date)); 
@@ -242,6 +241,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
       handleDayClick(currentDate, false);
   };
 
+  // Triggered when clicking a "CITA" chip (pink event)
   const handleEditAppointment = (docId: string, visit: Visit) => {
       const doc = doctors.find(d => d.id === docId);
       
@@ -287,8 +287,8 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
                    const updatedVisit: Visit = {
                        ...editingAppointment.visit,
                        date: dateStr,
-                       time: appointmentTime, 
-                       objective: planObjective.toUpperCase(), 
+                       time: appointmentTime, // Will be 9:00 or 16:00
+                       objective: planObjective.toUpperCase(), // Will be 'CITA DE CONTACTO'
                        outcome: 'CITA',
                        status: 'planned'
                    };
@@ -327,6 +327,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
   };
 
   const openReportModal = (docId: string, visit: Visit) => {
+      // Do not open report modal for Appointments, redirect to edit handler instead or do nothing (handled by click logic)
       if ((visit.outcome as string) === 'CITA') return; 
 
       setSelectedVisitToReport({ docId, visit });
@@ -480,8 +481,6 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
       }
   };
 
-  // --- HELPER FUNCTIONS (Moved inside component) ---
-
   const handleOpenTimeOffModal = () => {
       setNewTimeOff({
           startDate: new Date().toISOString().split('T')[0],
@@ -591,6 +590,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
 
        {/* TOOLBAR */}
        <div className="flex flex-col xl:flex-row justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-lg shadow-blue-500/5 gap-4">
+           {/* ... (Toolbar code same as before) ... */}
            <div className="text-center xl:text-left">
                <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Calendario</h1>
                <p className="text-xs md:text-sm text-slate-500 font-medium">Gestión de rutas y tiempos.</p>
@@ -641,6 +641,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
 
        {/* CALENDAR VIEW */}
        <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-white/50 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[600px]">
+           {/* ... Header Navigation ... */}
            <div className="flex justify-between items-center p-4 md:p-6 border-b border-slate-100 sticky top-0 z-20 bg-white/95 backdrop-blur">
                <button onClick={prevPeriod} className="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors text-slate-600"><ChevronLeft className="h-5 w-5" /></button>
                <h2 className="text-lg md:text-xl font-black text-slate-800 capitalize tracking-tight text-center">{getHeaderTitle()}</h2>
@@ -649,6 +650,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
 
            <div className="flex-1 overflow-auto bg-slate-50/30">
                <div className={`h-full flex flex-col ${viewMode !== 'day' ? 'min-w-[800px]' : 'min-w-full'}`}>
+                   {/* Headers for Month/Week */}
                    {viewMode !== 'day' && (
                        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
                            {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
@@ -667,6 +669,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
                            if (viewMode === 'day' && day) {
                                return (
                                    <div key={idx} className="flex-1 bg-white p-4 md:p-8 animate-fadeIn flex">
+                                       {/* Time Column */}
                                        <div className="w-24 flex-shrink-0 border-r border-slate-100 pr-4 pt-2">
                                            {visitTimeSlots.map(time => (
                                                <div key={time} className="h-24 text-xs font-bold text-slate-400 flex items-start justify-between group relative">
@@ -682,12 +685,14 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
                                            ))}
                                        </div>
 
+                                       {/* Events Column */}
                                        <div className="flex-1 pl-4 relative pt-2">
+                                            {/* Grid Lines */}
                                             {visitTimeSlots.map((time, tIdx) => (
                                                  <div 
                                                     key={`line-${time}`} 
                                                     className="absolute w-full border-t border-slate-100"
-                                                    style={{ top: `${tIdx * 6}rem` }}
+                                                    style={{ top: `${tIdx * 6}rem` }} // h-24 is 6rem
                                                  ></div>
                                             ))}
                                             
@@ -712,6 +717,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
                            
                            if (!day) return null;
 
+                           // Month/Week View Cell
                            return (
                                <div key={idx} 
                                    onDragOver={handleDragOver}
@@ -794,7 +800,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
                             <select 
                                 value={appointmentTime} 
                                 onChange={(e) => setAppointmentTime(e.target.value)}
-                                disabled={!!editingAppointment}
+                                disabled={!!editingAppointment} // Locked if editing existing appointment
                                 className={`w-full border border-slate-200 bg-white rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none ${!!editingAppointment ? 'bg-slate-100 cursor-not-allowed text-slate-500' : ''}`}
                             >
                                 {(isAppointmentMode ? appointmentTimeSlots : visitTimeSlots).map(t => <option key={t} value={t}>{t}</option>)}
@@ -807,7 +813,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
                                 rows={2}
                                 value={planObjective}
                                 onChange={(e) => setPlanObjective(e.target.value.toUpperCase())}
-                                disabled={isAppointmentMode}
+                                disabled={isAppointmentMode} // Locked if Appointment mode
                                 className={`w-full border border-slate-200 rounded-xl p-3 text-sm uppercase font-medium focus:ring-2 focus:ring-blue-500 outline-none resize-none ${isAppointmentMode ? 'bg-slate-100 cursor-not-allowed text-slate-500' : 'bg-white'}`}
                                 placeholder={isAppointmentMode ? "MOTIVO DE LA CITA..." : "OBJETIVO DE LA VISITA..."}
                             />
@@ -1028,7 +1034,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, onUpdate
        {/* 4. Time Off Detail/Delete Modal */}
        {selectedTimeOff && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-3xl shadow-xl p-6 w-full max-sm:max-w-xs max-w-sm">
+                <div className="bg-white rounded-3xl shadow-xl p-6 w-full max-w-sm">
                     <div className="flex justify-between items-start mb-4">
                         <h3 className="text-lg font-black text-slate-800 uppercase">{selectedTimeOff.reason}</h3>
                         <button onClick={() => setSelectedTimeOff(null)}><X className="w-5 h-5 text-slate-400" /></button>

@@ -1,6 +1,4 @@
-
 import React from 'react';
-// Explicit imports from react-router-dom
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, CalendarDays, User, LogOut, Shield, ChevronLeft, ChevronRight, X, Activity } from 'lucide-react';
 import { User as UserType } from '../types';

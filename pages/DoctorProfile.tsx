@@ -1,6 +1,4 @@
-
 import React, { useState, useEffect } from 'react';
-// Explicit imports from react-router-dom
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Doctor, Visit, ScheduleSlot, User } from '../types';
 import { Save, ArrowLeft, Clock, FileText, Calendar, UserCheck, ClipboardList, CheckCircle, MapPin, Trash2, Award, Brain, StickyNote, Mail, Phone, Building, Edit3, X, CreditCard, UserPlus } from 'lucide-react';

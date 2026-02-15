@@ -1,13 +1,18 @@
 
 export interface Visit {
   id: string;
-  date: string; // ISO string YYYY-MM-DD
-  time?: string; // HH:MM
-  note: string; // "Resultado de la visita"
-  objective?: string; // "Objetivo de la visita"
-  followUp?: string; // "Seguimiento"
-  outcome: 'SEGUIMIENTO' | 'COTIZACIÓN' | 'INTERESADO' | 'PROGRAMAR PROCEDIMIENTO' | 'PLANEADA' | 'CITA' | 'AUSENTE';
+  date: string; 
+  time?: string; 
+  note: string; 
+  objective?: string; 
+  followUp?: string; 
+  outcome: 'SEGUIMIENTO' | 'COTIZACIÓN' | 'INTERESADO' | 'PROGRAMAR PROCEDIMIENTO' | 'PLANEADA' | 'CITA' | 'AUSENTE' | 'COMPROMISO';
   status: 'planned' | 'completed';
+  // Nuevos campos de relevancia comercial
+  priority?: 'ALTA' | 'MEDIA' | 'BAJA';
+  materialsDelivered?: string;
+  interestLevel?: 1 | 2 | 3 | 4 | 5; // 1-5 estrellas
+  nextStepType?: 'LLAMADA' | 'WHATSAPP' | 'VISITA' | 'EMAIL';
 }
 
 export interface ScheduleSlot {
@@ -22,44 +27,29 @@ export interface TimeOffEvent {
   startDate: string;
   endDate: string;
   duration: '2 A 4 HRS' | '6 A 8 HRS' | 'TODO EL DÍA';
-  reason: 'JUNTA' | 'CAPACITACIÓN' | 'PERMISO' | 'ADMINISTRATIVO';
+  reason: 'VACACIONES' | 'INCAPACIDAD' | 'JUNTA' | 'PERMISO' | 'ADMINISTRATIVO';
   notes: string;
 }
 
 export interface Doctor {
   id: string;
-  category: 'MEDICO' | 'ADMINISTRATIVO' | 'HOSPITAL'; // New Category Field
+  category: 'MEDICO' | 'ADMINISTRATIVO' | 'HOSPITAL';
   executive: string;
   name: string;
-  specialty?: string; // Optional for Hospitals
+  specialty?: string;
   address: string;
-  
-  // New Contact Fields
   phone?: string;
   email?: string;
   floor?: string;
   officeNumber?: string;
-  
-  // Admin Specific
-  area?: string;
-
-  // Editable Fields
   hospital?: string;
   subSpecialty?: string;
   birthDate?: string;
-
-  // Ficha Medica Fields
-  cedula?: string; // NEW FIELD: Cédula Profesional
-  profile?: string; 
+  cedula?: string;
   classification?: 'A' | 'B' | 'C';
-  
-  // New Profile Fields
   socialStyle?: 'ANALÍTICO' | 'EMPRENDEDOR' | 'AFABLE' | 'EXPRESIVO' | '';
   attitudinalSegment?: 'RELACIÓN' | 'PACIENTE' | 'INNOVACIÓN' | 'EXPERIENCIA' | '';
-
-  // New Schedule Structure (Array of fixed slots)
   schedule: ScheduleSlot[];
-  
   importantNotes?: string;
   isInsuranceDoctor?: boolean; 
   visits: Visit[];
@@ -68,25 +58,17 @@ export interface Doctor {
 export interface Procedure {
   id: string;
   date: string;
-  time?: string; // New Time Field
-  hospital?: string; // New Hospital Field
+  time?: string;
+  hospital?: string;
   doctorId: string;
   doctorName: string;
   procedureType: string;
-  paymentType: 'DIRECTO' | 'ASEGURADORA'; // Payment Type Added
+  paymentType: 'DIRECTO' | 'ASEGURADORA';
   cost?: number; 
-  commission?: number; // New Commission Field
-  technician?: string; // New Technician Field
+  commission?: number;
+  technician?: string;
   notes: string;
-  status: 'scheduled' | 'performed'; // Scheduled (Red), Performed (Green)
-}
-
-export interface Stats {
-  totalDoctors: number;
-  totalVisits: number;
-  byExecutive: Record<string, number>;
-  insuranceDoctors: number;
-  classifications: { A: number; B: number; C: number; None: number };
+  status: 'scheduled' | 'performed';
 }
 
 export interface User {

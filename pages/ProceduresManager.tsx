@@ -1,8 +1,10 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Doctor, Procedure, User } from '../types';
 import { ChevronLeft, ChevronRight, Plus, Check, Search, Activity, X, Trash2, DollarSign, User as UserIcon, Building2, Clock, CreditCard } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
-import es from 'date-fns/locale/es';
+// Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
+import { es } from 'date-fns/locale';
 import { format } from 'date-fns';
 
 registerLocale('es', es);

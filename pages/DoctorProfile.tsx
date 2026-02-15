@@ -1,9 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
+// Explicit imports from react-router-dom
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Doctor, Visit, ScheduleSlot, User } from '../types';
 import { Save, ArrowLeft, Clock, FileText, Calendar, UserCheck, ClipboardList, CheckCircle, MapPin, Trash2, Award, Brain, StickyNote, Mail, Phone, Building, Edit3, X, CreditCard, UserPlus } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
-import es from 'date-fns/locale/es';
+// Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
+import { es } from 'date-fns/locale';
 
 registerLocale('es', es);
 
@@ -172,7 +175,8 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                 {isHospital && <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold uppercase">Hospital</span>}
              </div>
             <p className="mt-4 text-sm text-slate-500 flex items-center font-medium">
-                {(isMedico || isAdminCat) && (<span className="font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg uppercase tracking-wide shadow-sm border border-blue-100 mr-3">{doctor.specialty || doctor.area || 'GENERAL'}</span>)}
+                {/* Fix: Removed reference to doctor.area which does not exist on Doctor type */}
+                {(isMedico || isAdminCat) && (<span className="font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg uppercase tracking-wide shadow-sm border border-blue-100 mr-3">{doctor.specialty || 'GENERAL'}</span>)}
                 <span className="text-slate-600 flex items-center uppercase"><MapPin className="w-4 h-4 mr-1 text-slate-400" /> {doctor.address}</span>
             </p>
           </div>

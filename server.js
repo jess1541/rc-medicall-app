@@ -1,25 +1,47 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
+
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Cargar variables de entorno
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
-
-// Middleware
-app.use(express.json({ limit: '50mb' })); // Increased limit for large data syncs
+// Límite aumentado para la carga inicial masiva
+app.use(express.json({ limit: '100mb' }));
 app.use(cors());
 
-// --- Database Connection ---
-// REQUISITO: Tener MongoDB corriendo localmente o usar una URL de MongoDB Atlas
-const MONGO_URI = 'mongodb://localhost:27017/crm_medicall'; 
+// Headers para evitar caché excesivo en la API
+app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    next();
+});
 
-mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB Conectado: Base de datos lista para sincronizar."))
-  .catch(err => console.error("❌ Error conectando a MongoDB:", err));
+// --- MONGODB CONNECTION ---
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/rc_medicall_db';
 
-// --- Schemas & Models ---
+const connectDB = async () => {
+    try {
+        await mongoose.connect(MONGO_URI);
+        console.log("✅ MongoDB Conectado Exitósamente");
+    } catch (err) {
+        console.error("❌ Error de conexión MongoDB:", err.message);
+        // Reintentar conexión en 5 segundos
+        setTimeout(connectDB, 5000);
+    }
+};
 
-// Flexible Schema definitions to match TypeScript interfaces
-const visitSchema = new mongoose.Schema({
+connectDB();
+
+// --- MONGOOSE SCHEMAS ---
+
+const VisitSchema = new mongoose.Schema({
     id: String,
     date: String,
     time: String,
@@ -27,43 +49,55 @@ const visitSchema = new mongoose.Schema({
     objective: String,
     followUp: String,
     outcome: String,
-    status: String
-}, { _id: false }); // Disable auto _id for subdocuments to keep original IDs
+    status: String,
+    priority: String,
+    materialsDelivered: String,
+    interestLevel: Number,
+    nextStepType: String
+}, { _id: false });
 
-const scheduleSchema = new mongoose.Schema({
+const ScheduleSlotSchema = new mongoose.Schema({
     day: String,
     time: String,
     active: Boolean
 }, { _id: false });
 
-const doctorSchema = new mongoose.Schema({
-    id: { type: String, unique: true, required: true },
-    category: { type: String, default: 'MEDICO' }, // MEDICO, ADMINISTRATIVO, HOSPITAL
+const DoctorSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    category: { type: String, default: 'MEDICO' },
     executive: String,
     name: String,
     specialty: String,
     subSpecialty: String,
     address: String,
     hospital: String,
-    area: String,
+    officeNumber: String,
+    floor: String,
     phone: String,
     email: String,
-    floor: String,
-    officeNumber: String,
-    birthDate: String,
     cedula: String,
-    profile: String,
-    classification: String,
+    birthDate: String,
+    isInsuranceDoctor: { type: Boolean, default: false },
+    classification: { type: String, default: 'C' },
     socialStyle: String,
     attitudinalSegment: String,
     importantNotes: String,
-    isInsuranceDoctor: Boolean,
-    visits: [visitSchema],
-    schedule: [scheduleSchema]
-}, { minimize: false, strict: false }); // strict: false allows saving fields not explicitly defined if needed
+    visits: [VisitSchema],
+    schedule: [ScheduleSlotSchema],
+}, { timestamps: true });
 
-const procedureSchema = new mongoose.Schema({
-    id: { type: String, unique: true, required: true },
+const TimeOffSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    executive: String,
+    startDate: String,
+    endDate: String,
+    duration: String,
+    reason: String,
+    notes: String
+}, { timestamps: true });
+
+const ProcedureSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
     date: String,
     time: String,
     hospital: String,
@@ -76,111 +110,133 @@ const procedureSchema = new mongoose.Schema({
     technician: String,
     notes: String,
     status: String
-});
+}, { timestamps: true });
 
-const Doctor = mongoose.model('Doctor', doctorSchema);
-const Procedure = mongoose.model('Procedure', procedureSchema);
+// --- MODELS ---
+const Doctor = mongoose.model('Doctor', DoctorSchema);
+const TimeOff = mongoose.model('TimeOff', TimeOffSchema);
+const Procedure = mongoose.model('Procedure', ProcedureSchema);
 
-// --- API Routes ---
+// --- API ROUTES ---
 
-// --- DOCTORS / HOSPITALS / ADMINS ---
-
-// GET: Obtener todos los registros
+// 1. DOCTORS
 app.get('/api/doctors', async (req, res) => {
     try {
-        const doctors = await Doctor.find();
+        const doctors = await Doctor.find({}).sort({ name: 1 }).lean();
         res.json(doctors);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// POST: Crear o Actualizar (Upsert) - Guarda automáticamente cambios desde cualquier dispositivo
 app.post('/api/doctors', async (req, res) => {
-    const data = req.body;
     try {
-        // findOneAndUpdate with upsert: true handles both creation and updates
-        const result = await Doctor.findOneAndUpdate(
-            { id: data.id },
-            data,
-            { upsert: true, new: true, setDefaultsOnInsert: true }
+        const d = req.body;
+        const updatedDoctor = await Doctor.findOneAndUpdate(
+            { id: d.id },
+            d,
+            { new: true, upsert: true, setDefaultsOnInsert: true }
         );
-        res.json(result);
+        res.json({ success: true, data: updatedDoctor });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// DELETE: Eliminar un registro
-app.delete('/api/doctors/:id', async (req, res) => {
-    const { id } = req.params;
+app.post('/api/doctors/bulk', async (req, res) => {
     try {
-        const result = await Doctor.deleteOne({ id: id });
-        if (result.deletedCount > 0) {
-            res.status(200).json({ success: true, message: "Registro eliminado." });
-        } else {
-            res.status(404).json({ success: false, message: "No encontrado." });
+        const doctors = req.body;
+        if (!Array.isArray(doctors) || doctors.length === 0) {
+            return res.status(400).json({ error: "No data provided" });
         }
+        const operations = doctors.map(doc => ({
+            updateOne: {
+                filter: { id: doc.id },
+                update: { $set: doc },
+                upsert: true
+            }
+        }));
+        const result = await Doctor.bulkWrite(operations);
+        res.json({ success: true, count: result.upsertedCount + result.modifiedCount });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// DELETE VISIT: Eliminar una visita específica dentro de un doctor
-app.delete('/api/doctors/:doctorId/visits/:visitId', async (req, res) => {
-    const { doctorId, visitId } = req.params;
+// 2. TIMEOFF
+app.get('/api/timeoff', async (req, res) => {
     try {
-        const result = await Doctor.updateOne(
-            { id: doctorId }, 
-            { $pull: { visits: { id: visitId } } }
-        );
-        res.json({ success: true, result });
+        const events = await TimeOff.find({}).sort({ startDate: -1 }).lean();
+        res.json(events);
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// --- PROCEDURES ---
+app.post('/api/timeoff', async (req, res) => {
+    try {
+        const t = req.body;
+        await TimeOff.findOneAndUpdate(
+            { id: t.id },
+            t,
+            { new: true, upsert: true }
+        );
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
-// GET: Obtener todos los procedimientos
+app.delete('/api/timeoff/:id', async (req, res) => {
+    try {
+        await TimeOff.deleteOne({ id: req.params.id });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 3. PROCEDURES
 app.get('/api/procedures', async (req, res) => {
     try {
-        const procedures = await Procedure.find();
-        res.json(procedures);
+        const procs = await Procedure.find({}).sort({ date: -1 }).lean();
+        res.json(procs);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// POST: Crear o Actualizar Procedimiento
 app.post('/api/procedures', async (req, res) => {
-    const data = req.body;
     try {
-        const result = await Procedure.findOneAndUpdate(
-            { id: data.id },
-            data,
-            { upsert: true, new: true, setDefaultsOnInsert: true }
+        const p = req.body;
+        await Procedure.findOneAndUpdate(
+            { id: p.id },
+            p,
+            { new: true, upsert: true }
         );
-        res.json(result);
+        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// DELETE: Eliminar Procedimiento
 app.delete('/api/procedures/:id', async (req, res) => {
-    const { id } = req.params;
     try {
-        const result = await Procedure.deleteOne({ id: id });
-        res.json({ success: true, result });
+        await Procedure.deleteOne({ id: req.params.id });
+        res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// Port configuration
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => { // Listen on 0.0.0.0 to accept connections from other devices in LAN
-    console.log(`🚀 Servidor API corriendo en puerto ${PORT}`);
-    console.log(`📱 Para acceder desde celular, usa la IP de tu PC: http://TU_IP:${PORT}`);
+// --- STATIC FILES (Frontend) ---
+app.use(express.static(join(__dirname, 'dist')));
+
+app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+        res.sendFile(join(__dirname, 'dist', 'index.html'));
+    }
 });
+
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Elite CRM (Mongo Edition) Online Port ${PORT}`));

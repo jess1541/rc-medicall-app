@@ -1,501 +1,363 @@
-import React, { useMemo, useState, useRef } from 'react';
-import { Doctor, User, Procedure, TimeOffEvent } from '../types';
-import { Users, ShieldCheck, Download, Calendar, ArrowRight, CheckCircle2, TrendingUp, Filter, Award, Activity, DollarSign, Coins, X, MapPin, Target, Briefcase, PieChart, Database, Upload, AlertTriangle, Save, FileSpreadsheet } from 'lucide-react';
+
+import React, { useMemo, useState } from 'react';
+import { Doctor, User, Procedure, Visit } from '../types';
+import { 
+  Users, ShieldCheck, CheckCircle2, TrendingUp, Filter, 
+  Award, Activity, DollarSign, Target, Calendar, 
+  ArrowUpRight, Clock, MapPin, AlertCircle, 
+  BarChart3, PieChart, Zap, ChevronRight, Stethoscope
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
 
 interface DashboardProps {
   doctors: Doctor[];
   user: User;
   procedures: Procedure[];
-  onImportBackup?: (data: any) => void;
+  isOnline: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, onImportBackup }) => {
+const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnline }) => {
+  const navigate = useNavigate();
   const [filterExecutive, setFilterExecutive] = useState<string | null>(user.role === 'executive' ? user.name : null);
-  const [activeModal, setActiveModal] = useState<'planned' | 'completed' | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const executives = [
-      { name: 'LUIS', color: 'bg-blue-500', gradient: 'from-blue-500 to-blue-700', text: 'text-blue-600', bgLight: 'bg-blue-50' },
-      { name: 'ORALIA', color: 'bg-pink-500', gradient: 'from-pink-500 to-rose-600', text: 'text-pink-600', bgLight: 'bg-pink-50' },
-      { name: 'ANGEL', color: 'bg-purple-500', gradient: 'from-purple-500 to-indigo-600', text: 'text-purple-600', bgLight: 'bg-purple-50' },
-      { name: 'TALINA', color: 'bg-teal-500', gradient: 'from-emerald-500 to-teal-600', text: 'text-teal-600', bgLight: 'bg-teal-50' }
-  ];
 
   const filteredDoctors = useMemo(() => {
       return filterExecutive ? doctors.filter(d => d.executive === filterExecutive) : doctors;
   }, [doctors, filterExecutive]);
 
   const stats = useMemo(() => {
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
-    let plannedVisits = 0;
-    let completedVisits = 0;
-    const classifications = { A: 0, B: 0, C: 0, None: 0 };
+    let completedMonth = 0;
+    let plannedMonth = 0;
+    let completedWeek = 0;
+    let plannedWeek = 0;
+    let highPriorityPending = 0;
+    
+    const outcomes = {
+        INTERESADO: 0,
+        COTIZACIÓN: 0,
+        'PROGRAMAR PROCEDIMIENTO': 0,
+        SEGUIMIENTO: 0
+    };
+
+    const classifications = { A: 0, B: 0, C: 0 };
+    const upcomingVisits: any[] = [];
+    const recentActivity: any[] = [];
 
     filteredDoctors.forEach(doc => {
-        doc.visits.forEach(v => {
-            const vDate = new Date(v.date + 'T00:00:00');
-            if (vDate.getMonth() === currentMonth && vDate.getFullYear() === currentYear) {
-                if (v.status === 'completed') completedVisits++;
-                if (v.status === 'planned' && v.outcome !== 'CITA') plannedVisits++;
-            }
-        });
+        // Stats por clasificación
         if (doc.classification === 'A') classifications.A++;
         else if (doc.classification === 'B') classifications.B++;
-        else if (doc.classification === 'C') classifications.C++;
-        else classifications.None++;
-    });
+        else classifications.C++;
 
-    const teamBreakdown = executives.map(exec => {
-        const execDocs = doctors.filter(d => d.executive === exec.name);
-        let execPlanned = 0;
-        let execCompleted = 0;
-        execDocs.forEach(d => {
-            d.visits.forEach(v => {
-                const vDate = new Date(v.date + 'T00:00:00');
-                if (vDate.getMonth() === currentMonth && vDate.getFullYear() === currentYear) {
-                    if (v.status === 'completed') execCompleted++;
-                    if (v.status === 'planned' && v.outcome !== 'CITA') execPlanned++;
-                }
-            });
+        (doc.visits || []).forEach(v => {
+            const vDate = parseISO(v.date);
+            const isThisMonth = vDate.getMonth() === currentMonth && vDate.getFullYear() === currentYear;
+            const isThisWeek = isWithinInterval(vDate, { start: weekStart, end: weekEnd });
+
+            if (isThisMonth) {
+                if (v.status === 'completed') completedMonth++;
+                else plannedMonth++;
+            }
+
+            if (isThisWeek) {
+                if (v.status === 'completed') completedWeek++;
+                else plannedWeek++;
+            }
+
+            if (v.status === 'planned' && v.priority === 'ALTA') {
+                highPriorityPending++;
+            }
+
+            // Pipeline de los últimos resultados reportados
+            if (v.status === 'completed' && outcomes.hasOwnProperty(v.outcome)) {
+                (outcomes as any)[v.outcome]++;
+            }
+
+            // Agrupar para listas
+            if (v.status === 'planned' && vDate >= now) {
+                upcomingVisits.push({ ...v, docName: doc.name, docId: doc.id, hospital: doc.hospital });
+            }
+            if (v.status === 'completed') {
+                recentActivity.push({ ...v, docName: doc.name, docId: doc.id });
+            }
         });
-
-        const execProcs = procedures.filter(p => {
-            const pDate = new Date(p.date + 'T00:00:00');
-            return p.status === 'performed' && 
-                   pDate.getMonth() === currentMonth && 
-                   pDate.getFullYear() === currentYear &&
-                   execDocs.some(d => d.id === p.doctorId);
-        });
-
-        return {
-            ...exec,
-            doctors: execDocs.length,
-            planned: execPlanned,
-            completed: execCompleted,
-            revenue: execProcs.reduce((acc, curr) => acc + (curr.cost || 0), 0),
-            commission: execProcs.reduce((acc, curr) => acc + (curr.commission || 0), 0),
-            performance: (execPlanned + execCompleted) > 0 ? Math.round((execCompleted / (execPlanned + execCompleted)) * 100) : 0
-        };
     });
 
     const relevantProcedures = procedures.filter(p => {
-        const pDate = new Date(p.date + 'T00:00:00');
+        const pDate = parseISO(p.date);
         const belongs = filterExecutive ? filteredDoctors.some(d => d.id === p.doctorId) : true;
         return p.status === 'performed' && pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear && belongs;
     });
 
     return { 
         totalDoctors: filteredDoctors.length, 
-        completedVisits, 
+        completedMonth,
+        plannedMonth,
+        completedWeek,
+        plannedWeek,
+        highPriorityPending,
+        outcomes,
         totalRevenue: relevantProcedures.reduce((a, c) => a + (c.cost || 0), 0),
-        totalCommission: relevantProcedures.reduce((a, c) => a + (c.commission || 0), 0),
-        performance: (plannedVisits + completedVisits) > 0 ? Math.round((completedVisits / (plannedVisits + completedVisits)) * 100) : 0,
-        classifications, 
-        teamBreakdown 
+        performance: (plannedMonth + completedMonth) > 0 ? Math.round((completedMonth / (plannedMonth + completedMonth)) * 100) : 0,
+        classifications,
+        upcomingVisits: upcomingVisits.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5),
+        recentActivity: recentActivity.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
     };
-  }, [filteredDoctors, doctors, procedures, filterExecutive]);
-
-  // --- EXPORT LOGIC ---
-  const downloadCSV = (content: string, fileName: string) => {
-      // Add BOM for Excel UTF-8 compatibility
-      const blob = new Blob(["\uFEFF" + content], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-  };
-
-  const exportVisits = () => {
-      const headers = ['FECHA', 'HORA', 'EJECUTIVO', 'MÉDICO/HOSPITAL', 'ESPECIALIDAD', 'OBJETIVO', 'RESULTADO', 'NOTA', 'SEGUIMIENTO', 'ESTADO'];
-      
-      const rows = doctors.flatMap(doc => {
-          return doc.visits.map(v => {
-              // Filtrar por ejecutivo si está activo el filtro
-              if (filterExecutive && doc.executive !== filterExecutive) return null;
-              
-              return [
-                  v.date,
-                  v.time || '',
-                  doc.executive,
-                  `"${doc.name}"`, // Quote to handle commas in names
-                  doc.specialty || doc.category,
-                  `"${v.objective || ''}"`,
-                  v.outcome,
-                  `"${v.note || ''}"`,
-                  `"${v.followUp || ''}"`,
-                  v.status === 'completed' ? 'REALIZADA' : 'PLANEADA'
-              ].join(',');
-          }).filter(Boolean);
-      });
-
-      const csvContent = [headers.join(','), ...rows].join('\n');
-      downloadCSV(csvContent, `REPORTE_VISITAS_${new Date().toISOString().split('T')[0]}.csv`);
-  };
-
-  const exportProcedures = () => {
-      const headers = ['FECHA', 'HORA', 'HOSPITAL', 'MÉDICO', 'EJECUTIVO', 'PROCEDIMIENTO', 'TÉCNICO', 'PAGO', 'COSTO', 'COMISIÓN', 'ESTADO', 'NOTAS'];
-      
-      const rows = procedures.map(proc => {
-          const doc = doctors.find(d => d.id === proc.doctorId);
-          const executive = doc ? doc.executive : 'DESCONOCIDO';
-          
-          if (filterExecutive && executive !== filterExecutive) return null;
-
-          return [
-              proc.date,
-              proc.time || '',
-              `"${proc.hospital || ''}"`,
-              `"${proc.doctorName}"`,
-              executive,
-              `"${proc.procedureType}"`,
-              `"${proc.technician || ''}"`,
-              proc.paymentType,
-              proc.cost || 0,
-              proc.commission || 0,
-              proc.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO',
-              `"${proc.notes || ''}"`
-          ].join(',');
-      }).filter(Boolean);
-
-      const csvContent = [headers.join(','), ...rows].join('\n');
-      downloadCSV(csvContent, `REPORTE_PROCEDIMIENTOS_${new Date().toISOString().split('T')[0]}.csv`);
-  };
-
-  const exportTimeOff = () => {
-      const storedTimeOff = localStorage.getItem('rc_medicall_timeoff_v5');
-      const timeOffData: TimeOffEvent[] = storedTimeOff ? JSON.parse(storedTimeOff) : [];
-      
-      const headers = ['EJECUTIVO', 'INICIO', 'FIN', 'DURACIÓN', 'MOTIVO', 'NOTAS'];
-      const rows = timeOffData.map(t => {
-          if (filterExecutive && t.executive !== filterExecutive) return null;
-          return [
-              t.executive,
-              t.startDate,
-              t.endDate,
-              t.duration,
-              t.reason,
-              `"${t.notes || ''}"`
-          ].join(',');
-      }).filter(Boolean);
-
-      const csvContent = [headers.join(','), ...rows].join('\n');
-      downloadCSV(csvContent, `REPORTE_AUSENCIAS_${new Date().toISOString().split('T')[0]}.csv`);
-  };
-
-  // --- BACKUP LOGIC ---
-  const handleExportBackup = () => {
-      const backup = {
-          doctors,
-          procedures,
-          timeOff: JSON.parse(localStorage.getItem('rc_medicall_timeoff_v5') || '[]'),
-          exportedAt: new Date().toISOString(),
-          version: '5.0'
-      };
-      
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `RESPALDO_CRM_RC_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-  };
-
-  const handleImportClick = () => fileInputRef.current?.click();
-
-  const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-          try {
-              const data = JSON.parse(event.target?.result as string);
-              if (data.doctors && Array.isArray(data.doctors)) {
-                  if (window.confirm("¿Seguro que deseas restaurar este respaldo? Se sobreescribirá la información actual.")) {
-                      onImportBackup?.(data);
-                  }
-              } else {
-                  alert("Formato de archivo no válido.");
-              }
-          } catch (error) {
-              alert("Error al procesar el archivo JSON.");
-          }
-      };
-      reader.readAsText(file);
-  };
+  }, [filteredDoctors, procedures, filterExecutive]);
 
   const currentMonthName = new Date().toLocaleDateString('es-ES', { month: 'long' });
 
   return (
-    <div className="space-y-8 pb-10">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-white/80 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-xl border border-white/50 relative overflow-hidden">
-          <div className="relative z-10">
-            <h1 className="text-4xl font-black text-slate-800 tracking-tighter mb-2">
-                Hola, <span className="text-blue-600">{user.name}</span>
-            </h1>
-            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                {user.role === 'admin' ? 'PANEL DE CONTROL PROTEGIDO' : 'MI PANEL DE RESULTADOS'}
-            </p>
+    <div className="space-y-8 pb-16 animate-fadeIn">
+      {/* HERO SECTION */}
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
+          <div className="flex items-center gap-6">
+            <div className="p-5 bg-blue-600 rounded-[2rem] text-white shadow-2xl shadow-blue-200">
+                <Zap className="w-10 h-10" />
+            </div>
+            <div>
+                <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+                    Dashboard <span className="text-blue-600">Estratégico</span>
+                </h1>
+                <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px] mt-1">
+                    {user.role === 'admin' ? `Control Global • ${filterExecutive || 'Todo el Equipo'}` : `Mis KPIs • ${user.name}`}
+                </p>
+            </div>
           </div>
           
-          <div className="flex gap-3">
-              {user.role === 'admin' && filterExecutive && (
-                  <button onClick={() => setFilterExecutive(null)} className="px-5 py-2.5 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 font-black text-xs uppercase tracking-widest transition shadow-lg">
-                      <Filter className="w-4 h-4 inline mr-2" /> Vista Global
-                  </button>
-              )}
-              {user.role === 'admin' && (
-                  <div className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-2xl flex items-center text-[10px] font-black uppercase tracking-widest border border-emerald-200">
-                      <Save className="w-3 h-3 mr-2" /> Datos Protegidos
-                  </div>
-              )}
+          <div className="flex items-center gap-4">
+            <div className={`px-4 py-2 rounded-2xl flex items-center gap-2 border font-black text-[10px] uppercase tracking-widest ${isOnline ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
+                {isOnline ? 'Sincronizado' : 'Modo Local'}
+            </div>
+            {user.role === 'admin' && filterExecutive && (
+                <button onClick={() => setFilterExecutive(null)} className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-all">
+                    <Filter className="w-5 h-5" />
+                </button>
+            )}
           </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* METRICAS PRINCIPALES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-[2rem] shadow-lg border border-slate-100 group hover:-translate-y-1 transition-all">
-          <div className="flex justify-between items-start mb-4">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Directorio</p>
-            <Users className="w-5 h-5 text-blue-500" />
-          </div>
-          <p className="text-4xl font-black text-slate-800">{stats.totalDoctors}</p>
-          <p className="text-[10px] font-bold text-emerald-500 mt-2 flex items-center"><TrendingUp className="w-3 h-3 mr-1" /> Médicos Activos</p>
-        </div>
-        
-        <div onClick={() => setActiveModal('completed')} className="cursor-pointer bg-indigo-600 p-6 rounded-[2rem] shadow-xl text-white group hover:-translate-y-1 transition-all">
-          <div className="flex justify-between items-start mb-4">
-            <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Visitas {currentMonthName}</p>
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <p className="text-4xl font-black">{stats.completedVisits}</p>
-          <div className="w-full bg-white/20 h-1 rounded-full mt-4 overflow-hidden">
-            <div className="bg-white h-full" style={{ width: `${stats.performance}%` }}></div>
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-lg border border-slate-100 relative overflow-hidden group">
+          <Users className="absolute -right-4 -bottom-4 w-32 h-32 text-slate-50 group-hover:text-blue-50 transition-colors" />
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Cartera Total</p>
+          <div className="flex items-end gap-2 relative z-10">
+              <span className="text-5xl font-black text-slate-900">{stats.totalDoctors}</span>
+              <span className="text-xs font-bold text-blue-600 mb-2 uppercase">Contactos</span>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-[2rem] shadow-lg border border-slate-100 group hover:-translate-y-1 transition-all">
-          <div className="flex justify-between items-start mb-4">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ventas Mes</p>
-            <DollarSign className="w-5 h-5 text-amber-500" />
+        <div className="bg-blue-600 p-8 rounded-[2.5rem] shadow-2xl shadow-blue-200 text-white relative overflow-hidden">
+          <TrendingUp className="absolute -right-4 -bottom-4 w-32 h-32 text-white/10" />
+          <p className="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-4 relative z-10">Efectividad {currentMonthName}</p>
+          <div className="flex items-end gap-2 relative z-10">
+              <span className="text-5xl font-black">{stats.performance}%</span>
+              <div className="mb-2">
+                  <p className="text-[10px] font-bold uppercase leading-none">{stats.completedMonth} Visitas</p>
+                  <p className="text-[10px] font-bold uppercase opacity-60">Logradas</p>
+              </div>
           </div>
-          <p className="text-3xl font-black text-slate-800">${stats.totalRevenue.toLocaleString()}</p>
-          <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase">Realizadas</p>
         </div>
 
-        <div className="bg-white p-6 rounded-[2rem] shadow-lg border border-slate-100 group hover:-translate-y-1 transition-all">
-          <div className="flex justify-between items-start mb-4">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comisiones</p>
-            <Coins className="w-5 h-5 text-cyan-500" />
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-lg border border-slate-100 group">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Ventas del Mes</p>
+          <div className="flex items-center gap-3">
+              <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl"><DollarSign className="w-6 h-6" /></div>
+              <span className="text-3xl font-black text-slate-900">${stats.totalRevenue.toLocaleString()}</span>
           </div>
-          <p className="text-3xl font-black text-slate-800">${stats.totalCommission.toLocaleString()}</p>
-          <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase">Acumulado Equipo</p>
+          <p className="text-[9px] font-bold text-emerald-600 uppercase mt-4 flex items-center gap-1">
+              <ArrowUpRight className="w-3 h-3" /> Facturación Procedimientos
+          </p>
+        </div>
+
+        <div className="bg-slate-900 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
+          <AlertCircle className="absolute -right-4 -bottom-4 w-32 h-32 text-white/5" />
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 relative z-10">Prioridad Crítica</p>
+          <div className="flex items-end gap-3 relative z-10">
+              <span className="text-5xl font-black text-rose-500">{stats.highPriorityPending}</span>
+              <div className="mb-2">
+                  <p className="text-[10px] font-bold uppercase text-slate-300">Pendientes</p>
+                  <p className="text-[10px] font-bold uppercase text-rose-400">Urgentes</p>
+              </div>
+          </div>
         </div>
       </div>
 
-      {/* REPORTING & BACKUP CENTER */}
-      {user.role === 'admin' && (
-          <div className="bg-gradient-to-r from-slate-900 to-blue-900 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
-              
-              <div className="relative z-10 space-y-8">
-                  {/* Title Section */}
-                  <div className="flex items-center gap-5">
-                      <div className="p-4 bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 text-blue-400">
-                          <FileSpreadsheet className="w-8 h-8" />
-                      </div>
-                      <div>
-                          <h3 className="text-xl font-black text-white">Centro de Reportes y Datos</h3>
-                          <p className="text-sm text-blue-200 font-medium">Exportación de datos para análisis en Excel y copias de seguridad.</p>
-                      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* COLUMNA IZQUIERDA: PIPELINE Y CARTERA */}
+          <div className="lg:col-span-2 space-y-8">
+              {/* PIPELINE COMERCIAL */}
+              <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
+                  <div className="flex justify-between items-center mb-8">
+                      <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                          <BarChart3 className="w-6 h-6 text-blue-600" /> Pipeline de Conversión
+                      </h3>
+                      <span className="text-[10px] font-black text-slate-400 uppercase">Estado actual de prospectos</span>
                   </div>
                   
-                  {/* Action Buttons */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                      {/* Excel Exports */}
-                      <button 
-                        onClick={exportVisits}
-                        className="flex items-center justify-center px-4 py-3 bg-white/10 hover:bg-emerald-600 hover:border-emerald-500 backdrop-blur-md text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-white/20 transition-all active:scale-95"
-                      >
-                          <FileSpreadsheet className="w-4 h-4 mr-2" /> Reporte Visitas
-                      </button>
-                      <button 
-                        onClick={exportProcedures}
-                        className="flex items-center justify-center px-4 py-3 bg-white/10 hover:bg-emerald-600 hover:border-emerald-500 backdrop-blur-md text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-white/20 transition-all active:scale-95"
-                      >
-                          <FileSpreadsheet className="w-4 h-4 mr-2" /> Reporte Proc.
-                      </button>
-                      <button 
-                        onClick={exportTimeOff}
-                        className="flex items-center justify-center px-4 py-3 bg-white/10 hover:bg-orange-500 hover:border-orange-400 backdrop-blur-md text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-white/20 transition-all active:scale-95"
-                      >
-                          <FileSpreadsheet className="w-4 h-4 mr-2" /> Reporte Ausencias
-                      </button>
-
-                      {/* System Backups */}
-                      <button 
-                        onClick={handleExportBackup}
-                        className="flex items-center justify-center px-4 py-3 bg-white/5 hover:bg-white/20 backdrop-blur-md text-slate-300 hover:text-white rounded-2xl font-black text-[10px] uppercase tracking-widest border border-white/10 transition-all active:scale-95"
-                      >
-                          <Download className="w-4 h-4 mr-2" /> Respaldo Completo
-                      </button>
-                      
-                      <div className="relative">
-                        <button 
-                            onClick={handleImportClick}
-                            className="w-full h-full flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-600/30 transition-all active:scale-95"
-                        >
-                            <Upload className="w-4 h-4 mr-2" /> Restaurar
-                        </button>
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            onChange={handleFileImport} 
-                            accept=".json" 
-                            className="hidden" 
-                        />
-                      </div>
-                  </div>
-              </div>
-              
-              <div className="mt-6 flex items-center gap-2 text-blue-300/60 border-t border-white/10 pt-4">
-                  <AlertTriangle className="w-3 h-3" />
-                  <p className="text-[10px] font-bold uppercase tracking-wider">Nota: Los reportes se generan en formato .CSV compatibles con Excel.</p>
-              </div>
-          </div>
-      )}
-
-      {/* ADMIN CONTROL TABLE (Rest of Dashboard) */}
-      {user.role === 'admin' && !filterExecutive && (
-          <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
-              <div className="p-8 border-b border-slate-50 flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl"><Target className="w-6 h-6" /></div>
-                  <div>
-                      <h3 className="text-xl font-black text-slate-800">Auditoría de Ejecutivos</h3>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Control de desempeño mensual</p>
-                  </div>
-              </div>
-              <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                      <thead className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          <tr>
-                              <th className="px-8 py-4">Ejecutivo</th>
-                              <th className="px-6 py-4">Médicos</th>
-                              <th className="px-6 py-4">Planeadas</th>
-                              <th className="px-6 py-4">Realizadas</th>
-                              <th className="px-6 py-4">Efectividad</th>
-                              <th className="px-6 py-4">Venta</th>
-                              <th className="px-8 py-4 text-right">Detalle</th>
-                          </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                          {stats.teamBreakdown.map(exec => (
-                              <tr key={exec.name} className="hover:bg-slate-50/50 transition-colors">
-                                  <td className="px-8 py-5">
-                                      <div className="flex items-center gap-3">
-                                          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${exec.gradient} flex items-center justify-center text-white font-black text-[10px]`}>{exec.name.substring(0,2)}</div>
-                                          <span className="font-bold text-slate-800">{exec.name}</span>
-                                      </div>
-                                  </td>
-                                  <td className="px-6 py-5 font-medium text-slate-600">{exec.doctors}</td>
-                                  <td className="px-6 py-5 font-bold text-indigo-600">{exec.planned}</td>
-                                  <td className="px-6 py-5 font-bold text-emerald-600">{exec.completed}</td>
-                                  <td className="px-6 py-5">
-                                      <div className="flex items-center gap-2">
-                                          <div className="w-12 bg-slate-100 h-1 rounded-full overflow-hidden">
-                                              <div className="bg-indigo-500 h-full" style={{ width: `${exec.performance}%` }}></div>
-                                          </div>
-                                          <span className="text-[10px] font-black text-slate-500">{exec.performance}%</span>
-                                      </div>
-                                  </td>
-                                  <td className="px-6 py-5 font-black text-slate-800">${exec.revenue.toLocaleString()}</td>
-                                  <td className="px-8 py-5 text-right">
-                                      <button onClick={() => setFilterExecutive(exec.name)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                                          <ArrowRight className="w-4 h-4" />
-                                      </button>
-                                  </td>
-                              </tr>
-                          ))}
-                      </tbody>
-                  </table>
-              </div>
-          </div>
-      )}
-
-      {/* FEED DE ACTIVIDAD GLOBAL */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden flex flex-col h-[600px]">
-              <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-                  <h3 className="text-xl font-black text-slate-800">Actividad del Equipo</h3>
-                  <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-3 py-1 rounded-full uppercase">Historial Reciente</span>
-              </div>
-              <div className="flex-1 overflow-y-auto no-scrollbar p-0">
-                  <div className="divide-y divide-slate-50">
-                    {filteredDoctors
-                        .flatMap(d => d.visits.map(v => ({...v, doctorName: d.name, executive: d.executive})))
-                        .filter(v => v.status === 'completed')
-                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                        .slice(0, 30)
-                        .map((visit, idx) => (
-                            <div key={idx} className="p-6 hover:bg-slate-50/50 transition-colors">
-                                <div className="flex justify-between items-start mb-3">
-                                    <div>
-                                        <p className="text-sm font-black text-slate-800 uppercase line-clamp-1">{visit.doctorName}</p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[9px] font-black text-blue-500 uppercase">Ejecutivo: {visit.executive}</span>
-                                            <span className="text-[9px] font-bold text-slate-400">{visit.date}</span>
-                                        </div>
-                                    </div>
-                                    <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${visit.outcome === 'INTERESADO' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{visit.outcome}</span>
-                                </div>
-                                <div className="bg-slate-50 p-4 rounded-2xl text-xs text-slate-600 italic border border-slate-100 uppercase">"{visit.note}"</div>
-                            </div>
-                        ))}
-                  </div>
-              </div>
-          </div>
-
-          <div className="lg:col-span-1 space-y-8">
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100">
-                  <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2"><Award className="w-5 h-5 text-purple-500" /> Clasificación</h3>
-                  <div className="space-y-4">
-                      <div className="flex justify-between items-center p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                          <span className="text-xs font-black text-emerald-700 uppercase">VIP (A)</span>
-                          <span className="text-2xl font-black text-emerald-800">{stats.classifications.A}</span>
-                      </div>
-                      <div className="flex justify-between items-center p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                          <span className="text-xs font-black text-blue-700 uppercase">REGULAR (B)</span>
-                          <span className="text-2xl font-black text-blue-800">{stats.classifications.B}</span>
-                      </div>
-                      <div className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                          <span className="text-xs font-black text-slate-500 uppercase">BÁSICO (C)</span>
-                          <span className="text-2xl font-black text-slate-800">{stats.classifications.C}</span>
-                      </div>
-                  </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-[2.5rem] shadow-xl text-white overflow-hidden relative">
-                  <PieChart className="absolute -right-4 -bottom-4 w-32 h-32 text-white/5" />
-                  <h3 className="text-lg font-black mb-4 flex items-center gap-2"><Briefcase className="w-5 h-5 text-cyan-400" /> Equipo</h3>
-                  <div className="space-y-3">
-                      {executives.map(e => (
-                          <div key={e.name} className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-slate-300">{e.name}</span>
-                              <span className="text-xs font-black">{doctors.filter(d => d.executive === e.name).length} Leads</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {Object.entries(stats.outcomes).map(([key, value]) => (
+                          <div key={key} className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:border-blue-200 transition-colors">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{key}</p>
+                              <div className="flex justify-between items-end">
+                                  <span className="text-3xl font-black text-slate-800">{value}</span>
+                                  <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                      <div 
+                                        className="h-full bg-blue-600" 
+                                        // Fix: Cast value to number to fix arithmetic type error on line 215 (relative to error report)
+                                        style={{ width: `${stats.totalDoctors > 0 ? ((value as number) / stats.totalDoctors) * 100 : 0}%` }}
+                                      ></div>
+                                  </div>
+                              </div>
                           </div>
                       ))}
                   </div>
               </div>
+
+              {/* DISTRIBUCIÓN DE CARTERA */}
+              <div className="bg-slate-900 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-10"><Award className="w-40 h-40 text-white" /></div>
+                  <h3 className="text-xl font-black text-white uppercase tracking-tight mb-8 relative z-10 flex items-center gap-3">
+                      <PieChart className="w-6 h-6 text-indigo-400" /> Análisis de Clasificación
+                  </h3>
+                  
+                  <div className="space-y-6 relative z-10">
+                      {[
+                        { label: 'Médicos VIP (A)', count: stats.classifications.A, color: 'bg-emerald-500' },
+                        { label: 'Médicos Regulares (B)', count: stats.classifications.B, color: 'bg-blue-500' },
+                        { label: 'Médicos Básicos (C)', count: stats.classifications.C, color: 'bg-slate-600' },
+                      ].map((item) => (
+                        <div key={item.label}>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-black text-slate-400 uppercase">{item.label}</span>
+                                <span className="text-xs font-black text-white">{item.count}</span>
+                            </div>
+                            <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                                <div 
+                                    className={`h-full ${item.color} transition-all duration-1000`} 
+                                    style={{ width: `${stats.totalDoctors > 0 ? (item.count / stats.totalDoctors) * 100 : 0}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                      ))}
+                  </div>
+              </div>
+          </div>
+
+          {/* COLUMNA DERECHA: AGENDA Y ACTIVIDAD */}
+          <div className="space-y-8">
+              {/* PROXIMAS ACTIVIDADES */}
+              <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100 h-full">
+                  <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-blue-600" /> Próxima Agenda
+                  </h3>
+                  
+                  <div className="space-y-4">
+                      {stats.upcomingVisits.length > 0 ? stats.upcomingVisits.map((visit, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => navigate(`/doctors/${visit.docId}`)}
+                            className="p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-blue-200 cursor-pointer transition-all group"
+                          >
+                              <div className="flex justify-between items-start mb-2">
+                                  <span className="text-[9px] font-black bg-white px-2 py-1 rounded-lg text-blue-600 shadow-sm border border-slate-100 uppercase">{visit.date}</span>
+                                  <div className="flex gap-1">
+                                      {visit.priority === 'ALTA' && <div className="w-2 h-2 rounded-full bg-rose-500"></div>}
+                                      <Clock className="w-3 h-3 text-slate-300" />
+                                  </div>
+                              </div>
+                              <p className="text-xs font-black text-slate-800 uppercase truncate group-hover:text-blue-600">{visit.docName}</p>
+                              <div className="flex items-center gap-1 mt-1 opacity-50">
+                                  <MapPin className="w-3 h-3" />
+                                  <p className="text-[9px] font-bold uppercase truncate">{visit.hospital || 'Consultorio'}</p>
+                              </div>
+                          </div>
+                      )) : (
+                          <div className="py-12 text-center">
+                              <Calendar className="w-12 h-12 text-slate-100 mx-auto mb-3" />
+                              <p className="text-[10px] font-black text-slate-300 uppercase">Sin actividades pendientes</p>
+                          </div>
+                      )}
+                      
+                      <button 
+                        onClick={() => navigate('/calendar')}
+                        className="w-full py-4 mt-2 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-blue-400 hover:text-blue-600 transition-all"
+                      >
+                          Ver Calendario Completo
+                      </button>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      {/* ACTIVIDAD RECIENTE (CRM FEED) */}
+      <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
+          <div className="flex justify-between items-center mb-8">
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                  <Activity className="w-6 h-6 text-emerald-500" /> Actividad Reciente
+              </h3>
+              <div className="flex gap-2">
+                  <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest">Feed Directo</div>
+              </div>
+          </div>
+
+          <div className="overflow-x-auto">
+              <table className="w-full">
+                  <thead>
+                      <tr className="text-left border-b border-slate-50">
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Resultado</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Notas</th>
+                          <th className="pb-4"></th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                      {stats.recentActivity.map((act, i) => (
+                          <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
+                              <td className="py-5">
+                                  <span className="text-xs font-bold text-slate-500">{act.date}</span>
+                              </td>
+                              <td className="py-5">
+                                  <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-[10px]">{act.docName.charAt(0)}</div>
+                                      <span className="text-xs font-black text-slate-800 uppercase">{act.docName}</span>
+                                  </div>
+                              </td>
+                              <td className="py-5">
+                                  <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                                      act.outcome === 'INTERESADO' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                      act.outcome === 'COTIZACIÓN' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                      'bg-slate-50 text-slate-500 border-slate-100'
+                                  }`}>{act.outcome}</span>
+                              </td>
+                              <td className="py-5 max-w-xs">
+                                  <p className="text-xs text-slate-500 truncate italic">{act.note || 'Sin comentarios adicionales.'}</p>
+                              </td>
+                              <td className="py-5 text-right">
+                                  <button onClick={() => navigate(`/doctors/${act.docId}`)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors">
+                                      <ChevronRight className="w-5 h-5" />
+                                  </button>
+                              </td>
+                          </tr>
+                      ))}
+                      {stats.recentActivity.length === 0 && (
+                          <tr>
+                              <td colSpan={5} className="py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                  No hay reportes recientes registrados
+                              </td>
+                          </tr>
+                      )}
+                  </tbody>
+              </table>
           </div>
       </div>
     </div>

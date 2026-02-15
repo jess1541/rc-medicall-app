@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import DoctorList from './pages/DoctorList';
@@ -7,185 +8,215 @@ import DoctorProfile from './pages/DoctorProfile';
 import ExecutiveCalendar from './pages/ExecutiveCalendar';
 import ProceduresManager from './pages/ProceduresManager';
 import Login from './components/Login';
-import { parseData } from './constants';
 import { Doctor, User, Procedure, TimeOffEvent } from './types';
 import { Menu } from 'lucide-react';
+import { parseData } from './constants';
 
-const STORAGE_KEYS = {
-    DOCTORS: 'rc_medicall_doctors_v5',
-    PROCEDURES: 'rc_medicall_procedures_v5',
-    TIMEOFF: 'rc_medicall_timeoff_v5',
-    USER: 'rc_medicall_user_v5',
-    SIDEBAR: 'rc_medicall_sidebar_collapsed'
-};
+// Ajuste de puerto a 8080 para coincidir con server.js
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8080/api' : '/api';
+const SYNC_INTERVAL = 30000;
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>(parseData()); // Carga inicial desde constantes
   const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [timeOffEvents, setTimeOffEvents] = useState<TimeOffEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-      const savedState = localStorage.getItem(STORAGE_KEYS.SIDEBAR);
-      return savedState === 'true';
-  });
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
+  
+  const syncTimerRef = useRef<any>(null);
 
-  const toggleSidebar = () => {
-      const newState = !isSidebarCollapsed;
-      setIsSidebarCollapsed(newState);
-      localStorage.setItem(STORAGE_KEYS.SIDEBAR, String(newState));
+  const seedDatabase = async (initialData: Doctor[]) => {
+    try {
+        await fetch(`${API_BASE_URL}/doctors/bulk`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(initialData)
+        });
+    } catch (error) {
+        console.warn("Seeding omitido: Servidor no disponible o DB ya poblada.");
+    }
   };
 
-  // --- CARGA INICIAL SEGURA ---
-  useEffect(() => {
-    const initApp = () => {
-        // 1. Cargar Usuario
-        const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
-        if (savedUser) setUser(JSON.parse(savedUser));
+  const syncData = useCallback(async (silent = true) => {
+    if (!silent) setIsSyncing(true);
+    try {
+      const [docsRes, toffRes, procRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/doctors`, { cache: 'no-store' }),
+        fetch(`${API_BASE_URL}/timeoff`, { cache: 'no-store' }),
+        fetch(`${API_BASE_URL}/procedures`, { cache: 'no-store' })
+      ]);
 
-        // 2. Cargar Médicos (Prioridad al Storage)
-        const storedDocs = localStorage.getItem(STORAGE_KEYS.DOCTORS);
-        if (storedDocs && JSON.parse(storedDocs).length > 0) {
-            setDoctors(JSON.parse(storedDocs));
+      if (docsRes.ok && toffRes.ok && procRes.ok) {
+        let docsFromServer = await docsRes.json();
+        const toffs = await toffRes.json();
+        const procs = await procRes.json();
+
+        // Si el servidor está vacío, intentamos poblarlo con nuestros datos locales
+        if (docsFromServer.length === 0) {
+            const localData = parseData();
+            await seedDatabase(localData);
+            // Mantenemos los datos locales en el estado
         } else {
-            // Solo si está vacío, cargamos los datos por defecto
-            const initial = parseData();
-            setDoctors(initial);
-            localStorage.setItem(STORAGE_KEYS.DOCTORS, JSON.stringify(initial));
+            setDoctors(docsFromServer);
         }
-
-        // 3. Cargar Procedimientos
-        const storedProcs = localStorage.getItem(STORAGE_KEYS.PROCEDURES);
-        if (storedProcs) setProcedures(JSON.parse(storedProcs));
-
-        setLoading(false);
-    };
-
-    initApp();
+        
+        setTimeOffEvents(toffs);
+        setProcedures(procs);
+        setIsOnline(true);
+      }
+    } catch (error) {
+      console.log("Modo Offline: Usando base de datos interna.");
+      setIsOnline(false);
+    } finally {
+      if (!silent) setIsSyncing(false);
+      setLoading(false);
+    }
   }, []);
 
-  // --- PERSISTENCIA ATÓMICA ---
-  // Solo guardamos si hay datos, para evitar borrar por error al recargar
   useEffect(() => {
-      if (!loading && doctors.length > 0) {
-          localStorage.setItem(STORAGE_KEYS.DOCTORS, JSON.stringify(doctors));
-      }
-  }, [doctors, loading]);
+    const savedUser = localStorage.getItem('rc_user');
+    if (savedUser) setUser(JSON.parse(savedUser));
+    
+    // Ejecutar sincronización inicial
+    syncData(false);
 
-  useEffect(() => {
-      if (!loading) {
-          localStorage.setItem(STORAGE_KEYS.PROCEDURES, JSON.stringify(procedures));
-      }
-  }, [procedures, loading]);
+    syncTimerRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible') syncData(true);
+    }, SYNC_INTERVAL);
+
+    return () => clearInterval(syncTimerRef.current);
+  }, [syncData]);
 
   const handleLogin = (loggedInUser: User) => {
-      setUser(loggedInUser);
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(loggedInUser));
+    setUser(loggedInUser);
+    localStorage.setItem('rc_user', JSON.stringify(loggedInUser));
   };
 
-  const handleLogout = () => {
-      setUser(null);
-      localStorage.removeItem(STORAGE_KEYS.USER);
+  const updateDoctor = async (updated: Doctor) => {
+    setDoctors(prev => prev.map(d => d.id === updated.id ? updated : d));
+    try {
+        await fetch(`${API_BASE_URL}/doctors`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updated)
+        });
+    } catch (e) { 
+        console.error("Error al persistir cambios en servidor, guardado localmente."); 
+    }
   };
 
-  // --- FUNCIONES DE RESPALDO GLOBAL ---
-  const importFullBackup = (data: { doctors: Doctor[], procedures: Procedure[], timeOff?: TimeOffEvent[] }) => {
-      if (data.doctors) setDoctors(data.doctors);
-      if (data.procedures) setProcedures(data.procedures);
-      if (data.timeOff) localStorage.setItem(STORAGE_KEYS.TIMEOFF, JSON.stringify(data.timeOff));
-      alert("Base de datos restaurada correctamente.");
+  const handleSaveTimeOff = async (toff: TimeOffEvent) => {
+    setTimeOffEvents(prev => [...prev.filter(t => t.id !== toff.id), toff]);
+    try {
+        await fetch(`${API_BASE_URL}/timeoff`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(toff)
+        });
+    } catch (e) {}
   };
 
-  // --- CRUD HANDLERS ---
-  const updateDoctor = (updatedDoctor: Doctor) => {
-    setDoctors(prev => prev.map(d => d.id === updatedDoctor.id ? updatedDoctor : d));
+  const handleDeleteTimeOff = async (id: string) => {
+    setTimeOffEvents(prev => prev.filter(t => t.id !== id));
+    try {
+        await fetch(`${API_BASE_URL}/timeoff/${id}`, { method: 'DELETE' });
+    } catch (e) {}
   };
 
-  const updateDoctorsList = (newDoctors: Doctor[]) => {
-      setDoctors(newDoctors);
+  // Manejadores de Procedimientos
+  const handleAddProcedure = async (proc: Procedure) => {
+      setProcedures(prev => [...prev, proc]);
+      try {
+          await fetch(`${API_BASE_URL}/procedures`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(proc)
+          });
+      } catch (e) { console.error(e); }
   };
 
-  const addDoctor = (newDoctor: Doctor) => {
-      setDoctors(prev => [newDoctor, ...prev]);
+  const handleUpdateProcedure = async (proc: Procedure) => {
+      setProcedures(prev => prev.map(p => p.id === proc.id ? proc : p));
+      try {
+          await fetch(`${API_BASE_URL}/procedures`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(proc)
+          });
+      } catch (e) { console.error(e); }
   };
 
-  const deleteDoctor = (id: string) => {
-      setDoctors(prev => prev.filter(d => d.id !== id));
-  };
-
-  const handleDeleteVisit = (doctorId: string, visitId: string) => {
-      setDoctors(prev => prev.map(doc => {
-          if (doc.id === doctorId) {
-              return { ...doc, visits: doc.visits.filter(v => v.id !== visitId) };
-          }
-          return doc;
-      }));
-  };
-
-  const addProcedure = (newProc: Procedure) => {
-      setProcedures(prev => [...prev, newProc]);
-  };
-
-  const updateProcedure = (updatedProc: Procedure) => {
-      setProcedures(prev => prev.map(p => p.id === updatedProc.id ? updatedProc : p));
-  };
-
-  const deleteProcedure = (id: string) => {
+  const handleDeleteProcedure = async (id: string) => {
       setProcedures(prev => prev.filter(p => p.id !== id));
+      try {
+          await fetch(`${API_BASE_URL}/procedures/${id}`, { method: 'DELETE' });
+      } catch (e) { console.error(e); }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-slate-50">
-        <div className="flex flex-col items-center">
-            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-            <p className="mt-4 text-slate-500 font-bold animate-pulse">Protegiendo datos locales...</p>
-        </div>
-      </div>
-    );
-  }
-
+  if (loading && !user) return <div className="h-screen flex items-center justify-center bg-slate-950 text-white font-black animate-pulse uppercase tracking-[0.5em] text-[10px]">RC MediCall • Sincronizando Directorio...</div>;
   if (!user) return <Login onLogin={handleLogin} />;
 
   return (
-    <Router>
-      <div className="flex h-screen bg-[#f8fafc]">
-        {/* Mobile Header */}
-        <div className="md:hidden fixed top-0 left-0 w-full bg-slate-900 text-white z-50 p-4 flex items-center justify-between shadow-md">
-            <div className="flex items-center gap-2">
-                <span className="font-black text-cyan-400">RC</span>
-                <span className="font-bold">MediCall</span>
-            </div>
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-slate-800 rounded-lg">
-                <Menu className="w-6 h-6 text-white" />
-            </button>
-        </div>
-
+    <HashRouter>
+      <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
         <Sidebar 
-            user={user} 
-            onLogout={handleLogout} 
-            isMobileOpen={isMobileMenuOpen} 
-            closeMobileMenu={() => setIsMobileMenuOpen(false)} 
-            isCollapsed={isSidebarCollapsed}
-            toggleCollapse={toggleSidebar}
+          user={user} 
+          onLogout={() => { setUser(null); localStorage.removeItem('rc_user'); }} 
+          isMobileOpen={isMobileMenuOpen} 
+          closeMobileMenu={() => setIsMobileMenuOpen(false)} 
+          isCollapsed={isSidebarCollapsed}
+          isOnline={isOnline}
+          isSyncing={isSyncing}
+          toggleCollapse={() => { setIsSidebarCollapsed(!isSidebarCollapsed); localStorage.setItem('sidebar_collapsed', String(!isSidebarCollapsed)); }}
         />
         
-        <div className={`flex-1 flex flex-col h-full relative pt-16 md:pt-0 transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
-          <main className="flex-1 overflow-x-auto overflow-y-auto p-4 md:p-8 relative z-10 w-full">
-            <div className="max-w-7xl mx-auto min-w-[320px]">
-                <Routes>
-                <Route path="/" element={<Dashboard doctors={doctors} user={user} procedures={procedures} onImportBackup={importFullBackup} />} />
-                <Route path="/doctors" element={<DoctorList doctors={doctors} onAddDoctor={addDoctor} onDeleteDoctor={deleteDoctor} user={user} />} />
-                <Route path="/doctors/:id" element={<DoctorProfile doctors={doctors} onUpdate={updateDoctor} onDeleteVisit={handleDeleteVisit} user={user} />} />
-                <Route path="/calendar" element={<ExecutiveCalendar doctors={doctors} onUpdateDoctors={updateDoctorsList} onDeleteVisit={handleDeleteVisit} user={user} />} />
-                <Route path="/procedures" element={<ProceduresManager procedures={procedures} doctors={doctors} onAddProcedure={addProcedure} onUpdateProcedure={updateProcedure} onDeleteProcedure={deleteProcedure} user={user} />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-            </div>
+        <div className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+          <div className="md:hidden p-4 bg-slate-900 text-white flex justify-between items-center">
+             <span className="font-black tracking-tighter text-cyan-400">RC MediCall</span>
+             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-slate-800 rounded-lg"><Menu /></button>
+          </div>
+          <main className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar">
+            <Routes>
+              <Route path="/" element={<Dashboard doctors={doctors} user={user} procedures={procedures} isOnline={isOnline} />} />
+              <Route path="/doctors" element={<DoctorList doctors={doctors} user={user} onAddDoctor={updateDoctor} />} />
+              <Route path="/doctors/:id" element={<DoctorProfile doctors={doctors} onUpdate={updateDoctor} onDeleteVisit={(did, vid) => {
+                 const doc = doctors.find(d => d.id === did);
+                 if (doc) updateDoctor({ ...doc, visits: doc.visits.filter(v => v.id !== vid) });
+              }} user={user} />} />
+              <Route path="/calendar" element={
+                <ExecutiveCalendar 
+                  doctors={doctors} 
+                  timeOffEvents={timeOffEvents}
+                  onUpdateSingleDoctor={updateDoctor} 
+                  onSaveTimeOff={handleSaveTimeOff}
+                  onDeleteTimeOff={handleDeleteTimeOff}
+                  onDeleteVisit={(did, vid) => {
+                    const doc = doctors.find(d => d.id === did);
+                    if (doc) updateDoctor({ ...doc, visits: doc.visits.filter(v => v.id !== vid) });
+                  }} 
+                  user={user} 
+                />
+              } />
+              <Route path="/procedures" element={
+                  <ProceduresManager 
+                    procedures={procedures} 
+                    doctors={doctors} 
+                    onAddProcedure={handleAddProcedure} 
+                    onUpdateProcedure={handleUpdateProcedure} 
+                    onDeleteProcedure={handleDeleteProcedure} 
+                    user={user} 
+                  />
+              } />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
           </main>
         </div>
       </div>
-    </Router>
+    </HashRouter>
   );
 };
 

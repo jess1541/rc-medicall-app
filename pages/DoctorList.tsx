@@ -1,8 +1,7 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Doctor, User, ScheduleSlot } from '../types';
-import { Search, MapPin, Stethoscope, Building2, Briefcase, Plus, X, ArrowRight, Loader2, Filter, Database, Download, Upload } from 'lucide-react';
+import { Search, MapPin, Stethoscope, Building2, Briefcase, Plus, X, ArrowRight, Loader2, Filter, Database, Download, Upload, Trash2, AlertTriangle } from 'lucide-react';
 
 type TabType = 'MEDICO' | 'ADMINISTRATIVO' | 'HOSPITAL';
 
@@ -10,10 +9,11 @@ interface DoctorListProps {
   doctors: Doctor[];
   onAddDoctor?: (doc: Doctor) => void;
   onBulkAddDoctors?: (docs: Doctor[]) => void;
+  onDeleteDoctor?: (id: string) => void;
   user: User;
 }
 
-const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAddDoctors, user }) => {
+const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAddDoctors, onDeleteDoctor, user }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedExecutive, setSelectedExecutive] = useState(user.role === 'executive' ? user.name : 'TODOS');
@@ -145,6 +145,13 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
       fileInputRef.current?.click();
   };
 
+  const handleDeleteClick = (e: React.MouseEvent, id: string, name: string) => {
+      e.stopPropagation();
+      if (window.confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${name}? Esta acción no se puede deshacer.`)) {
+          if (onDeleteDoctor) onDeleteDoctor(id);
+      }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -265,7 +272,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
             </p>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
             <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -356,7 +363,19 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                     <div className={`p-4 rounded-2xl text-white shadow-lg ${activeTab === 'MEDICO' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : activeTab === 'ADMINISTRATIVO' ? 'bg-gradient-to-br from-purple-500 to-indigo-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600'}`}>
                         {activeTab === 'MEDICO' ? <Stethoscope className="h-6 w-6" /> : activeTab === 'ADMINISTRATIVO' ? <Briefcase className="h-6 w-6" /> : <Building2 className="h-6 w-6" />}
                     </div>
-                    <span className="text-[10px] font-black bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-100">{item.executive}</span>
+                    
+                    <div className="flex flex-col items-end gap-2">
+                        <span className="text-[10px] font-black bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-100">{item.executive}</span>
+                        {user.role === 'admin' && (
+                            <button 
+                                onClick={(e) => handleDeleteClick(e, item.id, item.name)}
+                                className="p-2 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-colors z-10"
+                                title="Eliminar Lead"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
                 </div>
                 
                 <h3 className="text-base font-black text-black uppercase leading-tight group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">{item.name}</h3>

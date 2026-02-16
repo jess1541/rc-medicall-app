@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
@@ -118,6 +117,15 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteDoctor = async (id: string) => {
+    setDoctors(prev => prev.filter(d => d.id !== id));
+    try {
+        await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' });
+    } catch (e) {
+        console.error("Error al eliminar doctor", e);
+    }
+  };
+
   const handleBulkAddDoctors = async (newDocs: Doctor[]) => {
       setDoctors(prev => [...prev, ...newDocs]);
       try {
@@ -204,7 +212,15 @@ const App: React.FC = () => {
           <main className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar">
             <Routes>
               <Route path="/" element={<Dashboard doctors={doctors} user={user} procedures={procedures} isOnline={isOnline} />} />
-              <Route path="/doctors" element={<DoctorList doctors={doctors} user={user} onAddDoctor={updateDoctor} onBulkAddDoctors={handleBulkAddDoctors} />} />
+              <Route path="/doctors" element={
+                <DoctorList 
+                    doctors={doctors} 
+                    user={user} 
+                    onAddDoctor={updateDoctor} 
+                    onBulkAddDoctors={handleBulkAddDoctors} 
+                    onDeleteDoctor={handleDeleteDoctor}
+                />} 
+              />
               <Route path="/doctors/:id" element={<DoctorProfile doctors={doctors} onUpdate={updateDoctor} onDeleteVisit={(did, vid) => {
                  const doc = doctors.find(d => d.id === did);
                  if (doc) updateDoctor({ ...doc, visits: doc.visits.filter(v => v.id !== vid) });
@@ -213,7 +229,7 @@ const App: React.FC = () => {
                 <ExecutiveCalendar 
                   doctors={doctors} 
                   timeOffEvents={timeOffEvents}
-                  onUpdateDoctor={updateDoctor} 
+                  onUpdateDoctor={updateDoctor}
                   onSaveTimeOff={handleSaveTimeOff}
                   onDeleteTimeOff={handleDeleteTimeOff}
                   onDeleteVisit={(did, vid) => {

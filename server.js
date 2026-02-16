@@ -163,6 +163,25 @@ app.post('/api/doctors/bulk', async (req, res) => {
     }
 });
 
+app.delete('/api/doctors/clear/:category', async (req, res) => {
+    try {
+        const { category } = req.params;
+        const result = await Doctor.deleteMany({ category: category.toUpperCase() });
+        res.json({ success: true, count: result.deletedCount });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/doctors/:id', async (req, res) => {
+    try {
+        await Doctor.deleteOne({ id: req.params.id });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 2. TIMEOFF
 app.get('/api/timeoff', async (req, res) => {
     try {

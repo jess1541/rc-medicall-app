@@ -10,10 +10,11 @@ interface DoctorListProps {
   onAddDoctor?: (doc: Doctor) => void;
   onBulkAddDoctors?: (docs: Doctor[]) => void;
   onDeleteDoctor?: (id: string) => void;
+  onClearCategory?: (category: string) => void;
   user: User;
 }
 
-const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAddDoctors, onDeleteDoctor, user }) => {
+const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAddDoctors, onDeleteDoctor, onClearCategory, user }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedExecutive, setSelectedExecutive] = useState(user.role === 'executive' ? user.name : 'TODOS');
@@ -280,6 +281,15 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                 accept=".csv" 
                 className="hidden" 
             />
+            {user.role === 'admin' && onClearCategory && (
+                <button 
+                    onClick={() => onClearCategory(activeTab)}
+                    className="flex items-center px-6 py-3.5 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition shadow-xl shadow-red-500/10 font-black text-xs uppercase tracking-widest active:scale-95 border border-red-100"
+                >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpiar Lista
+                </button>
+            )}
             <button 
                 onClick={handleImportClick}
                 className="flex items-center px-6 py-3.5 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition shadow-xl shadow-indigo-500/20 font-black text-xs uppercase tracking-widest active:scale-95"

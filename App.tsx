@@ -126,6 +126,17 @@ const App: React.FC = () => {
     }
   };
 
+  const handleClearCategory = async (category: string) => {
+      if (!window.confirm(`⚠️ ADVERTENCIA DE SEGURIDAD ⚠️\n\nEstás a punto de ELIMINAR TODOS los registros de la categoría: ${category}.\n\nEsta acción borrará permanentemente todos los contactos y sus historiales de visitas asociados a esta categoría.\n\n¿Estás absolutamente seguro de continuar?`)) return;
+      
+      setDoctors(prev => prev.filter(d => d.category !== category));
+      try {
+          await fetch(`${API_BASE_URL}/doctors/clear/${category}`, { method: 'DELETE' });
+      } catch (e) {
+          console.error("Error al limpiar categoría", e);
+      }
+  };
+
   const handleBulkAddDoctors = async (newDocs: Doctor[]) => {
       setDoctors(prev => [...prev, ...newDocs]);
       try {
@@ -219,6 +230,7 @@ const App: React.FC = () => {
                     onAddDoctor={updateDoctor} 
                     onBulkAddDoctors={handleBulkAddDoctors} 
                     onDeleteDoctor={handleDeleteDoctor}
+                    onClearCategory={handleClearCategory}
                 />} 
               />
               <Route path="/doctors/:id" element={<DoctorProfile doctors={doctors} onUpdate={updateDoctor} onDeleteVisit={(did, vid) => {

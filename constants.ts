@@ -1,4 +1,5 @@
 
+
 import { Doctor, ScheduleSlot } from './types';
 
 // Motor de datos masivos para RC MediCall - Carga Automática
@@ -608,7 +609,32 @@ ORALIA,Yedid Medina Nava,Ginecología y Obstetricia,,"Circuitos Centro Comercial
 LUIS,Yeni Lovera,Ginecología y Obstetricia,,Clínica Santa Margarita,,,,,,,,,,,,,
 LUIS,Yolanda Olivia Piña Maciel,Ginecología y Obstetricia,Biología de la Reproducción,San Ángel Inn ACORA,,,,,,,,,,,,,
 LUIS,Yolitsma Arlet Muciño Manjarrez,Ginecología y Obstetricia,,HMG,,,,,,,,,,,,,
-LUIS,Yunuen García Cortés,Ginecología y Obstetricia,,San Ángel Inn ACORA,,,,,,,,,,,,,`;
+LUIS,Yunuen García Cortés,Ginecología y Obstetricia,,San Ángel Inn ACORA,,,,,,,,,,,,,
+TALINA,Hospital Ángeles Metropolitano,HOSPITAL,,"Tlacotalpan 59, Roma Sur, Cuauhtémoc, 06760 CDMX",,,,55 5265 1800,,,,,HOSPITAL,,,,
+TALINA,Hospital Ángeles Mocel,HOSPITAL,,"Gobernador Gregorio V. Gelati 29, San Miguel Chapultepec I Secc, Miguel Hidalgo, 11850 CDMX",,,,55 5278 2300,,,,,HOSPITAL,,,,
+TALINA,Hospital Ángeles Roma,HOSPITAL,,"Querétaro 58, Roma Norte, Cuauhtémoc, 06700 CDMX",,,,52 55 5225 2610,,,,,HOSPITAL,,,,
+TALINA,Clínica Londres (Hospital Ángeles),HOSPITAL,,"Durango 50, Roma Norte, Cuauhtémoc, 06700 CDMX",,,,52 55 5229 8400,,,,,HOSPITAL,,,,
+TALINA,Hospital Ángeles México,HOSPITAL,,"Agrarismo 208, Escandón II Secc, Miguel Hidalgo, 11800 CDMX",,,,52 55 5516 9900,,,,,HOSPITAL,,,,
+TALINA,Star Médica Centro,HOSPITAL,,"San Luis Potosi 143, Roma Norte, Cuauhtémoc, 06700 CDMX",,,,55 1084 4747,,,,,HOSPITAL,,,,
+TALINA,María José Roma,HOSPITAL,,"Cozumel 62, Roma Nte., Cuauhtémoc, 06700 Ciudad de México, CDMX",,,,55 6650 9972,,,,,HOSPITAL,,,,
+TALINA,Dalinde,HOSPITAL,,"Av. Tuxpan 25, Roma Sur, Cuauhtémoc, 06760 CDMX",,,,52 55 5265 2800,,,,,HOSPITAL,,,,
+TALINA,Torre Médica Gineco PDT,HOSPITAL,,"Tehuantepec 251, Roma Sur, Cuauhtémoc, 06760 Ciudad de México, CDMX",,,,41652800,,,,,HOSPITAL,,,,
+LUIS,San Ángel Inn Acora,HOSPITAL,,"Av. Cuauhtemoc 1040,  Narvarte Poniente, Benito Juarez",,,,55 2868 0643,,,,,HOSPITAL,,,,
+LUIS,Ángeles Universidad,HOSPITAL,,"Av. Universidad 1080, Xoco, Benito Juárez, 03339 CDMX",,,,55 7256 9800,,,,,HOSPITAL,,,,
+LUIS,HMG Hospital Coyoacan,HOSPITAL,,"Calle Árbol del Fuego 80, El Rosario, Coyoacán, 04380 Ciudad de México, CDMX",,,,55 5338 0700,,,,,HOSPITAL,,,,
+LUIS,MAC La Viga,HOSPITAL,,"Calz. de la Viga 1174, El Triunfo, Iztapalapa, 09430 Ciudad de México, CDMX",,,,55 4169 8514,,,,,HOSPITAL,,,,
+LUIS,San Ángel Inn Universidad,HOSPITAL,,"Av. Río Churubusco 601, Xoco, Benito Juárez, 03330 Ciudad de México, CDMX",,,,55 5623 6363,,,,,HOSPITAL,,,,
+ORALIA,Ángeles Santa Mónica,HOSPITAL,,"Temístocles 210, Polanco, Polanco IV Secc, 11560 Ciudad de México, CDMX",,,,5555313120,,,,,HOSPITAL,,,,
+ORALIA,Star Médica Tlalnepantla,HOSPITAL,,"Av Sor Juana Inés de La Cruz 280, Fracc. Industrial, San Lorenzo, 54033 Tlalnepantla, Méx.",,,,55 5321 7070,,,,,HOSPITAL,,,,
+ORALIA,Star Médica Lomas Verdes,HOSPITAL,,"Avenida Lomas Verdes 2165, Santiago Occipaco, 53250 Naucalpan de Juárez, Méx.",,,,55 2625 1700,,,,,HOSPITAL,,,,
+ORALIA,San Ángel Inn Satélite,HOSPITAL,,"Cto Centro Comercial 20, Cd. Satélite, 53100 Naucalpan de Juárez, Méx.",,,,55 9550 7000,,,,,HOSPITAL,,,,
+ORALIA,Clínica Azura Satélite,HOSPITAL,,"Enrique Sada Muguerza No 17, Cd. Satélite, 53100 Naucalpan de Juárez, Méx.",,,,55 5572 5858,,,,,HOSPITAL,,,,
+ORALIA,Ángeles Lindavista,HOSPITAL,,"Río Bamba 639, Magdalena de las Salinas, Gustavo A. Madero, 07760 CDMX",,,,55 5754 7000,,,,,HOSPITAL,,,,
+ORALIA,Torre Médica Río Bamba,HOSPITAL,,"Av. Montevideo 303, Lindavista, Gustavo A. Madero, 07300 Ciudad de México, CDMX",,,,55 8931 1440,,,,,HOSPITAL,,,,
+ORALIA,Hospital Español,HOSPITAL,,"Ejército Nacional 613, Granada, Miguel Hidalgo, 11520 CDMX",,,,55 5255 9600,,,,,HOSPITAL,,,,
+ORALIA,MAC Lomas Verdes,HOSPITAL,,"Alexander Von Humboldt 88, Lomas Verdes 3ra Secc, 53120 Naucalpan de Juárez, Méx.",,,,55 4169 8514,,,,,HOSPITAL,,,,
+ORALIA,MAC Tlalnepantla,HOSPITAL,,"Av. Dr. Gustavo Baz No. 309-TR A1, Col. La Loma, C.P. 54060,  Tlanepantla, Estado de México",,,,5589775100,,,,,HOSPITAL,,,,
+ORALIA,Corporativo Satélite,HOSPITAL,,"Cto Misioneros 5, Cd. Satélite, 53100 Naucalpan de Juárez, Méx.",,,,55 5089 1410,,,,,HOSPITAL,,,,`;
 
 export const parseDataString = (data: string): Doctor[] => {
   const lines = data.trim().split('\n');

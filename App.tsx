@@ -97,7 +97,16 @@ const App: React.FC = () => {
   };
 
   const updateDoctor = async (updated: Doctor) => {
-    setDoctors(prev => prev.map(d => d.id === updated.id ? updated : d));
+    setDoctors(prev => {
+        const index = prev.findIndex(d => d.id === updated.id);
+        if (index !== -1) {
+            const newDocs = [...prev];
+            newDocs[index] = updated;
+            return newDocs;
+        }
+        return [...prev, updated];
+    });
+    
     try {
         await fetch(`${API_BASE_URL}/doctors`, {
             method: 'POST',
@@ -107,6 +116,19 @@ const App: React.FC = () => {
     } catch (e) { 
         console.error("Error al persistir cambios en servidor, guardado localmente."); 
     }
+  };
+
+  const handleBulkAddDoctors = async (newDocs: Doctor[]) => {
+      setDoctors(prev => [...prev, ...newDocs]);
+      try {
+          await fetch(`${API_BASE_URL}/doctors/bulk`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newDocs)
+          });
+      } catch (e) { 
+          console.error("Error al importar masivamente", e); 
+      }
   };
 
   const handleSaveTimeOff = async (toff: TimeOffEvent) => {
@@ -182,7 +204,7 @@ const App: React.FC = () => {
           <main className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar">
             <Routes>
               <Route path="/" element={<Dashboard doctors={doctors} user={user} procedures={procedures} isOnline={isOnline} />} />
-              <Route path="/doctors" element={<DoctorList doctors={doctors} user={user} onAddDoctor={updateDoctor} />} />
+              <Route path="/doctors" element={<DoctorList doctors={doctors} user={user} onAddDoctor={updateDoctor} onBulkAddDoctors={handleBulkAddDoctors} />} />
               <Route path="/doctors/:id" element={<DoctorProfile doctors={doctors} onUpdate={updateDoctor} onDeleteVisit={(did, vid) => {
                  const doc = doctors.find(d => d.id === did);
                  if (doc) updateDoctor({ ...doc, visits: doc.visits.filter(v => v.id !== vid) });

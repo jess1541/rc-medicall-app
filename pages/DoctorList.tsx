@@ -9,10 +9,11 @@ type TabType = 'MEDICO' | 'ADMINISTRATIVO' | 'HOSPITAL';
 interface DoctorListProps {
   doctors: Doctor[];
   onAddDoctor?: (doc: Doctor) => void;
+  onBulkAddDoctors?: (docs: Doctor[]) => void;
   user: User;
 }
 
-const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, user }) => {
+const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAddDoctors, user }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedExecutive, setSelectedExecutive] = useState(user.role === 'executive' ? user.name : 'TODOS');
@@ -157,9 +158,9 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, user }) =
           if (lines.length < 2) return;
 
           // Obtener headers y normalizarlos
-          const headers = lines[0].split(',').map(h => h.trim().toUpperCase().replace(/"/g, ''));
+          const headers = lines[0].split(',').map(h => h.trim().toUpperCase().replace(/^"|"$/g, ''));
           
-          let importCount = 0;
+          const newDoctors: Doctor[] = [];
 
           // Procesar cada línea
           lines.slice(1).forEach((line, index) => {
@@ -231,13 +232,21 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, user }) =
                   schedule: initialSchedule
               };
 
-              if (onAddDoctor) {
-                  onAddDoctor(newDoc);
-                  importCount++;
-              }
+              newDoctors.push(newDoc);
           });
 
-          alert(`Importación completada: ${importCount} registros procesados.`);
+          if (newDoctors.length > 0) {
+              if (onBulkAddDoctors) {
+                  onBulkAddDoctors(newDoctors);
+              } else if (onAddDoctor) {
+                  // Fallback si no existe la función bulk (legacy)
+                  newDoctors.forEach(doc => onAddDoctor(doc));
+              }
+              alert(`Importación completada: ${newDoctors.length} registros procesados.`);
+          } else {
+              alert("No se encontraron registros válidos o el formato CSV es incorrecto.");
+          }
+
           if (fileInputRef.current) fileInputRef.current.value = '';
       };
       reader.readAsText(file);

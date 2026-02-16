@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Doctor, User } from '../types';
-import { Search, MapPin, Stethoscope, Building2, Briefcase, Plus, X, ArrowRight, Loader2, Filter, Database } from 'lucide-react';
+import { Doctor, User, ScheduleSlot } from '../types';
+import { Search, MapPin, Stethoscope, Building2, Briefcase, Plus, X, ArrowRight, Loader2, Filter, Database, Download, Upload } from 'lucide-react';
 
 type TabType = 'MEDICO' | 'ADMINISTRATIVO' | 'HOSPITAL';
 
@@ -18,10 +18,11 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, user }) =
   const [selectedExecutive, setSelectedExecutive] = useState(user.role === 'executive' ? user.name : 'TODOS');
   const [activeTab, setActiveTab] = useState<TabType>('MEDICO');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(20); // Aumentado para mejor visualización inicial
+  const [visibleCount, setVisibleCount] = useState(20); 
   const [isFiltering, setIsFiltering] = useState(false);
   
   const observerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<Partial<Doctor>>({
       name: '',
@@ -102,6 +103,146 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, user }) =
       setFormData({ name: '', specialty: '', address: '', executive: user.name, category: activeTab });
   };
 
+  const handleExport = () => {
+      if (filteredItems.length === 0) {
+          alert("No hay datos para exportar");
+          return;
+      }
+
+      // Preparar datos para CSV
+      const csvData = filteredItems.map(doc => ({
+          NOMBRE: doc.name,
+          CATEGORIA: doc.category,
+          ESPECIALIDAD: doc.specialty,
+          EJECUTIVO: doc.executive,
+          DIRECCION: doc.address.replace(/,/g, ' '), // Evitar conflictos con comas
+          HOSPITAL: doc.hospital || '',
+          TELEFONO: doc.phone || '',
+          EMAIL: doc.email || '',
+          CLASIFICACION: doc.classification || 'C'
+      }));
+
+      // Generar CSV
+      const headers = Object.keys(csvData[0]);
+      const csvContent = [
+          headers.join(','),
+          ...csvData.map(row => headers.map(header => `"${(row as any)[header]}"`).join(','))
+      ].join('\n');
+
+      // Descargar archivo
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Directorio_RC_MediCall_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+
+  const handleImportClick = () => {
+      fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+          const text = event.target?.result as string;
+          if (!text) return;
+
+          const lines = text.split('\n');
+          if (lines.length < 2) return;
+
+          // Obtener headers y normalizarlos
+          const headers = lines[0].split(',').map(h => h.trim().toUpperCase().replace(/"/g, ''));
+          
+          let importCount = 0;
+
+          // Procesar cada línea
+          lines.slice(1).forEach((line, index) => {
+              if (!line.trim()) return;
+
+              // Parser robusto para CSV con comillas
+              const parts: string[] = [];
+              let currentPart = '';
+              let inQuotes = false;
+              for (let i = 0; i < line.length; i++) {
+                  const char = line[i];
+                  if (char === '"') inQuotes = !inQuotes;
+                  else if (char === ',' && !inQuotes) {
+                      parts.push(currentPart.trim().replace(/^"|"$/g, ''));
+                      currentPart = '';
+                  } else {
+                      currentPart += char;
+                  }
+              }
+              parts.push(currentPart.trim().replace(/^"|"$/g, ''));
+
+              // Mapear datos
+              const getData = (headerName: string) => {
+                  const idx = headers.indexOf(headerName);
+                  return idx !== -1 && parts[idx] ? parts[idx] : '';
+              };
+
+              const name = getData('NOMBRE');
+              if (!name) return;
+
+              // Determinar Categoría
+              let category: 'MEDICO' | 'HOSPITAL' | 'ADMINISTRATIVO' = 'MEDICO';
+              const rawCat = getData('CATEGORIA').toUpperCase();
+              if (rawCat.includes('HOSPITAL')) category = 'HOSPITAL';
+              else if (rawCat.includes('ADMIN') || rawCat.includes('PERSONAL')) category = 'ADMINISTRATIVO';
+              else if (rawCat.includes('MEDICO') || rawCat.includes('DOCTOR')) category = 'MEDICO';
+
+              const initialSchedule: ScheduleSlot[] = [
+                { day: 'LUNES', time: '', active: false },
+                { day: 'MARTES', time: '', active: false },
+                { day: 'MIÉRCOLES', time: '', active: false },
+                { day: 'JUEVES', time: '', active: false },
+                { day: 'VIERNES', time: '', active: false },
+                { day: 'SÁBADO', time: '', active: false },
+                { day: 'DOMINGO', time: '', active: false }
+              ];
+
+              const newDoc: Doctor = {
+                  id: `imp-${Date.now()}-${index}`,
+                  name: name.toUpperCase(),
+                  category: category,
+                  executive: getData('EJECUTIVO').toUpperCase() || 'SIN ASIGNAR',
+                  specialty: getData('ESPECIALIDAD').toUpperCase() || (category === 'MEDICO' ? 'GENERAL' : ''),
+                  subSpecialty: getData('SUB ESPECIALIDAD').toUpperCase(),
+                  address: getData('DIRECCION').toUpperCase(),
+                  phone: getData('TELEFONO'),
+                  email: getData('EMAIL'),
+                  hospital: getData('HOSPITAL').toUpperCase(),
+                  officeNumber: getData('CONSULTORIO'),
+                  floor: getData('PISO'),
+                  cedula: getData('CEDULA'),
+                  birthDate: getData('FECHA DE NACIMIENTO'),
+                  classification: (getData('CLASIFICACION').toUpperCase() as any) || 'C',
+                  isInsuranceDoctor: getData('ASEGURADORA').toUpperCase() === 'SI' || getData('ASEGURADORA').toUpperCase() === 'TRUE',
+                  importantNotes: getData('OBSERVACIONES').toUpperCase(),
+                  socialStyle: getData('ESTILO SOCIAL').toUpperCase() as any,
+                  attitudinalSegment: getData('SEGMENTO ACTITUDINAL').toUpperCase() as any,
+                  visits: [],
+                  schedule: initialSchedule
+              };
+
+              if (onAddDoctor) {
+                  onAddDoctor(newDoc);
+                  importCount++;
+              }
+          });
+
+          alert(`Importación completada: ${importCount} registros procesados.`);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+      };
+      reader.readAsText(file);
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -115,13 +256,37 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, user }) =
             </p>
         </div>
         
-        <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center px-8 py-3.5 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition shadow-xl font-black text-xs uppercase tracking-widest active:scale-95"
-        >
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Registro
-        </button>
+        <div className="flex gap-3">
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                accept=".csv" 
+                className="hidden" 
+            />
+            <button 
+                onClick={handleImportClick}
+                className="flex items-center px-6 py-3.5 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition shadow-xl shadow-indigo-500/20 font-black text-xs uppercase tracking-widest active:scale-95"
+            >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar CSV
+            </button>
+            
+            <button 
+                onClick={handleExport}
+                className="flex items-center px-6 py-3.5 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition shadow-xl shadow-emerald-500/20 font-black text-xs uppercase tracking-widest active:scale-95"
+            >
+                <Download className="h-4 w-4 mr-2" />
+                Descargar Excel
+            </button>
+            <button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center px-8 py-3.5 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition shadow-xl font-black text-xs uppercase tracking-widest active:scale-95"
+            >
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Registro
+            </button>
+        </div>
       </div>
 
       {/* FILTROS INTEGRADOS */}

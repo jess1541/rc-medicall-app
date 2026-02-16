@@ -5,7 +5,8 @@ import {
   Users, ShieldCheck, CheckCircle2, TrendingUp, Filter, 
   Award, Activity, DollarSign, Target, Calendar, 
   ArrowUpRight, Clock, MapPin, AlertCircle, 
-  BarChart3, PieChart, Zap, ChevronRight, Stethoscope, Wallet
+  BarChart3, PieChart, Zap, ChevronRight, Stethoscope, Wallet,
+  Download, FileSpreadsheet
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
@@ -110,6 +111,72 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
     };
   }, [filteredDoctors, procedures, filterExecutive]);
 
+  // Funciones de Exportación
+  const downloadCSV = (data: any[], filename: string) => {
+      if (data.length === 0) {
+          alert("No hay datos para generar el reporte.");
+          return;
+      }
+      const headers = Object.keys(data[0]);
+      const csvContent = [
+          headers.join(','),
+          ...data.map(row => headers.map(header => `"${String((row as any)[header]).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+
+  const handleExportVisits = () => {
+      const allVisits = filteredDoctors.flatMap(doc => 
+          (doc.visits || []).map(v => ({
+              FECHA: v.date,
+              HORA: v.time || '',
+              MEDICO: doc.name,
+              ESPECIALIDAD: doc.specialty,
+              EJECUTIVO: doc.executive,
+              HOSPITAL: doc.hospital || '',
+              ESTADO: v.status === 'completed' ? 'REALIZADA' : 'PROGRAMADA',
+              RESULTADO: v.outcome,
+              OBJETIVO: v.objective || '',
+              NOTAS: v.note || '',
+              SEGUIMIENTO: v.followUp || ''
+          }))
+      ).sort((a, b) => b.FECHA.localeCompare(a.FECHA));
+
+      downloadCSV(allVisits, 'Reporte_Visitas_Medicas');
+  };
+
+  const handleExportProcedures = () => {
+      const filteredProcedures = procedures.filter(p => 
+          filterExecutive ? filteredDoctors.some(d => d.id === p.doctorId) : true
+      ).map(p => {
+          const doc = doctors.find(d => d.id === p.doctorId);
+          return {
+              FECHA: p.date,
+              HORA: p.time || '',
+              MEDICO: p.doctorName,
+              ESPECIALIDAD: doc?.specialty || '',
+              EJECUTIVO: doc?.executive || '',
+              HOSPITAL: p.hospital || '',
+              TIPO_PROCEDIMIENTO: p.procedureType,
+              TECNICO: p.technician || '',
+              PAGO: p.paymentType,
+              COSTO: p.cost || 0,
+              COMISION: p.commission || 0,
+              ESTADO: p.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO'
+          };
+      }).sort((a, b) => b.FECHA.localeCompare(a.FECHA));
+
+      downloadCSV(filteredProcedures, 'Reporte_Procedimientos');
+  };
+
   const currentMonthName = new Date().toLocaleDateString('es-ES', { month: 'long' });
 
   return (
@@ -196,6 +263,45 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         </div>
       </div>
 
+      {/* CENTRO DE REPORTES Y DESCARGAS */}
+      <div className="bg-slate-900 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10"><FileSpreadsheet className="w-40 h-40 text-white" /></div>
+          <div className="relative z-10">
+              <h3 className="text-xl font-black text-white uppercase tracking-tight mb-6 flex items-center gap-3">
+                  <Download className="w-6 h-6 text-emerald-400" /> Centro de Reportes
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button 
+                      onClick={handleExportVisits}
+                      className="bg-white/10 hover:bg-white/20 border border-white/10 p-6 rounded-2xl flex items-center justify-between group transition-all"
+                  >
+                      <div className="flex items-center gap-4">
+                          <div className="p-3 bg-blue-500 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Users className="w-6 h-6" /></div>
+                          <div className="text-left">
+                              <p className="text-sm font-bold text-white uppercase">Reporte de Visitas</p>
+                              <p className="text-[10px] font-medium text-slate-400">Historial completo en Excel</p>
+                          </div>
+                      </div>
+                      <Download className="w-5 h-5 text-slate-400 group-hover:text-white" />
+                  </button>
+
+                  <button 
+                      onClick={handleExportProcedures}
+                      className="bg-white/10 hover:bg-white/20 border border-white/10 p-6 rounded-2xl flex items-center justify-between group transition-all"
+                  >
+                      <div className="flex items-center gap-4">
+                          <div className="p-3 bg-purple-500 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Activity className="w-6 h-6" /></div>
+                          <div className="text-left">
+                              <p className="text-sm font-bold text-white uppercase">Reporte de Procedimientos</p>
+                              <p className="text-[10px] font-medium text-slate-400">Detalle financiero y estado</p>
+                          </div>
+                      </div>
+                      <Download className="w-5 h-5 text-slate-400 group-hover:text-white" />
+                  </button>
+              </div>
+          </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* COLUMNA IZQUIERDA: PIPELINE Y CARTERA */}
           <div className="lg:col-span-2 space-y-8">
@@ -227,10 +333,10 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
               </div>
 
               {/* DISTRIBUCIÓN DE CARTERA */}
-              <div className="bg-slate-900 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-8 opacity-10"><Award className="w-40 h-40 text-white" /></div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-tight mb-8 relative z-10 flex items-center gap-3">
-                      <PieChart className="w-6 h-6 text-indigo-400" /> Análisis de Clasificación
+              <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-5"><Award className="w-40 h-40 text-slate-900" /></div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8 relative z-10 flex items-center gap-3">
+                      <PieChart className="w-6 h-6 text-indigo-500" /> Análisis de Clasificación
                   </h3>
                   
                   <div className="space-y-6 relative z-10">
@@ -238,14 +344,14 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                         { label: 'Top Productivo (A)', count: stats.classifications.A, color: 'bg-emerald-500' },
                         { label: 'Potencial Alto (B)', count: stats.classifications.B, color: 'bg-blue-500' },
                         { label: 'Ocasional (C)', count: stats.classifications.C, color: 'bg-yellow-500' },
-                        { label: 'No Estratégico (D)', count: stats.classifications.D, color: 'bg-slate-600' },
+                        { label: 'No Estratégico (D)', count: stats.classifications.D, color: 'bg-slate-400' },
                       ].map((item) => (
                         <div key={item.label}>
                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-black text-slate-400 uppercase">{item.label}</span>
-                                <span className="text-xs font-black text-white">{item.count}</span>
+                                <span className="text-xs font-black text-slate-500 uppercase">{item.label}</span>
+                                <span className="text-xs font-black text-slate-800">{item.count}</span>
                             </div>
-                            <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                                 <div 
                                     className={`h-full ${item.color} transition-all duration-1000`} 
                                     style={{ width: `${stats.totalDoctors > 0 ? (item.count / stats.totalDoctors) * 100 : 0}%` }}

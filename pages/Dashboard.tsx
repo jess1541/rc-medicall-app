@@ -5,7 +5,7 @@ import {
   Users, ShieldCheck, CheckCircle2, TrendingUp, Filter, 
   Award, Activity, DollarSign, Target, Calendar, 
   ArrowUpRight, Clock, MapPin, AlertCircle, 
-  BarChart3, PieChart, Zap, ChevronRight, Stethoscope
+  BarChart3, PieChart, Zap, ChevronRight, Stethoscope, Wallet
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
@@ -36,7 +36,6 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
     let plannedMonth = 0;
     let completedWeek = 0;
     let plannedWeek = 0;
-    let highPriorityPending = 0;
     
     const outcomes = {
         INTERESADO: 0,
@@ -45,7 +44,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         SEGUIMIENTO: 0
     };
 
-    const classifications = { A: 0, B: 0, C: 0 };
+    const classifications = { A: 0, B: 0, C: 0, D: 0 };
     const upcomingVisits: any[] = [];
     const recentActivity: any[] = [];
 
@@ -53,7 +52,8 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         // Stats por clasificación
         if (doc.classification === 'A') classifications.A++;
         else if (doc.classification === 'B') classifications.B++;
-        else classifications.C++;
+        else if (doc.classification === 'C') classifications.C++;
+        else classifications.D++; // Counts D or undefined as D
 
         (doc.visits || []).forEach(v => {
             const vDate = parseISO(v.date);
@@ -68,10 +68,6 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
             if (isThisWeek) {
                 if (v.status === 'completed') completedWeek++;
                 else plannedWeek++;
-            }
-
-            if (v.status === 'planned' && v.priority === 'ALTA') {
-                highPriorityPending++;
             }
 
             // Pipeline de los últimos resultados reportados
@@ -95,15 +91,18 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         return p.status === 'performed' && pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear && belongs;
     });
 
+    const totalRevenue = relevantProcedures.reduce((a, c) => a + (c.cost || 0), 0);
+    const totalCommissions = totalRevenue * 0.03; // Cálculo del 3%
+
     return { 
         totalDoctors: filteredDoctors.length, 
         completedMonth,
         plannedMonth,
         completedWeek,
         plannedWeek,
-        highPriorityPending,
         outcomes,
-        totalRevenue: relevantProcedures.reduce((a, c) => a + (c.cost || 0), 0),
+        totalRevenue,
+        totalCommissions,
         performance: (plannedMonth + completedMonth) > 0 ? Math.round((completedMonth / (plannedMonth + completedMonth)) * 100) : 0,
         classifications,
         upcomingVisits: upcomingVisits.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5),
@@ -146,6 +145,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
 
       {/* METRICAS PRINCIPALES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Card 1: Cartera */}
         <div className="bg-white p-8 rounded-[2.5rem] shadow-lg border border-slate-100 relative overflow-hidden group">
           <Users className="absolute -right-4 -bottom-4 w-32 h-32 text-slate-50 group-hover:text-blue-50 transition-colors" />
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Cartera Total</p>
@@ -155,6 +155,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
           </div>
         </div>
 
+        {/* Card 2: Efectividad */}
         <div className="bg-blue-600 p-8 rounded-[2.5rem] shadow-2xl shadow-blue-200 text-white relative overflow-hidden">
           <TrendingUp className="absolute -right-4 -bottom-4 w-32 h-32 text-white/10" />
           <p className="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-4 relative z-10">Efectividad {currentMonthName}</p>
@@ -167,6 +168,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
           </div>
         </div>
 
+        {/* Card 3: Ventas */}
         <div className="bg-white p-8 rounded-[2.5rem] shadow-lg border border-slate-100 group">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Ventas del Mes</p>
           <div className="flex items-center gap-3">
@@ -178,14 +180,17 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
           </p>
         </div>
 
-        <div className="bg-slate-900 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
-          <AlertCircle className="absolute -right-4 -bottom-4 w-32 h-32 text-white/5" />
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 relative z-10">Prioridad Crítica</p>
-          <div className="flex items-end gap-3 relative z-10">
-              <span className="text-5xl font-black text-rose-500">{stats.highPriorityPending}</span>
+        {/* Card 4: Comisiones (NUEVO) */}
+        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-8 rounded-[2.5rem] shadow-xl shadow-purple-200 text-white relative overflow-hidden">
+          <Wallet className="absolute -right-4 -bottom-4 w-32 h-32 text-white/10" />
+          <p className="text-[10px] font-black text-purple-100 uppercase tracking-widest mb-4 relative z-10">Comisiones (3%)</p>
+          <div className="flex items-end gap-2 relative z-10">
+              <span className="text-4xl lg:text-4xl xl:text-5xl font-black text-white">
+                ${stats.totalCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
               <div className="mb-2">
-                  <p className="text-[10px] font-bold uppercase text-slate-300">Pendientes</p>
-                  <p className="text-[10px] font-bold uppercase text-rose-400">Urgentes</p>
+                  <p className="text-[10px] font-bold uppercase opacity-80">Estimado</p>
+                  <p className="text-[10px] font-bold uppercase">Mensual</p>
               </div>
           </div>
         </div>
@@ -212,7 +217,6 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                                   <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                       <div 
                                         className="h-full bg-blue-600" 
-                                        // Fix: Cast value to number to fix arithmetic type error on line 215 (relative to error report)
                                         style={{ width: `${stats.totalDoctors > 0 ? ((value as number) / stats.totalDoctors) * 100 : 0}%` }}
                                       ></div>
                                   </div>
@@ -231,9 +235,10 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                   
                   <div className="space-y-6 relative z-10">
                       {[
-                        { label: 'Médicos VIP (A)', count: stats.classifications.A, color: 'bg-emerald-500' },
-                        { label: 'Médicos Regulares (B)', count: stats.classifications.B, color: 'bg-blue-500' },
-                        { label: 'Médicos Básicos (C)', count: stats.classifications.C, color: 'bg-slate-600' },
+                        { label: 'Top Productivo (A)', count: stats.classifications.A, color: 'bg-emerald-500' },
+                        { label: 'Potencial Alto (B)', count: stats.classifications.B, color: 'bg-blue-500' },
+                        { label: 'Ocasional (C)', count: stats.classifications.C, color: 'bg-yellow-500' },
+                        { label: 'No Estratégico (D)', count: stats.classifications.D, color: 'bg-slate-600' },
                       ].map((item) => (
                         <div key={item.label}>
                             <div className="flex justify-between items-center mb-2">

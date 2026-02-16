@@ -46,7 +46,7 @@ export interface Doctor {
   subSpecialty?: string;
   birthDate?: string;
   cedula?: string;
-  classification?: 'A' | 'B' | 'C';
+  classification?: 'A' | 'B' | 'C' | 'D';
   socialStyle?: 'ANALÍTICO' | 'EMPRENDEDOR' | 'AFABLE' | 'EXPRESIVO' | '';
   attitudinalSegment?: 'RELACIÓN' | 'PACIENTE' | 'INNOVACIÓN' | 'EXPERIENCIA' | '';
   schedule: ScheduleSlot[];

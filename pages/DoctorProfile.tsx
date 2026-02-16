@@ -156,6 +156,17 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
   const isAdminCat = doctor.category === 'ADMINISTRATIVO';
   const isHospital = doctor.category === 'HOSPITAL';
 
+  // Helper para mostrar etiqueta de clasificación
+  const getClassificationLabel = (code?: string) => {
+      switch(code) {
+          case 'A': return 'TOP PRODUCTIVO (A)';
+          case 'B': return 'POTENCIAL ALTO (B)';
+          case 'C': return 'OCASIONAL (C)';
+          case 'D': return 'NO ESTRATÉGICO (D)';
+          default: return 'NO DEFINIDO';
+      }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-10">
       <button type="button" onClick={() => fromParam === 'calendar' ? navigate('/calendar') : navigate('/doctors')} className="flex items-center text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors bg-white/50 backdrop-blur px-4 py-2 rounded-xl shadow-sm border border-slate-200/60">
@@ -175,7 +186,6 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                 {isHospital && <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold uppercase">Hospital</span>}
              </div>
             <p className="mt-4 text-sm text-slate-500 flex items-center font-medium">
-                {/* Fix: Removed reference to doctor.area which does not exist on Doctor type */}
                 {(isMedico || isAdminCat) && (<span className="font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg uppercase tracking-wide shadow-sm border border-blue-100 mr-3">{doctor.specialty || 'GENERAL'}</span>)}
                 <span className="text-slate-600 flex items-center uppercase"><MapPin className="w-4 h-4 mr-1 text-slate-400" /> {doctor.address}</span>
             </p>
@@ -266,7 +276,21 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Especialidad</label>{isEditing ? (<input spellCheck={true} lang="es" type="text" name="specialty" value={formData.specialty || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase" />) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.specialty || 'GENERAL'}</p>)}</div>
                                 <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Subespecialidad</label>{isEditing ? (<input spellCheck={true} lang="es" type="text" name="subSpecialty" value={formData.subSpecialty || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase" placeholder="EJ: ONCOLOGÍA" />) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.subSpecialty || 'N/A'}</p>)}</div>
-                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Categoría (Clasificación)</label>{isEditing ? (<select name="classification" value={formData.classification || 'C'} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium"><option value="A">VIP (A)</option><option value="B">REGULAR (B)</option><option value="C">BASICO (C)</option></select>) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.classification === 'A' ? 'VIP (A)' : (doctor.classification === 'B' ? 'REGULAR (B)' : 'BASICO (C)')}</p>)}</div>
+                                <div>
+                                    <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Categoría (Clasificación)</label>
+                                    {isEditing ? (
+                                        <select name="classification" value={formData.classification || 'C'} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase">
+                                            <option value="A">TOP PRODUCTIVO (A)</option>
+                                            <option value="B">POTENCIAL ALTO (B)</option>
+                                            <option value="C">OCASIONAL (C)</option>
+                                            <option value="D">NO ESTRATÉGICO (D)</option>
+                                        </select>
+                                    ) : (
+                                        <p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">
+                                            {getClassificationLabel(doctor.classification)}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}

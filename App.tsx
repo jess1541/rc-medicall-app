@@ -191,7 +191,7 @@ const App: React.FC = () => {
                 <ExecutiveCalendar 
                   doctors={doctors} 
                   timeOffEvents={timeOffEvents}
-                  onUpdateSingleDoctor={updateDoctor} 
+                  onUpdateDoctor={updateDoctor} 
                   onSaveTimeOff={handleSaveTimeOff}
                   onDeleteTimeOff={handleDeleteTimeOff}
                   onDeleteVisit={(did, vid) => {

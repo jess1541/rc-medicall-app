@@ -44,7 +44,7 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'visits'>('profile');
 
-  const executives = ['LUIS', 'ORALIA', 'ANGEL', 'TALINA', 'SIN ASIGNAR'];
+  const executives = ['LUIS', 'ORALIA', 'TALINA', 'SIN ASIGNAR'];
 
   const timeSlots = [];
   for (let i = 9; i <= 20; i++) {

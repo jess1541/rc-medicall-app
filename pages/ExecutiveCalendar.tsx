@@ -299,7 +299,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
              if (newDoc) {
                  const updatedVisits = newDoc.visits.map(v => 
                      v.id === editingAppointment.visit.id 
-                     ? { ...editingAppointment.visit, date: dateStr, time: appointmentTime, objective: planObjective.toUpperCase(), outcome: 'CITA', status: 'planned' as const }
+                     ? { ...editingAppointment.visit, date: dateStr, time: appointmentTime, objective: planObjective.toUpperCase(), outcome: 'CITA' as const, status: 'planned' as const }
                      : v
                  );
                  onUpdateDoctor({ ...newDoc, visits: updatedVisits });
@@ -344,7 +344,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
       setReportTime(visit.time || '');
       setIsEditingPlan(false);
       setEditObjective(visit.objective || '');
-      setNextVisitDate(null);
+      setNextVisitDate(null); // User must select a date
       setNextVisitTime('09:00'); 
       setReportModalOpen(true);
   };
@@ -385,6 +385,10 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
           alert("Reporte y Siguiente Paso son obligatorios.");
           return;
       }
+      if (!nextVisitDate) {
+          alert("Es obligatorio agendar la fecha de la próxima visita.");
+          return;
+      }
       
       const doc = doctors.find(d => d.id === selectedVisitToReport.docId);
       if (doc) {
@@ -403,24 +407,23 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
               return v;
           });
 
-          if (nextVisitDate) {
-              const newVisit: Visit = {
-                  id: `nv-${Date.now()}`,
-                  date: formatDateToString(nextVisitDate),
-                  time: nextVisitTime, 
-                  note: 'Visita Planeada',
-                  objective: reportFollowUp.toUpperCase(), 
-                  outcome: 'PLANEADA',
-                  status: 'planned'
-              };
-              updatedVisits = [...updatedVisits, newVisit];
-          }
+          // Create Next Visit (Mandatory)
+          const newVisit: Visit = {
+              id: `nv-${Date.now()}`,
+              date: formatDateToString(nextVisitDate),
+              time: nextVisitTime, 
+              note: 'Visita Planeada',
+              objective: reportFollowUp.toUpperCase(), 
+              outcome: 'PLANEADA',
+              status: 'planned'
+          };
+          updatedVisits = [...updatedVisits, newVisit];
 
           onUpdateDoctor({ ...doc, visits: updatedVisits });
       }
 
       setReportModalOpen(false);
-      if (nextVisitDate) alert("Reporte guardado y próxima visita agendada.");
+      alert("Reporte guardado y próxima visita agendada.");
   };
 
   const handleDragStart = (e: React.DragEvent, docId: string, visit: Visit) => {
@@ -524,7 +527,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
       const chipClasses = isSlot 
         ? `absolute left-0 right-0 mx-2 p-2 rounded shadow-sm cursor-pointer transition-colors z-10 border-l-4 ${
             isAppointment 
-            ? 'bg-red-100 border-red-500 hover:bg-red-200 cursor-default' 
+            ? 'bg-pink-100 border-pink-500 hover:bg-pink-200 cursor-default' 
             : (isCompleted 
                 ? 'bg-green-100 border-green-500 hover:bg-green-200' 
                 : 'bg-blue-100 border-blue-500 hover:bg-blue-200')
@@ -533,7 +536,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
             isTimeOff 
             ? 'bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200 text-orange-800'
             : (isAppointment 
-                ? 'bg-gradient-to-r from-red-500 to-rose-600 text-white border-transparent shadow-red-300' 
+                ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-transparent shadow-pink-300' 
                 : (isCompleted
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-transparent shadow-emerald-300' 
                     : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-transparent shadow-blue-200'))
@@ -556,10 +559,10 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
             {isSlot ? (
                 <>
                     <span className={`text-xs font-bold block ${
-                        isAppointment ? 'text-red-900' : (isCompleted ? 'text-green-900' : 'text-blue-900')
+                        isAppointment ? 'text-pink-900' : (isCompleted ? 'text-green-900' : 'text-blue-900')
                     }`}>{evt.data.docName} ({evt.data.docCategory || 'MEDICO'})</span>
                     <span className={`text-[10px] uppercase ${
-                        isAppointment ? 'text-red-700' : (isCompleted ? 'text-green-700' : 'text-blue-700')
+                        isAppointment ? 'text-pink-700' : (isCompleted ? 'text-green-700' : 'text-blue-700')
                     }`}>{evt.data.visit.objective}</span>
                 </>
             ) : (
@@ -587,6 +590,14 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
            </div>
            
            <div className="flex flex-col md:flex-row gap-3 items-center w-full xl:w-auto">
+               <button 
+                   onClick={() => handleDayClick(currentDate, false)}
+                   className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex items-center w-full md:w-auto justify-center"
+               >
+                   <Calendar className="w-4 h-4 mr-2" />
+                   Programar Visita
+               </button>
+
                <button 
                    onClick={() => handleDayClick(currentDate, true)}
                    className="bg-gradient-to-r from-pink-600 to-rose-600 text-white px-4 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg shadow-pink-500/30 transition-all active:scale-95 flex items-center w-full md:w-auto justify-center"
@@ -856,11 +867,11 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                        <div className="grid grid-cols-2 gap-4">
                            <div>
                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
-                               <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-slate-50" />
+                               <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-white" />
                            </div>
                            <div>
                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hora</label>
-                               <select value={reportTime} onChange={(e) => setReportTime(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-slate-50">
+                               <select value={reportTime} onChange={(e) => setReportTime(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-white">
                                    {visitTimeSlots.map(t => <option key={t} value={t}>{t}</option>)}
                                </select>
                            </div>
@@ -873,7 +884,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                    rows={3}
                                    value={editObjective}
                                    onChange={(e) => setEditObjective(e.target.value.toUpperCase())}
-                                   className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase"
+                                   className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase bg-white"
                                />
                            </div>
                        ) : (
@@ -890,7 +901,6 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                        <option value="COTIZACIÓN">COTIZACIÓN</option>
                                        <option value="INTERESADO">INTERESADO</option>
                                        <option value="PROGRAMAR PROCEDIMIENTO">PROGRAMAR PROCEDIMIENTO</option>
-                                       <option value="AUSENTE">AUSENTE</option>
                                    </select>
                                </div>
 
@@ -900,7 +910,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                        rows={3}
                                        value={reportNote}
                                        onChange={(e) => setReportNote(e.target.value.toUpperCase())}
-                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none"
+                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none bg-white"
                                        placeholder="DETALLES DE LA VISITA..."
                                    />
                                </div>
@@ -911,50 +921,42 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                        rows={2}
                                        value={reportFollowUp}
                                        onChange={(e) => setReportFollowUp(e.target.value.toUpperCase())}
-                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none"
+                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none bg-white"
                                        placeholder="COMPROMISOS..."
                                    />
                                </div>
                                
-                               <div className="border-t border-slate-100 pt-4">
-                                   <div className="flex items-center mb-2">
-                                       <input 
-                                            type="checkbox" 
-                                            id="scheduleNext" 
-                                            checked={!!nextVisitDate} 
-                                            onChange={(e) => {
-                                                if(e.target.checked) setNextVisitDate(new Date());
-                                                else setNextVisitDate(null);
-                                            }}
-                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mr-2"
-                                       />
-                                       <label htmlFor="scheduleNext" className="text-sm font-bold text-slate-700">Agendar Próxima Visita</label>
+                               <div className="border-t border-slate-100 pt-4 bg-blue-50/50 p-4 rounded-xl">
+                                   <div className="mb-2">
+                                       <span className="text-sm font-black text-slate-800 uppercase flex items-center">
+                                            <Calendar className="w-4 h-4 mr-2 text-blue-600" />
+                                            Agendar Próxima Visita (Obligatorio)
+                                       </span>
                                    </div>
                                    
-                                   {nextVisitDate && (
-                                       <div className="grid grid-cols-2 gap-4 mt-2 bg-blue-50 p-3 rounded-xl">
-                                           <div>
-                                               <label className="block text-[10px] font-black text-blue-400 uppercase mb-1">Fecha</label>
-                                               <DatePicker 
-                                                    selected={nextVisitDate} 
-                                                    onChange={(date) => setNextVisitDate(date)} 
-                                                    dateFormat="dd/MM/yyyy"
-                                                    locale="es"
-                                                    className="w-full text-xs font-bold p-2 rounded border border-blue-200"
-                                               />
-                                           </div>
-                                           <div>
-                                               <label className="block text-[10px] font-black text-blue-400 uppercase mb-1">Hora</label>
-                                               <select 
-                                                    value={nextVisitTime} 
-                                                    onChange={(e) => setNextVisitTime(e.target.value)}
-                                                    className="w-full text-xs font-bold p-2 rounded border border-blue-200"
-                                               >
-                                                   {visitTimeSlots.map(t => <option key={t} value={t}>{t}</option>)}
-                                               </select>
-                                           </div>
+                                   <div className="grid grid-cols-2 gap-4 mt-2">
+                                       <div>
+                                           <label className="block text-[10px] font-black text-blue-400 uppercase mb-1">Fecha</label>
+                                           <DatePicker 
+                                                selected={nextVisitDate} 
+                                                onChange={(date) => setNextVisitDate(date)} 
+                                                dateFormat="dd/MM/yyyy"
+                                                locale="es"
+                                                placeholderText="Seleccione fecha"
+                                                className="w-full text-xs font-bold p-2.5 rounded-xl border border-blue-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                           />
                                        </div>
-                                   )}
+                                       <div>
+                                           <label className="block text-[10px] font-black text-blue-400 uppercase mb-1">Hora</label>
+                                           <select 
+                                                value={nextVisitTime} 
+                                                onChange={(e) => setNextVisitTime(e.target.value)}
+                                                className="w-full text-xs font-bold p-2.5 rounded-xl border border-blue-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                           >
+                                               {visitTimeSlots.map(t => <option key={t} value={t}>{t}</option>)}
+                                           </select>
+                                       </div>
+                                   </div>
                                </div>
                            </>
                        )}
@@ -987,17 +989,29 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                        <div className="grid grid-cols-2 gap-4">
                            <div>
                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Desde</label>
-                               <input type="date" value={newTimeOff.startDate} onChange={(e) => setNewTimeOff({...newTimeOff, startDate: e.target.value})} className="w-full border border-slate-200 rounded-xl p-2 text-sm font-bold" />
+                               <DatePicker
+                                   selected={parseDateString(newTimeOff.startDate || '')}
+                                   onChange={(date) => setNewTimeOff({...newTimeOff, startDate: formatDateToString(date)})}
+                                   dateFormat="dd/MM/yyyy"
+                                   locale="es"
+                                   className="w-full border border-slate-200 rounded-xl p-2 text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-orange-500"
+                               />
                            </div>
                            <div>
                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hasta</label>
-                               <input type="date" value={newTimeOff.endDate} onChange={(e) => setNewTimeOff({...newTimeOff, endDate: e.target.value})} className="w-full border border-slate-200 rounded-xl p-2 text-sm font-bold" />
+                               <DatePicker
+                                   selected={parseDateString(newTimeOff.endDate || '')}
+                                   onChange={(date) => setNewTimeOff({...newTimeOff, endDate: formatDateToString(date)})}
+                                   dateFormat="dd/MM/yyyy"
+                                   locale="es"
+                                   className="w-full border border-slate-200 rounded-xl p-2 text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-orange-500"
+                               />
                            </div>
                        </div>
                        
                        <div>
                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Duración</label>
-                           <select value={newTimeOff.duration} onChange={(e) => setNewTimeOff({...newTimeOff, duration: e.target.value as any})} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none">
+                           <select value={newTimeOff.duration} onChange={(e) => setNewTimeOff({...newTimeOff, duration: e.target.value as any})} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white">
                                <option value="TODO EL DÍA">TODO EL DÍA</option>
                                <option value="2 A 4 HRS">2 A 4 HRS</option>
                                <option value="6 A 8 HRS">6 A 8 HRS</option>
@@ -1006,7 +1020,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
                        <div>
                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Motivo</label>
-                           <select value={newTimeOff.reason} onChange={(e) => setNewTimeOff({...newTimeOff, reason: e.target.value as any})} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none">
+                           <select value={newTimeOff.reason} onChange={(e) => setNewTimeOff({...newTimeOff, reason: e.target.value as any})} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white">
                                <option value="JUNTA">JUNTA</option>
                                <option value="CAPACITACIÓN">CAPACITACIÓN</option>
                                <option value="PERMISO">PERMISO</option>
@@ -1016,7 +1030,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
                        <div>
                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Notas</label>
-                           <textarea rows={2} value={newTimeOff.notes} onChange={(e) => setNewTimeOff({...newTimeOff, notes: e.target.value.toUpperCase()})} className="w-full border border-slate-200 rounded-xl p-3 text-sm uppercase outline-none resize-none" />
+                           <textarea rows={2} value={newTimeOff.notes} onChange={(e) => setNewTimeOff({...newTimeOff, notes: e.target.value.toUpperCase()})} className="w-full border border-slate-200 rounded-xl p-3 text-sm uppercase outline-none resize-none bg-white" />
                        </div>
                    </div>
                    <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">

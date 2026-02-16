@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { User } from '../types';
 import { Lock, UserCircle, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
@@ -10,8 +11,7 @@ const USERS: User[] = [
   { name: 'Administrador', role: 'admin', password: 'admin' },
   { name: 'LUIS', role: 'executive', password: 'luis01' },
   { name: 'ORALIA', role: 'executive', password: 'oralia02' },
-  { name: 'ANGEL', role: 'executive', password: 'angel03' },
-  { name: 'TALINA', role: 'executive', password: 'talina04' },
+  { name: 'TALINA', role: 'executive', password: 'talina03' },
 ];
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {

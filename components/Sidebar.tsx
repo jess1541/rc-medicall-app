@@ -31,8 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isMobileOpen, closeMo
   const executives = [
       { name: 'LUIS', color: 'from-blue-400 to-blue-600', initials: 'LU' },
       { name: 'ORALIA', color: 'from-pink-400 to-rose-600', initials: 'OR' },
-      { name: 'ANGEL', color: 'from-purple-400 to-indigo-600', initials: 'AN' },
-      { name: 'TALINA', color: 'from-emerald-400 to-teal-600', initials: 'TA' }
+      { name: 'TALINA', color: 'from-teal-400 to-emerald-600', initials: 'TA' }
   ];
 
   return (

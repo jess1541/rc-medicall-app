@@ -6,7 +6,7 @@ import {
   Award, Activity, DollarSign, Target, Calendar, 
   ArrowUpRight, Clock, MapPin, AlertCircle, 
   BarChart3, PieChart, Zap, ChevronRight, Stethoscope, Wallet,
-  Download, FileSpreadsheet
+  Download, FileSpreadsheet, X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
@@ -21,10 +21,50 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnline }) => {
   const navigate = useNavigate();
   const [filterExecutive, setFilterExecutive] = useState<string | null>(user.role === 'executive' ? user.name : null);
+  const [selectedStage, setSelectedStage] = useState<string | null>(null);
 
   const filteredDoctors = useMemo(() => {
-      return filterExecutive ? doctors.filter(d => d.executive === filterExecutive) : doctors;
+      // Filter out archived doctors for the main list, but we might need them for historical data?
+      // Actually, usually dashboard shows active portfolio.
+      // If we filter them out here, they won't contribute to 'totalDoctors' count, which is correct.
+      // However, their visits will also be excluded from 'completedMonth', 'performance', etc.
+      // If the user wants "permanezcan en el directorio y en procedimiento el registro", they probably want the history to count.
+      // So we should NOT filter them out here if we want their visits to count.
+      // BUT, we should filter them out for 'totalDoctors' count.
+      // Let's keep them in 'filteredDoctors' but handle the count separately.
+      // Wait, if I keep them, they might show up in lists where they shouldn't.
+      // Let's filter them out from 'filteredDoctors' to keep the dashboard focused on active portfolio, 
+      // UNLESS the user explicitly wants to see historical performance including archived.
+      // Standard CRM behavior: Dashboard reflects ACTIVE portfolio.
+      // However, if a visit happened this month, it should probably count.
+      // Let's filter by status !== 'archived' for now to be consistent with DoctorList.
+      // If the user complains that stats dropped, we can adjust.
+      // Actually, let's filter them out.
+      const activeDocs = doctors.filter(d => d.status !== 'archived');
+      return filterExecutive ? activeDocs.filter(d => d.executive === filterExecutive) : activeDocs;
   }, [doctors, filterExecutive]);
+
+  const stageDetails = useMemo(() => {
+      if (!selectedStage) return [];
+      const details: any[] = [];
+      filteredDoctors.forEach(doc => {
+          (doc.visits || []).forEach(v => {
+              if (v.status === 'completed' && v.outcome === selectedStage) {
+                  details.push({
+                      date: v.date,
+                      doctor: doc.name,
+                      specialty: doc.specialty,
+                      category: doc.category,
+                      classification: doc.classification,
+                      executive: doc.executive,
+                      notes: v.note,
+                      docId: doc.id
+                  });
+              }
+          });
+      });
+      return details.sort((a, b) => b.date.localeCompare(a.date));
+  }, [filteredDoctors, selectedStage]);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -81,7 +121,15 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                 upcomingVisits.push({ ...v, docName: doc.name, docId: doc.id, hospital: doc.hospital });
             }
             if (v.status === 'completed') {
-                recentActivity.push({ ...v, docName: doc.name, docId: doc.id });
+                recentActivity.push({ 
+                    ...v, 
+                    docName: doc.name, 
+                    docId: doc.id,
+                    specialty: doc.specialty,
+                    category: doc.category,
+                    classification: doc.classification,
+                    executive: doc.executive
+                });
             }
         });
     });
@@ -180,15 +228,15 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
   const currentMonthName = new Date().toLocaleDateString('es-ES', { month: 'long' });
 
   return (
-    <div className="space-y-8 pb-16 animate-fadeIn">
+    <div className="space-y-6 pb-16 animate-fadeIn">
       {/* HERO SECTION */}
-      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
-          <div className="flex items-center gap-6">
-            <div className="p-5 bg-blue-600 rounded-[2rem] text-white shadow-2xl shadow-blue-200">
-                <Zap className="w-10 h-10" />
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-xl border border-slate-100">
+          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center md:text-left">
+            <div className="p-4 md:p-5 bg-blue-600 rounded-[1.5rem] md:rounded-[2rem] text-white shadow-2xl shadow-blue-200">
+                <Zap className="w-8 h-8 md:w-10 md:h-10" />
             </div>
             <div>
-                <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+                <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">
                     Dashboard <span className="text-blue-600">Estratégico</span>
                 </h1>
                 <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px] mt-1">
@@ -197,7 +245,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 w-full md:w-auto justify-center">
             <div className={`px-4 py-2 rounded-2xl flex items-center gap-2 border font-black text-[10px] uppercase tracking-widest ${isOnline ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
                 <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
                 {isOnline ? 'Sincronizado' : 'Modo Local'}
@@ -211,23 +259,23 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       </div>
 
       {/* METRICAS PRINCIPALES */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Card 1: Cartera */}
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-lg border border-slate-100 relative overflow-hidden group">
-          <Users className="absolute -right-4 -bottom-4 w-32 h-32 text-slate-50 group-hover:text-blue-50 transition-colors" />
+        <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-lg border border-slate-100 relative overflow-hidden group">
+          <Users className="absolute -right-4 -bottom-4 w-24 h-24 md:w-32 md:h-32 text-slate-50 group-hover:text-blue-50 transition-colors" />
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Cartera Total</p>
           <div className="flex items-end gap-2 relative z-10">
-              <span className="text-5xl font-black text-slate-900">{stats.totalDoctors}</span>
+              <span className="text-4xl md:text-5xl font-black text-slate-900">{stats.totalDoctors}</span>
               <span className="text-xs font-bold text-blue-600 mb-2 uppercase">Contactos</span>
           </div>
         </div>
 
         {/* Card 2: Efectividad */}
-        <div className="bg-blue-600 p-8 rounded-[2.5rem] shadow-2xl shadow-blue-200 text-white relative overflow-hidden">
-          <TrendingUp className="absolute -right-4 -bottom-4 w-32 h-32 text-white/10" />
+        <div className="bg-blue-600 p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl shadow-blue-200 text-white relative overflow-hidden">
+          <TrendingUp className="absolute -right-4 -bottom-4 w-24 h-24 md:w-32 md:h-32 text-white/10" />
           <p className="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-4 relative z-10">Efectividad {currentMonthName}</p>
           <div className="flex items-end gap-2 relative z-10">
-              <span className="text-5xl font-black">{stats.performance}%</span>
+              <span className="text-4xl md:text-5xl font-black">{stats.performance}%</span>
               <div className="mb-2">
                   <p className="text-[10px] font-bold uppercase leading-none">{stats.completedMonth} Visitas</p>
                   <p className="text-[10px] font-bold uppercase opacity-60">Logradas</p>
@@ -236,11 +284,11 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         </div>
 
         {/* Card 3: Ventas */}
-        <div className="bg-white p-8 rounded-[2.5rem] shadow-lg border border-slate-100 group">
+        <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-lg border border-slate-100 group">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Ventas del Mes</p>
           <div className="flex items-center gap-3">
               <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl"><DollarSign className="w-6 h-6" /></div>
-              <span className="text-3xl font-black text-slate-900">${stats.totalRevenue.toLocaleString()}</span>
+              <span className="text-2xl md:text-3xl font-black text-slate-900">${stats.totalRevenue.toLocaleString()}</span>
           </div>
           <p className="text-[9px] font-bold text-emerald-600 uppercase mt-4 flex items-center gap-1">
               <ArrowUpRight className="w-3 h-3" /> Facturación Procedimientos
@@ -248,11 +296,11 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         </div>
 
         {/* Card 4: Comisiones (NUEVO) */}
-        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-8 rounded-[2.5rem] shadow-xl shadow-purple-200 text-white relative overflow-hidden">
-          <Wallet className="absolute -right-4 -bottom-4 w-32 h-32 text-white/10" />
+        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-xl shadow-purple-200 text-white relative overflow-hidden">
+          <Wallet className="absolute -right-4 -bottom-4 w-24 h-24 md:w-32 md:h-32 text-white/10" />
           <p className="text-[10px] font-black text-purple-100 uppercase tracking-widest mb-4 relative z-10">Comisiones (3%)</p>
           <div className="flex items-end gap-2 relative z-10">
-              <span className="text-4xl lg:text-4xl xl:text-5xl font-black text-white">
+              <span className="text-3xl md:text-4xl lg:text-4xl xl:text-5xl font-black text-white">
                 ${stats.totalCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <div className="mb-2">
@@ -264,16 +312,16 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       </div>
 
       {/* CENTRO DE REPORTES Y DESCARGAS */}
-      <div className="bg-slate-900 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
+      <div className="bg-slate-900 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-10"><FileSpreadsheet className="w-40 h-40 text-white" /></div>
           <div className="relative z-10">
-              <h3 className="text-xl font-black text-white uppercase tracking-tight mb-6 flex items-center gap-3">
+              <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-tight mb-6 flex items-center gap-3">
                   <Download className="w-6 h-6 text-emerald-400" /> Centro de Reportes
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button 
                       onClick={handleExportVisits}
-                      className="bg-white/10 hover:bg-white/20 border border-white/10 p-6 rounded-2xl flex items-center justify-between group transition-all"
+                      className="bg-white/10 hover:bg-white/20 border border-white/10 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
                   >
                       <div className="flex items-center gap-4">
                           <div className="p-3 bg-blue-500 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Users className="w-6 h-6" /></div>
@@ -287,7 +335,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
 
                   <button 
                       onClick={handleExportProcedures}
-                      className="bg-white/10 hover:bg-white/20 border border-white/10 p-6 rounded-2xl flex items-center justify-between group transition-all"
+                      className="bg-white/10 hover:bg-white/20 border border-white/10 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
                   >
                       <div className="flex items-center gap-4">
                           <div className="p-3 bg-purple-500 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Activity className="w-6 h-6" /></div>
@@ -316,10 +364,17 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {Object.entries(stats.outcomes).map(([key, value]) => (
-                          <div key={key} className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:border-blue-200 transition-colors">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{key}</p>
+                          <div 
+                            key={key} 
+                            onClick={() => setSelectedStage(key)}
+                            className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                          >
+                              <div className="flex justify-between items-center mb-2">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-500">{key}</p>
+                                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all" />
+                              </div>
                               <div className="flex justify-between items-end">
-                                  <span className="text-3xl font-black text-slate-800">{value}</span>
+                                  <span className="text-3xl font-black text-slate-800 group-hover:text-blue-700">{value}</span>
                                   <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                       <div 
                                         className="h-full bg-blue-600" 
@@ -426,6 +481,10 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                       <tr className="text-left border-b border-slate-50">
                           <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
                           <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Especialidad</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoría</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Clasificación</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ejecutivo</th>
                           <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Resultado</th>
                           <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Notas</th>
                           <th className="pb-4"></th>
@@ -442,6 +501,25 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                                       <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-[10px]">{act.docName.charAt(0)}</div>
                                       <span className="text-xs font-black text-slate-800 uppercase">{act.docName}</span>
                                   </div>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">{act.specialty || '-'}</span>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">{act.category}</span>
+                              </td>
+                              <td className="py-5">
+                                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${
+                                      act.classification === 'A' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                      act.classification === 'B' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                      act.classification === 'C' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
+                                      'bg-slate-50 text-slate-500 border-slate-100'
+                                  }`}>
+                                      {act.classification || 'C'}
+                                  </span>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">{act.executive}</span>
                               </td>
                               <td className="py-5">
                                   <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
@@ -462,7 +540,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                       ))}
                       {stats.recentActivity.length === 0 && (
                           <tr>
-                              <td colSpan={5} className="py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                              <td colSpan={9} className="py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">
                                   No hay reportes recientes registrados
                               </td>
                           </tr>
@@ -471,6 +549,76 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
               </table>
           </div>
       </div>
+      {/* MODAL DETALLE PIPELINE */}
+      {selectedStage && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl w-full max-w-4xl overflow-hidden animate-fadeIn border border-white/20 flex flex-col max-h-[85vh]">
+                <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div>
+                        <h3 className="text-xl md:text-2xl font-black text-black uppercase tracking-tight flex items-center gap-3">
+                            <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                            Detalle: <span className="text-blue-600">{selectedStage}</span>
+                        </h3>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 ml-8 md:ml-9">
+                            {stageDetails.length} Registros encontrados
+                        </p>
+                    </div>
+                    <button onClick={() => setSelectedStage(null)} className="p-2 md:p-3 bg-white rounded-2xl text-slate-400 hover:text-red-500 transition-all shadow-sm">
+                        <X className="h-5 w-5 md:h-6 md:w-6" />
+                    </button>
+                </div>
+                
+                <div className="p-4 md:p-8 overflow-y-auto custom-scrollbar">
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[600px]">
+                            <thead>
+                                <tr className="text-left border-b border-slate-100">
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Especialidad</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Clasificación</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ejecutivo</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Notas</th>
+                                    <th className="pb-4"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {stageDetails.map((item, idx) => (
+                                    <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
+                                        <td className="py-4 text-xs font-bold text-slate-500">{item.date}</td>
+                                        <td className="py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-[10px]">{item.doctor.charAt(0)}</div>
+                                                <span className="text-xs font-black text-slate-800 uppercase">{item.doctor}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 text-xs font-medium text-slate-500 uppercase">{item.specialty || '-'}</td>
+                                        <td className="py-4">
+                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${
+                                                item.classification === 'A' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                item.classification === 'B' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                item.classification === 'C' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
+                                                'bg-slate-50 text-slate-500 border-slate-100'
+                                            }`}>
+                                                {item.classification || 'C'}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 text-xs font-medium text-slate-500 uppercase">{item.executive}</td>
+                                        <td className="py-4 text-xs text-slate-500 italic max-w-xs truncate">{item.notes}</td>
+                                        <td className="py-4 text-right">
+                                            <button onClick={() => navigate(`/doctors/${item.docId}`)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors">
+                                                <ChevronRight className="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

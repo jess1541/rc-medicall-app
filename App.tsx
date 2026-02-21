@@ -118,11 +118,32 @@ const App: React.FC = () => {
   };
 
   const handleDeleteDoctor = async (id: string) => {
-    setDoctors(prev => prev.filter(d => d.id !== id));
-    try {
-        await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' });
-    } catch (e) {
-        console.error("Error al eliminar doctor", e);
+    const doc = doctors.find(d => d.id === id);
+    if (!doc) return;
+
+    if (doc.status === 'archived') {
+        // Hard delete if already archived
+        setDoctors(prev => prev.filter(d => d.id !== id));
+        try {
+            await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' });
+        } catch (e) {
+            console.error("Error al eliminar doctor permanentemente", e);
+        }
+    } else {
+        // Soft delete: update status to 'archived'
+        const updatedDoc = { ...doc, status: 'archived' as const };
+        
+        setDoctors(prev => prev.map(d => d.id === id ? updatedDoc : d));
+        
+        try {
+            await fetch(`${API_BASE_URL}/doctors`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedDoc)
+            });
+        } catch (e) {
+            console.error("Error al archivar doctor", e);
+        }
     }
   };
 

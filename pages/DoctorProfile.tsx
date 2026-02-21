@@ -175,31 +175,33 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
 
       <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl shadow-blue-500/5 border border-white/60 overflow-hidden relative">
         <div className="h-4 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600"></div>
-        <div className="p-8 md:flex md:items-center md:justify-between">
+        <div className="p-6 md:p-8 md:flex md:items-center md:justify-between">
           <div className="flex-1 min-w-0">
              <div className="flex items-center flex-wrap gap-3">
-                 <h2 className="text-3xl font-black leading-7 text-slate-800 sm:text-4xl sm:truncate uppercase tracking-tight">{doctor.name}</h2>
+                 <h2 className="text-2xl md:text-3xl lg:text-4xl font-black leading-7 text-slate-800 uppercase tracking-tight">{doctor.name}</h2>
                 {doctor.isInsuranceDoctor && isMedico && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-black bg-gradient-to-r from-yellow-100 to-amber-100 text-amber-700 border border-amber-200 uppercase tracking-wide shadow-sm"><CheckCircle className="w-3 h-3 mr-1" />Médico Aseguradora</span>
+                    <span className="inline-flex items-center px-3 py-1 rounded-lg text-[10px] md:text-xs font-black bg-gradient-to-r from-yellow-100 to-amber-100 text-amber-700 border border-amber-200 uppercase tracking-wide shadow-sm"><CheckCircle className="w-3 h-3 mr-1" />Médico Aseguradora</span>
                 )}
-                {isAdminCat && <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold uppercase">Administrativo</span>}
-                {isHospital && <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold uppercase">Hospital</span>}
+                {isAdminCat && <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase">Administrativo</span>}
+                {isHospital && <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase">Hospital</span>}
              </div>
-            <p className="mt-4 text-sm text-slate-500 flex items-center font-medium">
-                {(isMedico || isAdminCat) && (<span className="font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg uppercase tracking-wide shadow-sm border border-blue-100 mr-3">{doctor.specialty || 'GENERAL'}</span>)}
+            <p className="mt-4 text-xs md:text-sm text-slate-500 flex flex-wrap items-center font-medium gap-2">
+                {(isMedico || isAdminCat) && (<span className="font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg uppercase tracking-wide shadow-sm border border-blue-100">{doctor.specialty || 'GENERAL'}</span>)}
                 <span className="text-slate-600 flex items-center uppercase"><MapPin className="w-4 h-4 mr-1 text-slate-400" /> {doctor.address}</span>
             </p>
           </div>
-          <div className="mt-6 md:mt-0 md:ml-6 flex flex-col items-end">
+          <div className="mt-6 md:mt-0 md:ml-6 flex flex-col items-start md:items-end">
                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Ejecutivo Asignado</span>
-                 <span className="text-base font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl mt-2 border border-slate-200 shadow-inner uppercase tracking-wide">{doctor.executive}</span>
+                 <span className="text-sm md:text-base font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl mt-2 border border-slate-200 shadow-inner uppercase tracking-wide">{doctor.executive}</span>
           </div>
         </div>
 
-        <div className="border-t border-slate-100 bg-slate-50/50 px-8"><nav className="-mb-px flex space-x-8">
-            <button onClick={() => setActiveTab('profile')} className={`py-4 px-1 border-b-4 font-bold text-sm transition-all duration-300 ${activeTab === 'profile' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'}`}><UserCheck className="inline-block w-4 h-4 mr-2" />Ficha</button>
-            <button onClick={() => setActiveTab('visits')} className={`py-4 px-1 border-b-4 font-bold text-sm transition-all duration-300 ${activeTab === 'visits' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'}`}><ClipboardList className="inline-block w-4 h-4 mr-2" />Gestión de Visitas</button>
-        </nav></div>
+        <div className="border-t border-slate-100 bg-slate-50/50 px-4 md:px-8 overflow-x-auto no-scrollbar">
+            <nav className="-mb-px flex space-x-8 whitespace-nowrap">
+                <button onClick={() => setActiveTab('profile')} className={`py-4 px-1 border-b-4 font-bold text-xs md:text-sm transition-all duration-300 ${activeTab === 'profile' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'}`}><UserCheck className="inline-block w-4 h-4 mr-2" />Ficha</button>
+                <button onClick={() => setActiveTab('visits')} className={`py-4 px-1 border-b-4 font-bold text-xs md:text-sm transition-all duration-300 ${activeTab === 'visits' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'}`}><ClipboardList className="inline-block w-4 h-4 mr-2" />Gestión de Visitas</button>
+            </nav>
+        </div>
       </div>
 
       <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-sm border border-white/60 p-8 min-h-[500px]">

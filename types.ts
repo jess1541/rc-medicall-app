@@ -53,6 +53,7 @@ export interface Doctor {
   importantNotes?: string;
   isInsuranceDoctor?: boolean; 
   visits: Visit[];
+  status?: 'active' | 'archived';
 }
 
 export interface Procedure {

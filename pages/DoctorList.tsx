@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Doctor, User, ScheduleSlot } from '../types';
 import { Search, MapPin, Stethoscope, Building2, Briefcase, Plus, X, ArrowRight, Loader2, Filter, Database, Download, Upload, Trash2, AlertTriangle } from 'lucide-react';
 
-type TabType = 'MEDICO' | 'ADMINISTRATIVO' | 'HOSPITAL';
+type TabType = 'MEDICO' | 'ADMINISTRATIVO' | 'HOSPITAL' | 'ARCHIVADOS';
 
 interface DoctorListProps {
   doctors: Doctor[];
@@ -66,14 +66,22 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
   const filteredItems = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
     return doctors.filter(doc => {
-      const category = doc.category || 'MEDICO';
+      // Filter by status: show only active doctors unless in 'ARCHIVADOS' tab
+      const isArchived = doc.status === 'archived';
+      if (activeTab === 'ARCHIVADOS') {
+          if (!isArchived) return false;
+      } else {
+          if (isArchived) return false;
+          if (doc.category !== activeTab) return false;
+      }
+
       const matchesSearch = !term || 
                             doc.name.toLowerCase().includes(term) || 
                             doc.address.toLowerCase().includes(term) ||
                             (doc.specialty || '').toLowerCase().includes(term);
       const matchesExec = selectedExecutive === 'TODOS' || doc.executive === selectedExecutive;
-      const matchesTab = category === activeTab;
-      return matchesSearch && matchesExec && matchesTab;
+      
+      return matchesSearch && matchesExec;
     });
   }, [doctors, searchTerm, selectedExecutive, activeTab]);
 
@@ -148,8 +156,14 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
 
   const handleDeleteClick = (e: React.MouseEvent, id: string, name: string) => {
       e.stopPropagation();
-      if (window.confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${name}? Esta acción no se puede deshacer.`)) {
-          if (onDeleteDoctor) onDeleteDoctor(id);
+      if (activeTab === 'ARCHIVADOS') {
+          if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE a ${name}?\n\nEsta acción no se puede deshacer.`)) {
+              if (onDeleteDoctor) onDeleteDoctor(id); 
+          }
+      } else {
+          if (window.confirm(`¿Estás seguro de que deseas ARCHIVAR a ${name}?\n\nEl registro se moverá a la pestaña de Archivados y no aparecerá en las listas principales, pero sus datos históricos se conservarán.`)) {
+              if (onDeleteDoctor) onDeleteDoctor(id);
+          }
       }
   };
 
@@ -264,16 +278,16 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
     <div className="space-y-6 animate-fadeIn pb-12">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-            <h1 className="text-3xl font-black text-black tracking-tight flex items-center gap-3">
-                <Database className="w-8 h-8 text-blue-600" />
+            <h1 className="text-2xl md:text-3xl font-black text-black tracking-tight flex items-center gap-3">
+                <Database className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
                 Directorio Central
             </h1>
-            <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] ml-11">
+            <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] ml-9 md:ml-11">
                 {filteredItems.length} registros cargados correctamente.
             </p>
         </div>
         
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-3">
             <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -284,7 +298,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
             {user.role === 'admin' && onClearCategory && (
                 <button 
                     onClick={() => onClearCategory(activeTab)}
-                    className="flex items-center px-6 py-3.5 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition shadow-xl shadow-red-500/10 font-black text-xs uppercase tracking-widest active:scale-95 border border-red-100"
+                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 md:px-6 py-3 md:py-3.5 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition shadow-xl shadow-red-500/10 font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95 border border-red-100"
                 >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Limpiar Lista
@@ -292,22 +306,22 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
             )}
             <button 
                 onClick={handleImportClick}
-                className="flex items-center px-6 py-3.5 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition shadow-xl shadow-indigo-500/20 font-black text-xs uppercase tracking-widest active:scale-95"
+                className="flex items-center justify-center px-4 md:px-6 py-3 md:py-3.5 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition shadow-xl shadow-indigo-500/20 font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95"
             >
                 <Upload className="h-4 w-4 mr-2" />
-                Importar CSV
+                Importar
             </button>
             
             <button 
                 onClick={handleExport}
-                className="flex items-center px-6 py-3.5 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition shadow-xl shadow-emerald-500/20 font-black text-xs uppercase tracking-widest active:scale-95"
+                className="flex items-center justify-center px-4 md:px-6 py-3 md:py-3.5 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition shadow-xl shadow-emerald-500/20 font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95"
             >
                 <Download className="h-4 w-4 mr-2" />
-                Descargar Excel
+                Excel
             </button>
             <button 
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center px-8 py-3.5 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition shadow-xl font-black text-xs uppercase tracking-widest active:scale-95"
+                className="col-span-2 md:col-span-1 flex items-center justify-center px-6 md:px-8 py-3 md:py-3.5 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition shadow-xl font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95"
             >
                 <Plus className="h-4 w-4 mr-2" />
                 Nuevo Registro
@@ -316,15 +330,15 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
       </div>
 
       {/* FILTROS INTEGRADOS */}
-      <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-100 space-y-6">
-        <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-2xl w-fit">
-            {(['MEDICO', 'ADMINISTRATIVO', 'HOSPITAL'] as TabType[]).map(tab => (
+      <div className="bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] shadow-xl border border-slate-100 space-y-4 md:space-y-6">
+        <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-2xl w-full md:w-fit overflow-x-auto no-scrollbar">
+            {(['MEDICO', 'ADMINISTRATIVO', 'HOSPITAL', 'ARCHIVADOS'] as TabType[]).map(tab => (
                 <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`flex-1 md:flex-none px-4 md:px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                    {tab === 'MEDICO' ? 'Médicos' : (tab === 'ADMINISTRATIVO' ? 'Admin' : 'Hospitales')}
+                    {tab === 'MEDICO' ? 'Médicos' : (tab === 'ADMINISTRATIVO' ? 'Admin' : (tab === 'HOSPITAL' ? 'Hospitales' : 'Archivados'))}
                 </button>
             ))}
         </div>
@@ -334,8 +348,8 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                 <Search className="absolute left-5 top-5 h-5 w-5 text-slate-300" />
                 <input
                     type="text"
-                    className="block w-full pl-14 pr-4 py-5 border border-slate-200 rounded-[1.5rem] bg-slate-50 text-black font-black placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm"
-                    placeholder="Buscar por nombre, dirección o especialidad..."
+                    className="block w-full pl-14 pr-4 py-4 md:py-5 border border-slate-200 rounded-[1.5rem] bg-slate-50 text-black font-black placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm"
+                    placeholder="Buscar..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -343,7 +357,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
             <div className="relative">
                 <Filter className="absolute left-5 top-5 h-5 w-5 text-slate-300" />
                 <select
-                    className="block w-full pl-14 pr-4 py-5 border border-slate-200 rounded-[1.5rem] bg-slate-50 text-black font-black focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm appearance-none cursor-pointer"
+                    className="block w-full pl-14 pr-4 py-4 md:py-5 border border-slate-200 rounded-[1.5rem] bg-slate-50 text-black font-black focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm appearance-none cursor-pointer"
                     value={selectedExecutive}
                     onChange={(e) => setSelectedExecutive(e.target.value)}
                     disabled={user.role === 'executive'}
@@ -375,12 +389,15 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                     </div>
                     
                     <div className="flex flex-col items-end gap-2">
-                        <span className="text-[10px] font-black bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-100">{item.executive}</span>
+                        <div className="flex gap-1">
+                            <span className="text-[9px] font-black bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-100">{item.category}</span>
+                            <span className="text-[9px] font-black bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-100">{item.executive}</span>
+                        </div>
                         {user.role === 'admin' && (
                             <button 
                                 onClick={(e) => handleDeleteClick(e, item.id, item.name)}
-                                className="p-2 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-colors z-10"
-                                title="Eliminar Lead"
+                                className={`p-2 rounded-lg transition-colors z-10 ${activeTab === 'ARCHIVADOS' ? 'bg-red-50 text-red-400 hover:bg-red-500 hover:text-white' : 'bg-orange-50 text-orange-400 hover:bg-orange-500 hover:text-white'}`}
+                                title={activeTab === 'ARCHIVADOS' ? "Eliminar Permanentemente" : "Archivar Lead"}
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
@@ -389,7 +406,17 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                 </div>
                 
                 <h3 className="text-base font-black text-black uppercase leading-tight group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">{item.name}</h3>
-                <p className="text-[10px] text-slate-500 font-black uppercase tracking-wider mb-6">{item.specialty || 'GENERAL'}</p>
+                <div className="flex items-center gap-2 mb-6">
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-wider">{item.specialty || 'GENERAL'}</p>
+                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
+                        item.classification === 'A' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        item.classification === 'B' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        item.classification === 'C' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
+                        'bg-slate-50 text-slate-500 border-slate-100'
+                    }`}>
+                        {item.classification || 'C'}
+                    </span>
+                </div>
                 
                 <div className="mt-auto flex items-start text-[11px] text-black font-bold uppercase border-t border-slate-50 pt-6">
                     <MapPin className="h-4 w-4 mr-2 text-slate-300 flex-shrink-0" />

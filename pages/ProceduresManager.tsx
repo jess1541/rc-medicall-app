@@ -50,10 +50,11 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
   const filteredDoctors = useMemo(() => {
       if (!searchTerm) return [];
       return doctors.filter(d => {
+          const isNotArchived = d.status !== 'archived';
           const matchesCategory = d.category === 'MEDICO' || !d.category;
           const matchesSearch = d.name.toLowerCase().includes(searchTerm.toLowerCase());
           const matchesProfile = user.role === 'admin' || d.executive === user.name;
-          return matchesCategory && matchesSearch && matchesProfile;
+          return isNotArchived && matchesCategory && matchesSearch && matchesProfile;
       });
   }, [doctors, searchTerm, user]);
 

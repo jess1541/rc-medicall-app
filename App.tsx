@@ -14,6 +14,7 @@ import { parseData } from './constants';
 // Ajuste de puerto a 8080 para coincidir con server.js
 const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8080/api' : '/api';
 const SYNC_INTERVAL = 30000;
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -27,6 +28,38 @@ const App: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
   
   const syncTimerRef = useRef<any>(null);
+  const inactivityTimerRef = useRef<any>(null);
+
+  const handleLogout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem('rc_user');
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+  }, []);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    if (user) {
+        inactivityTimerRef.current = setTimeout(() => {
+            handleLogout();
+            alert("Sesión cerrada por inactividad.");
+        }, INACTIVITY_TIMEOUT);
+    }
+  }, [user, handleLogout]);
+
+  useEffect(() => {
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    const handleActivity = () => resetInactivityTimer();
+
+    if (user) {
+        resetInactivityTimer();
+        events.forEach(event => window.addEventListener(event, handleActivity));
+    }
+
+    return () => {
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+        events.forEach(event => window.removeEventListener(event, handleActivity));
+    };
+  }, [user, resetInactivityTimer]);
 
   const seedDatabase = async (initialData: Doctor[]) => {
     try {
@@ -227,7 +260,7 @@ const App: React.FC = () => {
       <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
         <Sidebar 
           user={user} 
-          onLogout={() => { setUser(null); localStorage.removeItem('rc_user'); }} 
+          onLogout={handleLogout} 
           isMobileOpen={isMobileMenuOpen} 
           closeMobileMenu={() => setIsMobileMenuOpen(false)} 
           isCollapsed={isSidebarCollapsed}

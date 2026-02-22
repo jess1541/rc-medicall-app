@@ -140,6 +140,11 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         return p.status === 'performed' && pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear && belongs;
     });
 
+    const recentProcedures = procedures
+        .filter(p => filterExecutive ? filteredDoctors.some(d => d.id === p.doctorId) : true)
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 5);
+
     const totalRevenue = relevantProcedures.reduce((a, c) => a + (c.cost || 0), 0);
     const totalCommissions = totalRevenue * 0.03; // Cálculo del 3%
 
@@ -155,7 +160,8 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         performance: (plannedMonth + completedMonth) > 0 ? Math.round((completedMonth / (plannedMonth + completedMonth)) * 100) : 0,
         classifications,
         upcomingVisits: upcomingVisits.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5),
-        recentActivity: recentActivity.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
+        recentActivity: recentActivity.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
+        recentProcedures
     };
   }, [filteredDoctors, procedures, filterExecutive]);
 
@@ -542,6 +548,87 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                           <tr>
                               <td colSpan={9} className="py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">
                                   No hay reportes recientes registrados
+                              </td>
+                          </tr>
+                      )}
+                  </tbody>
+              </table>
+          </div>
+      </div>
+
+      {/* PROCEDIMIENTOS RECIENTES */}
+      <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
+          <div className="flex justify-between items-center mb-8">
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                  <Stethoscope className="w-6 h-6 text-purple-500" /> Procedimientos Recientes
+              </h3>
+              <div className="flex gap-2">
+                  <div className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-[9px] font-black uppercase tracking-widest">Últimos Registros</div>
+              </div>
+          </div>
+
+          <div className="overflow-x-auto">
+              <table className="w-full">
+                  <thead>
+                      <tr className="text-left border-b border-slate-50">
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Procedimiento</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hospital</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pago</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Monto</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
+                          <th className="pb-4"></th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                      {stats.recentProcedures.map((proc, i) => (
+                          <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
+                              <td className="py-5">
+                                  <span className="text-xs font-bold text-slate-500">{proc.date}</span>
+                              </td>
+                              <td className="py-5">
+                                  <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-black text-[10px]">{proc.doctorName.charAt(0)}</div>
+                                      <span className="text-xs font-black text-slate-800 uppercase">{proc.doctorName}</span>
+                                  </div>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">{proc.procedureType}</span>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">{proc.hospital || '-'}</span>
+                              </td>
+                              <td className="py-5">
+                                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${
+                                      proc.paymentType === 'DIRECTO' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                      'bg-blue-50 text-blue-600 border-blue-100'
+                                  }`}>
+                                      {proc.paymentType}
+                                  </span>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-bold text-slate-700">${(proc.cost || 0).toLocaleString()}</span>
+                              </td>
+                              <td className="py-5">
+                                  <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                                      proc.status === 'performed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                      'bg-orange-50 text-orange-600 border-orange-100'
+                                  }`}>
+                                      {proc.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO'}
+                                  </span>
+                              </td>
+                              <td className="py-5 text-right">
+                                  <button onClick={() => navigate(`/procedures`)} className="p-2 text-slate-300 hover:text-purple-600 transition-colors">
+                                      <ChevronRight className="w-5 h-5" />
+                                  </button>
+                              </td>
+                          </tr>
+                      ))}
+                      {stats.recentProcedures.length === 0 && (
+                          <tr>
+                              <td colSpan={8} className="py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                  No hay procedimientos recientes registrados
                               </td>
                           </tr>
                       )}

@@ -54,12 +54,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isMobileOpen, closeMo
                             <span className="text-2xl font-black text-cyan-500 tracking-tighter">RC</span>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center group-hover:scale-105 transition-transform">
-                            <div className="flex items-baseline leading-none">
-                                <span className="text-3xl font-black text-cyan-400 tracking-tighter">RC</span>
-                                <span className="text-3xl font-bold text-slate-300 ml-1">Medi</span>
-                                <span className="text-3xl font-bold text-cyan-400">Call</span>
-                            </div>
+                        <div className="flex flex-col items-center justify-center group-hover:scale-105 transition-transform px-2">
+                            <img src="/logotipo.png" alt="RC MediCall" className="h-10 w-auto object-contain" />
                         </div>
                     )}
                 </div>

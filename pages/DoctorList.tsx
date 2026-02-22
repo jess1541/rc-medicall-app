@@ -167,6 +167,28 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
       }
   };
 
+  const handleBulkArchive = () => {
+      if (selectedExecutive === 'TODOS') return;
+      
+      const count = doctors.filter(d => d.executive === selectedExecutive && d.status !== 'archived').length;
+      
+      if (count === 0) {
+          alert(`No hay registros activos asignados a ${selectedExecutive}.`);
+          return;
+      }
+
+      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ARCHIVAR toda la cartera de ${selectedExecutive}?\n\nSe archivarán ${count} registros. Esta acción los moverá a la pestaña de Archivados.`)) {
+          const idsToArchive = doctors
+              .filter(d => d.executive === selectedExecutive && d.status !== 'archived')
+              .map(d => d.id);
+          
+          if (onDeleteDoctor) {
+              idsToArchive.forEach(id => onDeleteDoctor(id));
+          }
+          alert(`Se han archivado ${count} registros de ${selectedExecutive}.`);
+      }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -302,6 +324,15 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                 >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Limpiar Lista
+                </button>
+            )}
+            {user.role === 'admin' && selectedExecutive !== 'TODOS' && activeTab !== 'ARCHIVADOS' && (
+                <button 
+                    onClick={handleBulkArchive}
+                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 md:px-6 py-3 md:py-3.5 bg-orange-50 text-orange-500 rounded-2xl hover:bg-orange-100 transition shadow-xl shadow-orange-500/10 font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95 border border-orange-100"
+                >
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Archivar {selectedExecutive}
                 </button>
             )}
             <button 

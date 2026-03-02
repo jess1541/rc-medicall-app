@@ -115,9 +115,9 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
 
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
-  const handleGetLocation = () => {
+  const handleGetLocation = (silent = false) => {
     if (!navigator.geolocation) {
-      alert("Tu navegador no soporta geolocalización.");
+      if (!silent) alert("Tu navegador no soporta geolocalización.");
       return;
     }
 
@@ -134,20 +134,29 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
           }
         }));
         setIsGettingLocation(false);
-        alert("Ubicación registrada correctamente.");
+        if (!silent) alert("Ubicación registrada correctamente.");
       },
       (error) => {
         console.error("Error obteniendo ubicación:", error);
         setIsGettingLocation(false);
-        let msg = "No se pudo obtener la ubicación.";
-        if (error.code === 1) msg = "Permiso de ubicación denegado.";
-        else if (error.code === 2) msg = "Ubicación no disponible.";
-        else if (error.code === 3) msg = "Tiempo de espera agotado.";
-        alert(msg);
+        if (!silent) {
+            let msg = "No se pudo obtener la ubicación.";
+            if (error.code === 1) msg = "Permiso de ubicación denegado.";
+            else if (error.code === 2) msg = "Ubicación no disponible.";
+            else if (error.code === 3) msg = "Tiempo de espera agotado.";
+            alert(msg);
+        }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
+
+  // Activar automáticamente la función de registrar ubicación al seleccionar "Reportar Visita"
+  useEffect(() => {
+    if (visitType === 'report' && !newVisit.checkIn) {
+        handleGetLocation(true);
+    }
+  }, [visitType]);
 
   const handleAddInteraction = (e: React.FormEvent) => {
     e.preventDefault();
@@ -434,7 +443,7 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                                         <textarea spellCheck={true} lang="es" value={newVisit.followUp || ''} onChange={(e) => setNewVisit({...newVisit, followUp: e.target.value.toUpperCase()})} placeholder="COMPROMISOS O ACCIONES A SEGUIR..." rows={2} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
                                     </div>
                                     <div className="flex items-center gap-4 pt-2">
-                                        <button type="button" onClick={handleGetLocation} disabled={isGettingLocation || !!newVisit.checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${newVisit.checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
+                                        <button type="button" onClick={() => handleGetLocation()} disabled={isGettingLocation || !!newVisit.checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${newVisit.checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
                                             {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : newVisit.checkIn ? <CheckCircle className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
                                             {isGettingLocation ? 'Obteniendo...' : newVisit.checkIn ? 'Ubicación Registrada' : 'Registrar Ubicación (Check-in)'}
                                         </button>

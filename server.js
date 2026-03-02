@@ -82,7 +82,13 @@ const VisitSchema = new mongoose.Schema({
     priority: String,
     materialsDelivered: String,
     interestLevel: Number,
-    nextStepType: String
+    nextStepType: String,
+    checkIn: {
+        lat: Number,
+        lng: Number,
+        timestamp: String,
+        accuracy: Number
+    }
 }, { _id: false });
 
 const ScheduleSlotSchema = new mongoose.Schema({

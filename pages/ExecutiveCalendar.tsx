@@ -332,9 +332,9 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [checkIn, setCheckIn] = useState<{lat: number, lng: number, timestamp: string, accuracy: number} | undefined>(undefined);
 
-  const handleGetLocation = () => {
+  const handleGetLocation = (silent = false) => {
     if (!navigator.geolocation) {
-      alert("Tu navegador no soporta geolocalización.");
+      if (!silent) alert("Tu navegador no soporta geolocalización.");
       return;
     }
 
@@ -348,16 +348,18 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
             accuracy: position.coords.accuracy
         });
         setIsGettingLocation(false);
-        alert("Ubicación registrada correctamente.");
+        if (!silent) alert("Ubicación registrada correctamente.");
       },
       (error) => {
         console.error("Error obteniendo ubicación:", error);
         setIsGettingLocation(false);
-        let msg = "No se pudo obtener la ubicación.";
-        if (error.code === 1) msg = "Permiso de ubicación denegado.";
-        else if (error.code === 2) msg = "Ubicación no disponible.";
-        else if (error.code === 3) msg = "Tiempo de espera agotado.";
-        alert(msg);
+        if (!silent) {
+            let msg = "No se pudo obtener la ubicación.";
+            if (error.code === 1) msg = "Permiso de ubicación denegado.";
+            else if (error.code === 2) msg = "Ubicación no disponible.";
+            else if (error.code === 3) msg = "Tiempo de espera agotado.";
+            alert(msg);
+        }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -381,6 +383,9 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
       setNextVisitTime('09:00'); 
       setCheckIn(undefined); // Reset check-in
       setReportModalOpen(true);
+      
+      // Activar automáticamente la función de registrar ubicación al abrir el reporte
+      setTimeout(() => handleGetLocation(true), 100);
   };
 
   const confirmDeleteVisit = () => {
@@ -1036,7 +1041,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                </div>
 
                                <div className="flex items-center gap-4 pt-2">
-                                    <button type="button" onClick={handleGetLocation} disabled={isGettingLocation || !!checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
+                                    <button type="button" onClick={() => handleGetLocation()} disabled={isGettingLocation || !!checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
                                         {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : checkIn ? <CheckCircle className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
                                         {isGettingLocation ? 'Obteniendo...' : checkIn ? 'Ubicación Registrada' : 'Registrar Ubicación (Check-in)'}
                                     </button>

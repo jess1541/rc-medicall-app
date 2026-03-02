@@ -94,7 +94,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
 
       const newDoctor: Doctor = {
           id: `new-${Date.now()}`,
-          category: activeTab,
+          category: activeTab === 'ARCHIVADOS' ? 'MEDICO' : activeTab,
           name: formData.name.toUpperCase(),
           executive: formData.executive?.toUpperCase() || 'SIN ASIGNAR',
           specialty: formData.specialty?.toUpperCase() || (activeTab === 'HOSPITAL' ? 'HOSPITAL' : 'GENERAL'),
@@ -110,7 +110,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
       
       onAddDoctor(newDoctor);
       setIsAddModalOpen(false);
-      setFormData({ name: '', specialty: '', address: '', executive: user.name, category: activeTab });
+      setFormData({ name: '', specialty: '', address: '', executive: user.name, category: activeTab === 'ARCHIVADOS' ? 'MEDICO' : activeTab });
   };
 
   const handleExport = () => {

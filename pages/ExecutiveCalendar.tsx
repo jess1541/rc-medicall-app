@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 // Explicit import from react-router-dom
 import { useLocation } from 'react-router-dom';
 import { Doctor, Visit, User, TimeOffEvent } from '../types';
-import { ChevronLeft, ChevronRight, Plus, Check, Search, Edit3, Calendar, ExternalLink, X, Lock, Clock, MapPin, Coffee, CalendarClock, CheckCircle2, User as UserIcon, Trash2, Building, Briefcase, Stethoscope } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Check, Search, Edit3, Calendar, ExternalLink, X, Lock, Clock, MapPin, Coffee, CalendarClock, CheckCircle2, User as UserIcon, Trash2, Building, Briefcase, Stethoscope, Loader2, CheckCircle } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 // Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
 import { es } from 'date-fns/locale';
@@ -329,6 +329,40 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
       }
   };
 
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [checkIn, setCheckIn] = useState<{lat: number, lng: number, timestamp: string, accuracy: number} | undefined>(undefined);
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Tu navegador no soporta geolocalización.");
+      return;
+    }
+
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCheckIn({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            timestamp: new Date().toISOString(),
+            accuracy: position.coords.accuracy
+        });
+        setIsGettingLocation(false);
+        alert("Ubicación registrada correctamente.");
+      },
+      (error) => {
+        console.error("Error obteniendo ubicación:", error);
+        setIsGettingLocation(false);
+        let msg = "No se pudo obtener la ubicación.";
+        if (error.code === 1) msg = "Permiso de ubicación denegado.";
+        else if (error.code === 2) msg = "Ubicación no disponible.";
+        else if (error.code === 3) msg = "Tiempo de espera agotado.";
+        alert(msg);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
   const openReportModal = (docId: string, visit: Visit) => {
       if ((visit.outcome as string) === 'CITA') return; 
 
@@ -345,6 +379,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
       setEditObjective(visit.objective || '');
       setNextVisitDate(null); // User must select a date
       setNextVisitTime('09:00'); 
+      setCheckIn(undefined); // Reset check-in
       setReportModalOpen(true);
   };
 
@@ -388,6 +423,20 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
           alert("Es obligatorio agendar la fecha de la próxima visita.");
           return;
       }
+
+      // Validación de fecha: Solo se puede reportar el día de la visita
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (reportDate !== todayStr) {
+          alert("⚠️ RESTRICCIÓN: Solo puedes finalizar reportes el mismo día de la visita.\n\nNo es posible cerrar visitas de días anteriores ni futuros.");
+          return;
+      }
+
+      // Validación de Check-in
+      if (!checkIn) {
+          if (!window.confirm("⚠️ ADVERTENCIA: No has registrado tu ubicación.\n\nEs obligatorio registrar la ubicación para asegurar la visita.\n\n¿Deseas continuar sin registrar la ubicación?")) {
+              return;
+          }
+      }
       
       const doc = doctors.find(d => d.id === selectedVisitToReport.docId);
       if (doc) {
@@ -400,7 +449,8 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                       note: reportNote.toUpperCase(),
                       outcome: reportOutcome as any,
                       followUp: reportFollowUp.toUpperCase(),
-                      status: 'completed' as const
+                      status: 'completed' as const,
+                      checkIn: checkIn
                   };
               }
               return v;
@@ -976,6 +1026,13 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none bg-white"
                                        placeholder="COMPROMISOS..."
                                    />
+                               </div>
+
+                               <div className="flex items-center gap-4 pt-2">
+                                    <button type="button" onClick={handleGetLocation} disabled={isGettingLocation || !!checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
+                                        {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : checkIn ? <CheckCircle className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                                        {isGettingLocation ? 'Obteniendo...' : checkIn ? 'Ubicación Registrada' : 'Registrar Ubicación (Check-in)'}
+                                    </button>
                                </div>
                                
                                <div className="border-t border-slate-100 pt-4 bg-blue-50/50 p-4 rounded-xl">

@@ -40,9 +40,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isMobileOpen, closeMo
             <div className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm" onClick={closeMobileMenu}></div>
         )}
 
-        <div className={`flex flex-col bg-slate-900 text-white shadow-2xl overflow-hidden transition-all duration-300 ease-in-out z-40 fixed inset-y-0 left-0 h-full border-r border-slate-800/50 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isCollapsed ? 'w-20' : 'w-64'}`}>
+        <div className={`flex flex-col bg-slate-950 text-slate-200 shadow-2xl overflow-hidden transition-all duration-300 ease-in-out z-40 fixed inset-y-0 left-0 h-full border-r border-slate-800 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} ${isCollapsed ? 'w-20' : 'w-64'}`}>
             
-            <div className="flex flex-col items-center justify-center h-24 border-b border-slate-800/50 relative z-10 mt-8 md:mt-0">
+            <div className="flex flex-col items-center justify-center h-24 border-b border-slate-800 relative z-10 mt-8 md:mt-0 bg-slate-950">
                 <div className="text-center group cursor-default flex items-center justify-center w-full h-full relative">
                     {isSyncing && (
                         <div className="absolute top-2 right-2 animate-spin text-cyan-500/30">

@@ -293,7 +293,7 @@ const App: React.FC = () => {
   if (!user) return <Login onLogin={handleLogin} />;
 
   return (
-    <HashRouter>
+    <HashRouter future={{ v7_startTransition: true }}>
       <div className="flex h-[100dvh] bg-[#f8fafc] overflow-hidden">
         <Sidebar 
           user={user} 

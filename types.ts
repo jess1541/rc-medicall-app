@@ -13,6 +13,12 @@ export interface Visit {
   materialsDelivered?: string;
   interestLevel?: 1 | 2 | 3 | 4 | 5; // 1-5 estrellas
   nextStepType?: 'LLAMADA' | 'WHATSAPP' | 'VISITA' | 'EMAIL';
+  checkIn?: {
+    lat: number;
+    lng: number;
+    timestamp: string;
+    accuracy: number;
+  };
 }
 
 export interface ScheduleSlot {

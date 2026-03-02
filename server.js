@@ -5,6 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { createServer as createViteServer } from 'vite';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -12,32 +13,60 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const app = express();
-// Límite aumentado para la carga inicial masiva
-app.use(express.json({ limit: '100mb' }));
-app.use(cors());
+async function startServer() {
+    const app = express();
+    // Límite aumentado para la carga inicial masiva
+    app.use(express.json({ limit: '100mb' }));
+    app.use(cors());
 
-// Headers para evitar caché excesivo en la API
-app.use('/api', (req, res, next) => {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-    next();
-});
+    // Headers para evitar caché excesivo en la API
+    app.use('/api', (req, res, next) => {
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        next();
+    });
 
-// --- MONGODB CONNECTION ---
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/rc_medicall_db';
+// --- HYBRID STORAGE SETUP ---
+const MONGO_URI = process.env.MONGO_URI;
+const isMemoryMode = !MONGO_URI;
+
+// In-memory store for fallback
+let memoryStore = {
+    doctors: [],
+    timeoff: [],
+    procedures: [],
+    operations: [],
+    users: []
+};
+
+if (isMemoryMode) {
+    console.log("ℹ️ MODO DEMO: No se detectó MONGO_URI. Usando almacenamiento en memoria.");
+    console.log("💡 Los datos se perderán al reiniciar el servidor. Configura MONGO_URI para persistencia real.");
+}
 
 const connectDB = async () => {
+    if (isMemoryMode) return;
     try {
-        await mongoose.connect(MONGO_URI);
+        await mongoose.connect(MONGO_URI, {
+            serverSelectionTimeoutMS: 5000,
+        });
         console.log("✅ MongoDB Conectado Exitósamente");
     } catch (err) {
         console.error("❌ Error de conexión MongoDB:", err.message);
-        // Reintentar conexión en 5 segundos
-        setTimeout(connectDB, 5000);
+        setTimeout(connectDB, 10000);
     }
 };
 
 connectDB();
+
+// --- API STATUS ---
+app.get('/api/status', (req, res) => {
+    res.json({
+        database: isMemoryMode ? 'memory' : (mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'),
+        mode: isMemoryMode ? 'demo' : 'production',
+        uptime: process.uptime(),
+        mongoUriSet: !!MONGO_URI
+    });
+});
 
 // --- MONGOOSE SCHEMAS ---
 
@@ -149,11 +178,8 @@ const User = mongoose.model('User', UserSchema);
 // 0. USERS (AUTH & MANAGEMENT)
 app.get('/api/users', async (req, res) => {
     try {
+        if (isMemoryMode) return res.json(memoryStore.users);
         const users = await User.find({}).lean();
-        // Si no hay usuarios, devolver los default para que el frontend los use o los cree
-        if (users.length === 0) {
-            return res.json([]); 
-        }
         res.json(users);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -163,6 +189,12 @@ app.get('/api/users', async (req, res) => {
 app.post('/api/users', async (req, res) => {
     try {
         const u = req.body;
+        if (isMemoryMode) {
+            const idx = memoryStore.users.findIndex(x => x.id === u.id);
+            if (idx >= 0) memoryStore.users[idx] = u;
+            else memoryStore.users.push(u);
+            return res.json({ success: true, data: u });
+        }
         const updatedUser = await User.findOneAndUpdate(
             { id: u.id },
             u,
@@ -177,16 +209,17 @@ app.post('/api/users', async (req, res) => {
 app.post('/api/users/init', async (req, res) => {
     try {
         const initialUsers = req.body;
-        if (!Array.isArray(initialUsers) || initialUsers.length === 0) return res.status(400).json({ error: "No data" });
-        
+        if (isMemoryMode) {
+            memoryStore.users = initialUsers.map(u => ({ ...u, id: u.name }));
+            return res.json({ success: true });
+        }
         const operations = initialUsers.map(u => ({
             updateOne: {
-                filter: { id: u.name }, // Usamos nombre como ID inicial para compatibilidad
-                update: { $set: { ...u, id: u.name } }, // Aseguramos que tenga ID
+                filter: { id: u.name },
+                update: { $set: { ...u, id: u.name } },
                 upsert: true
             }
         }));
-        
         await User.bulkWrite(operations);
         res.json({ success: true });
     } catch (error) {
@@ -196,6 +229,10 @@ app.post('/api/users/init', async (req, res) => {
 
 app.delete('/api/users/:id', async (req, res) => {
     try {
+        if (isMemoryMode) {
+            memoryStore.users = memoryStore.users.filter(u => u.id !== req.params.id);
+            return res.json({ success: true });
+        }
         await User.deleteOne({ id: req.params.id });
         res.json({ success: true });
     } catch (error) {
@@ -206,6 +243,7 @@ app.delete('/api/users/:id', async (req, res) => {
 // 1. DOCTORS
 app.get('/api/doctors', async (req, res) => {
     try {
+        if (isMemoryMode) return res.json(memoryStore.doctors);
         const doctors = await Doctor.find({}).sort({ name: 1 }).lean();
         res.json(doctors);
     } catch (error) {
@@ -216,6 +254,12 @@ app.get('/api/doctors', async (req, res) => {
 app.post('/api/doctors', async (req, res) => {
     try {
         const d = req.body;
+        if (isMemoryMode) {
+            const idx = memoryStore.doctors.findIndex(x => x.id === d.id);
+            if (idx >= 0) memoryStore.doctors[idx] = d;
+            else memoryStore.doctors.push(d);
+            return res.json({ success: true, data: d });
+        }
         const updatedDoctor = await Doctor.findOneAndUpdate(
             { id: d.id },
             d,
@@ -230,8 +274,13 @@ app.post('/api/doctors', async (req, res) => {
 app.post('/api/doctors/bulk', async (req, res) => {
     try {
         const doctors = req.body;
-        if (!Array.isArray(doctors) || doctors.length === 0) {
-            return res.status(400).json({ error: "No data provided" });
+        if (isMemoryMode) {
+            doctors.forEach(d => {
+                const idx = memoryStore.doctors.findIndex(x => x.id === d.id);
+                if (idx >= 0) memoryStore.doctors[idx] = d;
+                else memoryStore.doctors.push(d);
+            });
+            return res.json({ success: true, count: doctors.length });
         }
         const operations = doctors.map(doc => ({
             updateOne: {
@@ -250,6 +299,11 @@ app.post('/api/doctors/bulk', async (req, res) => {
 app.delete('/api/doctors/clear/:category', async (req, res) => {
     try {
         const { category } = req.params;
+        if (isMemoryMode) {
+            const count = memoryStore.doctors.filter(d => d.category === category.toUpperCase()).length;
+            memoryStore.doctors = memoryStore.doctors.filter(d => d.category !== category.toUpperCase());
+            return res.json({ success: true, count });
+        }
         const result = await Doctor.deleteMany({ category: category.toUpperCase() });
         res.json({ success: true, count: result.deletedCount });
     } catch (error) {
@@ -259,6 +313,10 @@ app.delete('/api/doctors/clear/:category', async (req, res) => {
 
 app.delete('/api/doctors/:id', async (req, res) => {
     try {
+        if (isMemoryMode) {
+            memoryStore.doctors = memoryStore.doctors.filter(d => d.id !== req.params.id);
+            return res.json({ success: true });
+        }
         await Doctor.deleteOne({ id: req.params.id });
         res.json({ success: true });
     } catch (error) {
@@ -269,6 +327,7 @@ app.delete('/api/doctors/:id', async (req, res) => {
 // 2. TIMEOFF
 app.get('/api/timeoff', async (req, res) => {
     try {
+        if (isMemoryMode) return res.json(memoryStore.timeoff);
         const events = await TimeOff.find({}).sort({ startDate: -1 }).lean();
         res.json(events);
     } catch (error) {
@@ -279,6 +338,12 @@ app.get('/api/timeoff', async (req, res) => {
 app.post('/api/timeoff', async (req, res) => {
     try {
         const t = req.body;
+        if (isMemoryMode) {
+            const idx = memoryStore.timeoff.findIndex(x => x.id === t.id);
+            if (idx >= 0) memoryStore.timeoff[idx] = t;
+            else memoryStore.timeoff.push(t);
+            return res.json({ success: true });
+        }
         await TimeOff.findOneAndUpdate(
             { id: t.id },
             t,
@@ -292,6 +357,10 @@ app.post('/api/timeoff', async (req, res) => {
 
 app.delete('/api/timeoff/:id', async (req, res) => {
     try {
+        if (isMemoryMode) {
+            memoryStore.timeoff = memoryStore.timeoff.filter(t => t.id !== req.params.id);
+            return res.json({ success: true });
+        }
         await TimeOff.deleteOne({ id: req.params.id });
         res.json({ success: true });
     } catch (error) {
@@ -302,6 +371,7 @@ app.delete('/api/timeoff/:id', async (req, res) => {
 // 3. PROCEDURES
 app.get('/api/procedures', async (req, res) => {
     try {
+        if (isMemoryMode) return res.json(memoryStore.procedures);
         const procs = await Procedure.find({}).sort({ date: -1 }).lean();
         res.json(procs);
     } catch (error) {
@@ -312,6 +382,12 @@ app.get('/api/procedures', async (req, res) => {
 app.post('/api/procedures', async (req, res) => {
     try {
         const p = req.body;
+        if (isMemoryMode) {
+            const idx = memoryStore.procedures.findIndex(x => x.id === p.id);
+            if (idx >= 0) memoryStore.procedures[idx] = p;
+            else memoryStore.procedures.push(p);
+            return res.json({ success: true });
+        }
         await Procedure.findOneAndUpdate(
             { id: p.id },
             p,
@@ -325,6 +401,10 @@ app.post('/api/procedures', async (req, res) => {
 
 app.delete('/api/procedures/:id', async (req, res) => {
     try {
+        if (isMemoryMode) {
+            memoryStore.procedures = memoryStore.procedures.filter(p => p.id !== req.params.id);
+            return res.json({ success: true });
+        }
         await Procedure.deleteOne({ id: req.params.id });
         res.json({ success: true });
     } catch (error) {
@@ -335,6 +415,7 @@ app.delete('/api/procedures/:id', async (req, res) => {
 // 4. OPERATIONS
 app.get('/api/operations', async (req, res) => {
     try {
+        if (isMemoryMode) return res.json(memoryStore.operations);
         const ops = await Operation.find({}).sort({ date: -1 }).lean();
         res.json(ops);
     } catch (error) {
@@ -345,6 +426,12 @@ app.get('/api/operations', async (req, res) => {
 app.post('/api/operations', async (req, res) => {
     try {
         const op = req.body;
+        if (isMemoryMode) {
+            const idx = memoryStore.operations.findIndex(x => x.id === op.id);
+            if (idx >= 0) memoryStore.operations[idx] = op;
+            else memoryStore.operations.push(op);
+            return res.json({ success: true });
+        }
         await Operation.findOneAndUpdate(
             { id: op.id },
             op,
@@ -358,6 +445,10 @@ app.post('/api/operations', async (req, res) => {
 
 app.delete('/api/operations/:id', async (req, res) => {
     try {
+        if (isMemoryMode) {
+            memoryStore.operations = memoryStore.operations.filter(o => o.id !== req.params.id);
+            return res.json({ success: true });
+        }
         await Operation.deleteOne({ id: req.params.id });
         res.json({ success: true });
     } catch (error) {
@@ -366,13 +457,23 @@ app.delete('/api/operations/:id', async (req, res) => {
 });
 
 // --- STATIC FILES (Frontend) ---
-app.use(express.static(join(__dirname, 'dist')));
-
-app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-        res.sendFile(join(__dirname, 'dist', 'index.html'));
+    if (process.env.NODE_ENV !== 'production') {
+        const vite = await createViteServer({
+            server: { middlewareMode: true },
+            appType: 'spa',
+        });
+        app.use(vite.middlewares);
+    } else {
+        app.use(express.static(join(__dirname, 'dist')));
+        app.get('*', (req, res) => {
+            if (!req.path.startsWith('/api')) {
+                res.sendFile(join(__dirname, 'dist', 'index.html'));
+            }
+        });
     }
-});
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Elite CRM (Mongo Edition) Online Port ${PORT}`));
+    const PORT = 3000;
+    app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Elite CRM (Mongo Edition) Online Port ${PORT}`));
+}
+
+startServer();

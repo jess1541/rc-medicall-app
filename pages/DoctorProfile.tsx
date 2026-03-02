@@ -159,10 +159,18 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
     } else {
         if (!newVisit.note || !newVisit.objective || !newVisit.followUp) { alert("Error: Todos los campos son obligatorios."); return; }
         
-        // Validación de fecha: Solo se puede reportar el día de la visita
-        const todayStr = new Date().toISOString().split('T')[0];
-        if (newVisit.date !== todayStr) {
-            alert("⚠️ RESTRICCIÓN: Solo puedes finalizar reportes el mismo día de la visita.\n\nNo es posible cerrar visitas de días anteriores ni futuros.");
+        // Validación de tiempo: No sea mayor a 24 horas una vez realizada la visita
+        const visitDateTime = new Date(`${newVisit.date}T${newVisit.time || '00:00'}`);
+        const now = new Date();
+        const diffInHours = (now.getTime() - visitDateTime.getTime()) / (1000 * 60 * 60);
+
+        if (diffInHours > 24) {
+            alert("⚠️ RESTRICCIÓN: Han pasado más de 24 horas desde la fecha/hora de la visita. El reporte ha quedado restringido.");
+            return;
+        }
+
+        if (diffInHours < -2) { // Pequeño margen para zonas horarias o errores de reloj, pero bloquea futuro lejano
+            alert("⚠️ RESTRICCIÓN: No puedes reportar visitas futuras.");
             return;
         }
 

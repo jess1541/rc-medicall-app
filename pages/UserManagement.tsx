@@ -6,7 +6,7 @@ interface UserManagementProps {
   user: User;
 }
 
-const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8080/api' : '/api';
+const API_BASE_URL = '/api';
 
 const UserManagement: React.FC<UserManagementProps> = ({ user }) => {
   const [users, setUsers] = useState<User[]>([]);

@@ -5,7 +5,6 @@ import { ChevronLeft, ChevronRight, Plus, Check, Search, Activity, X, Trash2, Do
 import DatePicker, { registerLocale } from 'react-datepicker';
 // Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
 import { es } from 'date-fns/locale';
-import { format } from 'date-fns';
 
 registerLocale('es', es);
 
@@ -27,8 +26,6 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProcedure, setEditingProcedure] = useState<Procedure | null>(null);
   
-  const [isDragging, setIsDragging] = useState(false);
-
   const [formData, setFormData] = useState<Partial<Procedure>>({
       date: new Date().toISOString().split('T')[0],
       time: '',
@@ -179,7 +176,6 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
   };
 
   const handleDragStart = (e: React.DragEvent, proc: Procedure) => {
-      setIsDragging(true);
       e.dataTransfer.setData("text/plain", JSON.stringify(proc));
       e.dataTransfer.effectAllowed = "move";
   };
@@ -191,7 +187,6 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
 
   const handleDrop = (e: React.DragEvent, targetDate: Date) => {
       e.preventDefault();
-      setIsDragging(false);
       try {
           const data = e.dataTransfer.getData("text/plain");
           if (!data) return;
@@ -301,25 +296,25 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
   };
 
   return (
-    <div className="space-y-6 pb-10 text-slate-200">
-        <div className="flex flex-col md:flex-row justify-between items-center bg-slate-900/80 backdrop-blur-xl p-4 rounded-3xl border border-slate-800 shadow-lg gap-4">
+    <div className="space-y-6 pb-10">
+        <div className="flex flex-col md:flex-row justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-lg gap-4">
             <div>
-                <h1 className="text-2xl font-black text-white">Procedimientos</h1>
-                <p className="text-sm text-slate-400 font-medium">
+                <h1 className="text-2xl font-black text-slate-800">Procedimientos</h1>
+                <p className="text-sm text-slate-500 font-medium">
                     {user.role === 'admin' ? 'Vista Global de Procedimientos' : 'Mis Procedimientos Asignados'}
                 </p>
             </div>
             
             <div className="flex gap-3 items-center">
-                <div className="bg-slate-950/50 p-1 rounded-xl flex shadow-inner border border-slate-800/50">
-                   <button onClick={() => setViewMode('month')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'month' ? 'bg-slate-800 text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>Mes</button>
-                   <button onClick={() => setViewMode('week')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'week' ? 'bg-slate-800 text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>Semana</button>
-                   <button onClick={() => setViewMode('day')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'day' ? 'bg-slate-800 text-indigo-400 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>Día</button>
+                <div className="bg-slate-100/50 p-1 rounded-xl flex shadow-inner border border-slate-200/50">
+                   <button onClick={() => setViewMode('month')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'month' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Mes</button>
+                   <button onClick={() => setViewMode('week')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'week' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Semana</button>
+                   <button onClick={() => setViewMode('day')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'day' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Día</button>
                 </div>
 
                 <button 
                     onClick={() => setIsListView(!isListView)} 
-                    className={`p-2.5 rounded-xl transition-all ${isListView ? 'bg-indigo-900/30 text-indigo-400' : 'bg-slate-900 text-slate-400 hover:bg-slate-800 border border-slate-700'}`}
+                    className={`p-2.5 rounded-xl transition-all ${isListView ? 'bg-indigo-100 text-indigo-600' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'}`}
                     title={isListView ? "Ver Calendario" : "Ver Lista"}
                 >
                     {isListView ? <CalendarIcon className="w-5 h-5" /> : <LayoutList className="w-5 h-5" />}
@@ -331,60 +326,60 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
             </div>
         </div>
 
-        <div className="bg-slate-900 rounded-3xl shadow-sm border border-slate-800 overflow-hidden min-h-[600px] flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b border-slate-800 bg-slate-950/30">
-                <button onClick={prevPeriod} className="p-2 hover:bg-slate-800 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-slate-400" /></button>
-                <h2 className="text-xl font-black text-white capitalize tracking-tight">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden min-h-[600px] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/30">
+                <button onClick={prevPeriod} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-slate-600" /></button>
+                <h2 className="text-xl font-black text-slate-800 capitalize tracking-tight">
                     {getHeaderTitle()}
                 </h2>
-                <button onClick={nextPeriod} className="p-2 hover:bg-slate-800 rounded-full transition-colors"><ChevronRight className="w-6 h-6 text-slate-400" /></button>
+                <button onClick={nextPeriod} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><ChevronRight className="w-6 h-6 text-slate-600" /></button>
             </div>
 
             {isListView ? (
                 <div className="flex-1 overflow-x-auto">
                     <table className="w-full">
                         <thead>
-                            <tr className="text-left border-b border-slate-800 bg-slate-950/50">
-                                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
-                                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Médico</th>
-                                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Procedimiento</th>
-                                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Hospital</th>
-                                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Costo</th>
-                                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado</th>
-                                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest"></th>
+                            <tr className="text-left border-b border-slate-100 bg-slate-50/50">
+                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
+                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
+                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Procedimiento</th>
+                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hospital</th>
+                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Costo</th>
+                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
+                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest"></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800">
+                        <tbody className="divide-y divide-slate-50">
                             {listProcedures.map(proc => (
-                                <tr key={proc.id} className="group hover:bg-slate-800/50 transition-colors">
+                                <tr key={proc.id} className="group hover:bg-slate-50/50 transition-colors">
                                     <td className="p-4">
                                         <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-slate-300">{proc.date}</span>
-                                            <span className="text-[10px] text-slate-500 font-medium">{proc.time || '--:--'}</span>
+                                            <span className="text-xs font-bold text-slate-700">{proc.date}</span>
+                                            <span className="text-[10px] text-slate-400 font-medium">{proc.time || '--:--'}</span>
                                         </div>
                                     </td>
                                     <td className="p-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-xl bg-indigo-900/30 text-indigo-400 flex items-center justify-center font-black text-[10px]">{proc.doctorName.charAt(0)}</div>
+                                            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px]">{proc.doctorName.charAt(0)}</div>
                                             <div className="flex flex-col">
-                                                <span className="text-xs font-black text-slate-200 uppercase">{proc.doctorName}</span>
-                                                {user.role === 'admin' && <span className="text-[9px] text-slate-500 uppercase">{getProcedureExecutive(proc.doctorId)}</span>}
+                                                <span className="text-xs font-black text-slate-800 uppercase">{proc.doctorName}</span>
+                                                {user.role === 'admin' && <span className="text-[9px] text-slate-400 uppercase">{getProcedureExecutive(proc.doctorId)}</span>}
                                             </div>
                                         </div>
                                     </td>
                                     <td className="p-4">
-                                        <span className="text-xs font-medium text-slate-400 uppercase">{proc.procedureType}</span>
+                                        <span className="text-xs font-medium text-slate-600 uppercase">{proc.procedureType}</span>
                                     </td>
                                     <td className="p-4">
                                         <span className="text-xs font-medium text-slate-500 uppercase">{proc.hospital || '-'}</span>
                                     </td>
                                     <td className="p-4">
-                                        <span className="text-xs font-bold text-slate-300">{formatCurrency(proc.cost || 0)}</span>
+                                        <span className="text-xs font-bold text-slate-700">{formatCurrency(proc.cost || 0)}</span>
                                     </td>
                                     <td className="p-4">
                                         <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
-                                            proc.status === 'performed' ? 'bg-emerald-900/20 text-emerald-400 border-emerald-500/20' :
-                                            'bg-orange-900/20 text-orange-400 border-orange-500/20'
+                                            proc.status === 'performed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                            'bg-orange-50 text-orange-600 border-orange-100'
                                         }`}>
                                             {proc.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO'}
                                         </span>
@@ -392,7 +387,7 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                     <td className="p-4 text-right">
                                         <button 
                                             onClick={() => openModal(undefined, proc)}
-                                            className="p-2 text-slate-400 hover:text-indigo-400 transition-colors bg-slate-800 border border-slate-700 rounded-xl shadow-sm hover:shadow-md"
+                                            className="p-2 text-slate-300 hover:text-indigo-600 transition-colors bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md"
                                         >
                                             <Activity className="w-4 h-4" />
                                         </button>
@@ -401,7 +396,7 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                             ))}
                             {listProcedures.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="py-20 text-center text-slate-500 text-xs font-medium uppercase tracking-widest">
+                                    <td colSpan={7} className="py-20 text-center text-slate-400 text-xs font-medium uppercase tracking-widest">
                                         No hay procedimientos registrados en este periodo
                                     </td>
                                 </tr>
@@ -413,16 +408,16 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                 <div className="overflow-x-auto">
                     <div className={`${viewMode !== 'day' ? 'min-w-[800px]' : 'w-full'}`}>
                         {viewMode !== 'day' && (
-                            <div className="grid grid-cols-7 bg-slate-950 border-b border-slate-800">
+                            <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-100">
                                 {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
-                                    <div key={d} className="py-3 text-center text-xs font-extrabold text-slate-500 uppercase tracking-widest">{d}</div>
+                                    <div key={d} className="py-3 text-center text-xs font-extrabold text-slate-400 uppercase tracking-widest">{d}</div>
                                 ))}
                             </div>
                         )}
 
                         <div className={`flex-1 ${viewMode === 'day' ? 'p-4' : 'grid grid-cols-7 auto-rows-fr'}`}>
                             {calendarDays.map((day, idx) => {
-                                if (viewMode !== 'day' && !day) return <div key={`empty-${idx}`} className="bg-slate-950/20 min-h-[120px] border-b border-r border-slate-800"></div>;
+                                if (viewMode !== 'day' && !day) return <div key={`empty-${idx}`} className="bg-slate-50/20 min-h-[120px] border-b border-r border-slate-100"></div>;
                                 
                                 if (!day) return null; 
 
@@ -434,10 +429,10 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                          onDragOver={handleDragOver}
                                          onDrop={(e) => handleDrop(e, day)}
                                          onClick={() => openModal(day)}
-                                         className={`${viewMode === 'day' ? 'h-full border rounded-2xl bg-slate-950/30 p-4 border-slate-800' : 'min-h-[120px] p-2 border-b border-r border-slate-800'} hover:bg-blue-900/10 transition-colors cursor-pointer relative group ${isToday && viewMode !== 'day' ? 'bg-blue-900/10' : ''}`}
+                                         className={`${viewMode === 'day' ? 'h-full border rounded-2xl bg-slate-50/30 p-4' : 'min-h-[120px] p-2 border-b border-r border-slate-100'} hover:bg-blue-50/20 transition-colors cursor-pointer relative group ${isToday && viewMode !== 'day' ? 'bg-blue-50/30' : ''}`}
                                     >
                                         <div className="flex justify-between items-center mb-2">
-                                            <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}>
+                                            <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-700'}`}>
                                                 {day.getDate()}
                                             </span>
                                             <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -453,13 +448,13 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                                     onClick={(e) => { e.stopPropagation(); openModal(undefined, proc); }}
                                                     className={`p-2 rounded-lg text-[10px] font-bold border shadow-sm cursor-grab active:cursor-grabbing transition-transform hover:scale-[1.02] flex flex-col gap-0.5 ${
                                                         proc.status === 'scheduled' 
-                                                        ? 'bg-slate-800 border-slate-700 text-slate-300' 
-                                                        : 'bg-emerald-900/20 border-emerald-500/20 text-emerald-400'
+                                                        ? 'bg-gradient-to-r from-red-50 to-white border-red-100 text-red-800' 
+                                                        : 'bg-gradient-to-r from-green-50 to-white border-green-100 text-green-800'
                                                     }`}
                                                 >
                                                     <div className="flex justify-between items-start">
                                                         <span className="truncate uppercase flex-1">{proc.doctorName}</span>
-                                                        {proc.time && <span className="text-[8px] bg-slate-950/50 px-1 rounded ml-1">{proc.time}</span>}
+                                                        {proc.time && <span className="text-[8px] bg-white/50 px-1 rounded ml-1">{proc.time}</span>}
                                                     </div>
                                                     {proc.hospital && <span className="text-[8px] opacity-70 truncate">{proc.hospital}</span>}
                                                     {proc.cost && proc.cost > 0 && (
@@ -468,14 +463,14 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                                         </span>
                                                     )}
                                                     {user.role === 'admin' && (
-                                                        <div className="mt-1 border-t border-white/10 pt-0.5">
+                                                        <div className="mt-1 border-t border-white/20 pt-0.5">
                                                             <span className="text-[8px] opacity-80 uppercase">{getProcedureExecutive(proc.doctorId)}</span>
                                                         </div>
                                                     )}
                                                 </div>
                                             ))}
                                             {viewMode === 'day' && dayProcedures.length === 0 && (
-                                                <div className="flex items-center justify-center h-40 text-slate-500 text-sm font-medium">
+                                                <div className="flex items-center justify-center h-40 text-slate-400 text-sm font-medium">
                                                     No hay procedimientos para este día.
                                                 </div>
                                             )}
@@ -491,16 +486,16 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
 
         {/* MODAL - Updated Layout for Full Visibility */}
         {isModalOpen && (
-            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-slate-900 rounded-3xl shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden animate-fadeIn scale-100 transform transition-all flex flex-col max-h-[90vh] border border-slate-800">
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-3xl shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden animate-fadeIn scale-100 transform transition-all flex flex-col max-h-[90vh]">
                     {/* Header - Fixed */}
-                    <div className={`p-6 border-b border-slate-800 flex justify-between items-center flex-shrink-0 bg-slate-900`}>
+                    <div className={`p-6 border-b border-slate-100 flex justify-between items-center flex-shrink-0 bg-gradient-to-r ${formData.status === 'scheduled' ? 'from-slate-50 to-white' : 'from-green-50 to-white'}`}>
                         <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-xl ${formData.status === 'scheduled' ? 'bg-indigo-900/30 text-indigo-400' : 'bg-green-900/30 text-green-400'}`}>
+                            <div className={`p-2 rounded-xl ${formData.status === 'scheduled' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
                                 <Activity className="w-5 h-5" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-black text-white">
+                                <h3 className="text-xl font-black text-slate-800">
                                     {editingProcedure ? 'Editar Procedimiento' : 'Agendar Procedimiento'}
                                 </h3>
                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -508,20 +503,20 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                 </p>
                             </div>
                         </div>
-                        <button onClick={closeModal} className="bg-slate-800 p-2 rounded-full hover:bg-slate-700 transition-colors text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+                        <button onClick={closeModal} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors text-slate-500"><X className="w-5 h-5" /></button>
                     </div>
                     
                     {/* Body - Scrollable */}
-                    <div className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
+                    <div className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1">
                         {editingProcedure && (
-                            <div className="flex items-center justify-between bg-slate-950 p-4 rounded-2xl border border-slate-800 shadow-inner">
+                            <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-inner">
                                 <span className="text-xs font-black text-slate-500 uppercase tracking-wide">Estado Actual:</span>
                                 <button 
                                     onClick={() => setFormData(prev => ({...prev, status: prev.status === 'scheduled' ? 'performed' : 'scheduled'}))}
                                     className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all shadow-sm ${
                                         formData.status === 'scheduled' 
-                                        ? 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700' 
-                                        : 'bg-emerald-600 text-white shadow-emerald-500/30'
+                                        ? 'bg-white border border-red-200 text-red-600 hover:bg-red-50' 
+                                        : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-green-500/30'
                                     }`}
                                 >
                                     {formData.status === 'scheduled' ? 'PENDIENTE' : 'REALIZADO'}
@@ -536,13 +531,13 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                     type="date" 
                                     value={formData.date}
                                     onChange={e => setFormData({...formData, date: e.target.value})}
-                                    className="w-full border border-slate-800 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm text-white bg-slate-950"
+                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm text-slate-900 bg-white"
                                 />
                             </div>
                             <div>
                                 <label className="block text-xs font-black text-slate-500 uppercase mb-2">Hora (AM/PM)</label>
                                 <div className="relative">
-                                    <Clock className="absolute left-3 top-3 w-4 h-4 text-slate-500 z-10" />
+                                    <Clock className="absolute left-3 top-3 w-4 h-4 text-slate-400 z-10" />
                                     <DatePicker
                                         selected={selectedTime}
                                         onChange={handleTimeChange}
@@ -552,7 +547,7 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                         timeCaption="Hora"
                                         dateFormat="h:mm aa"
                                         placeholderText="--:-- --"
-                                        className="w-full pl-9 border border-slate-800 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm text-white bg-slate-950"
+                                        className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm text-slate-900 bg-white"
                                     />
                                 </div>
                             </div>
@@ -561,12 +556,12 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                         <div>
                             <label className="block text-xs font-black text-slate-500 uppercase mb-2">Ejecutivo que Agenda</label>
                             <div className="relative">
-                                <UserIcon className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                                <UserIcon className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                                 <input 
                                     type="text" 
                                     value={user.name} 
                                     disabled
-                                    className="w-full pl-9 bg-slate-900 border border-slate-800 text-slate-500 rounded-xl p-3 text-sm font-bold outline-none cursor-not-allowed uppercase"
+                                    className="w-full pl-9 bg-slate-100 border border-slate-200 text-slate-500 rounded-xl p-3 text-sm font-bold outline-none cursor-not-allowed uppercase"
                                 />
                             </div>
                         </div>
@@ -574,12 +569,12 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                         <div>
                             <label className="block text-xs font-black text-slate-500 uppercase mb-2">Hospital / Clínica</label>
                             <div className="relative">
-                                <Building2 className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                                <Building2 className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                                 <input 
                                     type="text" 
                                     value={formData.hospital || ''}
                                     onChange={e => setFormData({...formData, hospital: e.target.value.toUpperCase()})}
-                                    className="w-full pl-9 border border-slate-800 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-600 uppercase text-white bg-slate-950"
+                                    className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 uppercase text-slate-900 bg-white"
                                     placeholder="NOMBRE DEL HOSPITAL..."
                                 />
                             </div>
@@ -589,11 +584,11 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                         <div>
                             <label className="block text-xs font-black text-slate-500 uppercase mb-2">Método de Pago</label>
                             <div className="relative">
-                                <CreditCard className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                                <CreditCard className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                                 <select 
                                     value={formData.paymentType || 'DIRECTO'}
                                     onChange={e => setFormData({...formData, paymentType: e.target.value as any})}
-                                    className="w-full pl-9 border border-slate-800 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm appearance-none cursor-pointer uppercase text-white bg-slate-950"
+                                    className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm appearance-none cursor-pointer uppercase text-slate-900 bg-white"
                                 >
                                     <option value="DIRECTO">DIRECTO</option>
                                     <option value="ASEGURADORA">ASEGURADORA</option>
@@ -608,13 +603,13 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                             <div>
                                 <label className="block text-xs font-black text-slate-500 uppercase mb-2">Costo (MXN)</label>
                                 <div className="relative">
-                                    <DollarSign className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                                    <DollarSign className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                                     <input 
                                         type="text"
                                         value={displayCost}
                                         onChange={handleCostChange}
                                         onBlur={handleCostBlur}
-                                        className="w-full pl-9 border border-slate-800 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-600 text-white bg-slate-950"
+                                        className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 text-slate-900 bg-white"
                                         placeholder="0.00"
                                     />
                                 </div>
@@ -627,7 +622,7 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                         type="text"
                                         readOnly
                                         value={formData.commission ? new Intl.NumberFormat('es-MX', { minimumFractionDigits: 2 }).format(formData.commission) : '0.00'}
-                                        className="w-full pl-9 bg-emerald-900/20 border border-emerald-500/20 text-emerald-400 rounded-xl p-3 text-sm font-bold outline-none cursor-default"
+                                        className="w-full pl-9 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl p-3 text-sm font-bold outline-none cursor-default"
                                     />
                                 </div>
                             </div>
@@ -636,27 +631,27 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                         <div>
                             <label className="block text-xs font-black text-slate-500 uppercase mb-2">Médico Responsable</label>
                             <div className="relative group">
-                               <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
+                               <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
                                <input 
                                    type="text" 
                                    placeholder="BUSCAR POR NOMBRE..." 
                                    value={searchTerm}
                                    onChange={e => { setSearchTerm(e.target.value.toUpperCase()); setFormData(prev => ({...prev, doctorId: ''})) }}
-                                   className="w-full pl-10 border border-slate-800 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-600 text-white bg-slate-950"
+                                   className="w-full pl-10 border border-slate-200 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 text-slate-900 bg-white"
                                />
                             </div>
                             {searchTerm && !formData.doctorId && (
-                                <div className="mt-2 max-h-40 overflow-y-auto border border-slate-700 rounded-xl bg-slate-800 shadow-lg w-full z-20">
+                                <div className="mt-2 max-h-40 overflow-y-auto border border-slate-100 rounded-xl bg-white shadow-lg w-full z-20">
                                     {filteredDoctors.map(doc => (
                                         <div 
                                             key={doc.id} 
                                             onClick={() => { setFormData(prev => ({...prev, doctorId: doc.id, doctorName: doc.name})); setSearchTerm(doc.name); }}
-                                            className="p-3 text-xs font-bold text-slate-300 hover:bg-indigo-600 hover:text-white cursor-pointer uppercase border-b last:border-0 border-slate-700 transition-colors"
+                                            className="p-3 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer uppercase border-b last:border-0 border-slate-50 transition-colors"
                                         >
                                             {doc.name}
                                         </div>
                                     ))}
-                                    {filteredDoctors.length === 0 && <div className="p-4 text-xs text-slate-500 text-center font-medium">No se encontraron resultados</div>}
+                                    {filteredDoctors.length === 0 && <div className="p-4 text-xs text-slate-400 text-center font-medium">No se encontraron resultados</div>}
                                 </div>
                             )}
                         </div>
@@ -668,7 +663,7 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                     type="text" 
                                     value={formData.procedureType}
                                     onChange={e => setFormData({...formData, procedureType: e.target.value.toUpperCase()})}
-                                    className="w-full border border-slate-800 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-600 text-white bg-slate-950"
+                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 text-slate-900 bg-white"
                                     placeholder="EJ: ENDOSCOPIA"
                                 />
                             </div>
@@ -678,7 +673,7 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                     type="text"
                                     value={formData.technician || ''}
                                     onChange={e => setFormData({...formData, technician: e.target.value.toUpperCase()})}
-                                    className="w-full border border-slate-800 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-600 uppercase text-white bg-slate-950"
+                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 uppercase text-slate-900 bg-white"
                                     placeholder="NOMBRE..."
                                 />
                             </div>
@@ -690,18 +685,18 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                 rows={3}
                                 value={formData.notes}
                                 onChange={e => setFormData({...formData, notes: e.target.value.toUpperCase()})}
-                                className="w-full border border-slate-800 rounded-xl p-3 text-sm font-medium uppercase focus:ring-2 focus:ring-indigo-500 outline-none resize-none shadow-sm placeholder-slate-600 text-white bg-slate-950"
+                                className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium uppercase focus:ring-2 focus:ring-indigo-500 outline-none resize-none shadow-sm placeholder-slate-300 text-slate-900 bg-white"
                                 placeholder="DETALLES IMPORTANTES..."
                             />
                         </div>
                     </div>
 
                     {/* Footer - Fixed */}
-                    <div className="p-6 border-t border-slate-800 bg-slate-900 flex justify-between items-center flex-shrink-0">
+                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center flex-shrink-0">
                         {editingProcedure ? (
                             <button 
                                 onClick={handleDelete} 
-                                className="text-red-400 hover:text-red-500 p-2 hover:bg-red-900/20 rounded-xl transition-colors"
+                                className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-xl transition-colors"
                                 title="Eliminar registro"
                             >
                                 <Trash2 className="w-5 h-5"/>
@@ -709,8 +704,8 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                         ) : <div></div>}
                         
                         <div className="flex gap-3">
-                            <button onClick={closeModal} className="px-5 py-2.5 bg-slate-800 border border-slate-700 text-slate-400 font-bold hover:bg-slate-700 rounded-xl transition-colors text-sm">Cancelar</button>
-                            <button onClick={handleSave} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 text-sm flex items-center">
+                            <button onClick={closeModal} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition-colors text-sm">Cancelar</button>
+                            <button onClick={handleSave} className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 text-sm flex items-center">
                                 <Check className="w-4 h-4 mr-2" />
                                 Guardar
                             </button>

@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 // Explicit import from react-router-dom
 import { useLocation } from 'react-router-dom';
 import { Doctor, Visit, User, TimeOffEvent } from '../types';
-import { ChevronLeft, ChevronRight, Plus, Check, Search, Edit3, Calendar, ExternalLink, X, Lock, Clock, MapPin, Coffee, CalendarClock, CheckCircle2, User as UserIcon, Trash2, Building, Briefcase, Stethoscope, Loader2, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Search, Calendar, X, Lock, Clock, MapPin, Coffee, CalendarClock, CheckCircle2, User as UserIcon, Trash2, Building, Stethoscope, Loader2, CheckCircle } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 // Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
 import { es } from 'date-fns/locale';

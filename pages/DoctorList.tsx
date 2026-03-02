@@ -298,18 +298,22 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-            <h1 className="text-2xl md:text-3xl font-black text-black tracking-tight flex items-center gap-3">
-                <Database className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
-                Directorio Central
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-100/60 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-full blur-3xl -z-10 opacity-60"></div>
+        
+        <div className="relative z-10">
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl">
+                    <Database className="w-6 h-6" />
+                </div>
+                Directorio <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Central</span>
             </h1>
-            <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] ml-9 md:ml-11">
-                {filteredItems.length} registros cargados correctamente.
+            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] ml-[4.5rem] mt-1">
+                {filteredItems.length} registros activos
             </p>
         </div>
         
-        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-3">
+        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-3 relative z-10">
             <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -320,16 +324,16 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
             {user.role === 'admin' && onClearCategory && (
                 <button 
                     onClick={() => onClearCategory(activeTab)}
-                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 md:px-6 py-3 md:py-3.5 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition shadow-xl shadow-red-500/10 font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95 border border-red-100"
+                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 py-3 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-rose-100"
                 >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Limpiar Lista
+                    Limpiar
                 </button>
             )}
             {user.role === 'admin' && selectedExecutive !== 'TODOS' && activeTab !== 'ARCHIVADOS' && (
                 <button 
                     onClick={handleBulkArchive}
-                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 md:px-6 py-3 md:py-3.5 bg-orange-50 text-orange-500 rounded-2xl hover:bg-orange-100 transition shadow-xl shadow-orange-500/10 font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95 border border-orange-100"
+                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 py-3 bg-orange-50 text-orange-500 rounded-xl hover:bg-orange-100 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-orange-100"
                 >
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Archivar {selectedExecutive}
@@ -337,7 +341,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
             )}
             <button 
                 onClick={handleImportClick}
-                className="flex items-center justify-center px-4 md:px-6 py-3 md:py-3.5 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition shadow-xl shadow-indigo-500/20 font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95"
+                className="flex items-center justify-center px-4 py-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-indigo-100"
             >
                 <Upload className="h-4 w-4 mr-2" />
                 Importar
@@ -345,29 +349,29 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
             
             <button 
                 onClick={handleExport}
-                className="flex items-center justify-center px-4 md:px-6 py-3 md:py-3.5 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition shadow-xl shadow-emerald-500/20 font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95"
+                className="flex items-center justify-center px-4 py-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-emerald-100"
             >
                 <Download className="h-4 w-4 mr-2" />
                 Excel
             </button>
             <button 
                 onClick={() => setIsAddModalOpen(true)}
-                className="col-span-2 md:col-span-1 flex items-center justify-center px-6 md:px-8 py-3 md:py-3.5 bg-slate-900 text-white rounded-2xl hover:bg-slate-800 transition shadow-xl font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95"
+                className="col-span-2 md:col-span-1 flex items-center justify-center px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 font-black text-[10px] uppercase tracking-widest active:scale-95"
             >
                 <Plus className="h-4 w-4 mr-2" />
-                Nuevo Registro
+                Nuevo
             </button>
         </div>
       </div>
 
       {/* FILTROS INTEGRADOS */}
-      <div className="bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] shadow-xl border border-slate-100 space-y-4 md:space-y-6">
-        <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-2xl w-full md:w-fit overflow-x-auto no-scrollbar">
+      <div className="bg-white p-4 md:p-6 rounded-[2.5rem] shadow-xl border border-slate-100/60 space-y-4 md:space-y-6">
+        <div className="flex flex-wrap gap-2 p-1.5 bg-slate-50 rounded-2xl w-full md:w-fit overflow-x-auto no-scrollbar border border-slate-100">
             {(['MEDICO', 'ADMINISTRATIVO', 'HOSPITAL', 'ARCHIVADOS'] as TabType[]).map(tab => (
                 <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`flex-1 md:flex-none px-4 md:px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white text-blue-600 shadow-md scale-105' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
                 >
                     {tab === 'MEDICO' ? 'Médicos' : (tab === 'ADMINISTRATIVO' ? 'Admin' : (tab === 'HOSPITAL' ? 'Hospitales' : 'Archivados'))}
                 </button>
@@ -375,26 +379,33 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 relative">
-                <Search className="absolute left-5 top-5 h-5 w-5 text-slate-300" />
+            <div className="lg:col-span-2 relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                </div>
                 <input
                     type="text"
-                    className="block w-full pl-14 pr-4 py-4 md:py-5 border border-slate-200 rounded-[1.5rem] bg-slate-50 text-black font-black placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm"
-                    placeholder="Buscar..."
+                    className="block w-full pl-14 pr-4 py-4 border-2 border-slate-100 rounded-2xl bg-slate-50/50 text-slate-900 font-bold placeholder-slate-400 focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm"
+                    placeholder="BUSCAR POR NOMBRE, ESPECIALIDAD O DIRECCIÓN..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <div className="relative">
-                <Filter className="absolute left-5 top-5 h-5 w-5 text-slate-300" />
+            <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <Filter className="h-5 w-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                </div>
                 <select
-                    className="block w-full pl-14 pr-4 py-4 md:py-5 border border-slate-200 rounded-[1.5rem] bg-slate-50 text-black font-black focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm appearance-none cursor-pointer"
+                    className="block w-full pl-14 pr-10 py-4 border-2 border-slate-100 rounded-2xl bg-slate-50/50 text-slate-900 font-bold focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm appearance-none cursor-pointer"
                     value={selectedExecutive}
                     onChange={(e) => setSelectedExecutive(e.target.value)}
                     disabled={user.role === 'executive'}
                 >
                     {executivesList.map(exec => <option key={exec} value={exec}>{exec}</option>)}
                 </select>
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                    <div className="h-1.5 w-1.5 rounded-full bg-slate-400"></div>
+                </div>
             </div>
         </div>
       </div>

@@ -72,8 +72,26 @@ export interface Procedure {
   status: 'scheduled' | 'performed';
 }
 
+export interface Operation {
+  id: string;
+  date: string;
+  time?: string;
+  remissionNumber?: string;
+  hospital?: string;
+  doctorId: string;
+  doctorName: string;
+  executive?: string;
+  operationType: string;
+  paymentType: 'DIRECTO' | 'ASEGURADORA';
+  cost?: number; 
+  commission?: number;
+  technician?: string;
+  notes: string;
+  status: 'scheduled' | 'performed';
+}
+
 export interface User {
   name: string;
-  role: 'admin' | 'executive';
+  role: 'admin' | 'executive' | 'admin_restricted';
   password?: string;
 }

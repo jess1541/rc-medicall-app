@@ -6,8 +6,11 @@ import DoctorList from './pages/DoctorList';
 import DoctorProfile from './pages/DoctorProfile';
 import ExecutiveCalendar from './pages/ExecutiveCalendar';
 import ProceduresManager from './pages/ProceduresManager';
+import OperationsManager from './pages/OperationsManager';
+import OperationsDashboard from './pages/OperationsDashboard';
+import UserManagement from './pages/UserManagement';
 import Login from './components/Login';
-import { Doctor, User, Procedure, TimeOffEvent } from './types';
+import { Doctor, User, Procedure, Operation, TimeOffEvent } from './types';
 import { Menu } from 'lucide-react';
 import { parseData } from './constants';
 
@@ -20,6 +23,7 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>(parseData()); // Carga inicial desde constantes
   const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [operations, setOperations] = useState<Operation[]>([]);
   const [timeOffEvents, setTimeOffEvents] = useState<TimeOffEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -76,16 +80,18 @@ const App: React.FC = () => {
   const syncData = useCallback(async (silent = true) => {
     if (!silent) setIsSyncing(true);
     try {
-      const [docsRes, toffRes, procRes] = await Promise.all([
+      const [docsRes, toffRes, procRes, opsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/doctors`, { cache: 'no-store' }),
         fetch(`${API_BASE_URL}/timeoff`, { cache: 'no-store' }),
-        fetch(`${API_BASE_URL}/procedures`, { cache: 'no-store' })
+        fetch(`${API_BASE_URL}/procedures`, { cache: 'no-store' }),
+        fetch(`${API_BASE_URL}/operations`, { cache: 'no-store' })
       ]);
 
-      if (docsRes.ok && toffRes.ok && procRes.ok) {
+      if (docsRes.ok && toffRes.ok && procRes.ok && opsRes.ok) {
         let docsFromServer = await docsRes.json();
         const toffs = await toffRes.json();
         const procs = await procRes.json();
+        const ops = await opsRes.json();
 
         // Si el servidor está vacío, intentamos poblarlo con nuestros datos locales
         if (docsFromServer.length === 0) {
@@ -98,6 +104,7 @@ const App: React.FC = () => {
         
         setTimeOffEvents(toffs);
         setProcedures(procs);
+        setOperations(ops);
         setIsOnline(true);
       }
     } catch (error) {
@@ -252,12 +259,42 @@ const App: React.FC = () => {
       } catch (e) { console.error(e); }
   };
 
+  // Manejadores de Operativos
+  const handleAddOperation = async (op: Operation) => {
+      setOperations(prev => [...prev, op]);
+      try {
+          await fetch(`${API_BASE_URL}/operations`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(op)
+          });
+      } catch (e) { console.error(e); }
+  };
+
+  const handleUpdateOperation = async (op: Operation) => {
+      setOperations(prev => prev.map(o => o.id === op.id ? op : o));
+      try {
+          await fetch(`${API_BASE_URL}/operations`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(op)
+          });
+      } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteOperation = async (id: string) => {
+      setOperations(prev => prev.filter(o => o.id !== id));
+      try {
+          await fetch(`${API_BASE_URL}/operations/${id}`, { method: 'DELETE' });
+      } catch (e) { console.error(e); }
+  };
+
   if (loading && !user) return <div className="h-screen flex items-center justify-center bg-slate-950 text-white font-black animate-pulse uppercase tracking-[0.5em] text-[10px]">RC MediCall • Sincronizando Directorio...</div>;
   if (!user) return <Login onLogin={handleLogin} />;
 
   return (
     <HashRouter>
-      <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
+      <div className="flex h-[100dvh] bg-[#f8fafc] overflow-hidden">
         <Sidebar 
           user={user} 
           onLogout={handleLogout} 
@@ -315,6 +352,23 @@ const App: React.FC = () => {
                     user={user} 
                   />
               } />
+              <Route path="/operations-dashboard" element={
+                  <OperationsDashboard 
+                    operations={operations} 
+                    user={user} 
+                  />
+              } />
+              <Route path="/operations" element={
+                  <OperationsManager 
+                    operations={operations} 
+                    doctors={doctors} 
+                    onAddOperation={handleAddOperation} 
+                    onUpdateOperation={handleUpdateOperation} 
+                    onDeleteOperation={handleDeleteOperation} 
+                    user={user} 
+                  />
+              } />
+              <Route path="/users" element={<UserManagement user={user} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>

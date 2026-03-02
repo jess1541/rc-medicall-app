@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { Lock, UserCircle, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
@@ -7,23 +7,61 @@ interface LoginProps {
   onLogin: (user: User) => void;
 }
 
-const USERS: User[] = [
+const DEFAULT_USERS: User[] = [
   { name: 'Administrador', role: 'admin', password: 'admin' },
   { name: 'LUIS', role: 'executive', password: 'luis01' },
   { name: 'ORALIA', role: 'executive', password: 'oralia02' },
   { name: 'TALINA', role: 'executive', password: 'talina03' },
+  { name: 'ALBERTO', role: 'admin_restricted', password: 'alberto01' },
+  { name: 'NAYELY', role: 'admin_restricted', password: 'nayely01' },
+  { name: 'LIZ', role: 'admin_restricted', password: 'liz01' },
 ];
 
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8080/api' : '/api';
+
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/users`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setUsers(data);
+          } else {
+            // Seed default users if DB is empty
+            await fetch(`${API_BASE_URL}/users/init`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(DEFAULT_USERS)
+            });
+            setUsers(DEFAULT_USERS);
+          }
+        } else {
+            // Fallback to defaults if API fails
+            setUsers(DEFAULT_USERS);
+        }
+      } catch (e) {
+        console.error("Error fetching users:", e);
+        setUsers(DEFAULT_USERS);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const user = USERS.find(u => u.name === selectedUser);
+    const user = users.find(u => u.name === selectedUser);
     
     if (user && user.password === password) {
       setIsAnimating(true);
@@ -34,6 +72,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setError('Contraseña incorrecta o usuario no seleccionado.');
     }
   };
+
+  if (loading) {
+      return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-widest animate-pulse">Cargando sistema...</div>;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 relative overflow-hidden">
@@ -61,7 +103,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   className="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent block pl-10 p-3 appearance-none transition-all hover:bg-slate-100"
                 >
                   <option value="" disabled>-- Selecciona tu perfil --</option>
-                  {USERS.map(u => (
+                  {users.map(u => (
                     <option key={u.name} value={u.name} className="text-slate-900">{u.name}</option>
                   ))}
                 </select>

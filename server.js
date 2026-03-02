@@ -112,12 +112,96 @@ const ProcedureSchema = new mongoose.Schema({
     status: String
 }, { timestamps: true });
 
+const OperationSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    date: String,
+    time: String,
+    remissionNumber: String,
+    hospital: String,
+    doctorId: String,
+    doctorName: String,
+    executive: String,
+    operationType: String,
+    paymentType: String,
+    cost: Number,
+    commission: Number,
+    technician: String,
+    notes: String,
+    status: String
+}, { timestamps: true });
+
+const UserSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    role: { type: String, enum: ['admin', 'executive', 'admin_restricted'], required: true },
+    password: { type: String, required: true }
+}, { timestamps: true });
+
 // --- MODELS ---
 const Doctor = mongoose.model('Doctor', DoctorSchema);
 const TimeOff = mongoose.model('TimeOff', TimeOffSchema);
 const Procedure = mongoose.model('Procedure', ProcedureSchema);
+const Operation = mongoose.model('Operation', OperationSchema);
+const User = mongoose.model('User', UserSchema);
 
 // --- API ROUTES ---
+
+// 0. USERS (AUTH & MANAGEMENT)
+app.get('/api/users', async (req, res) => {
+    try {
+        const users = await User.find({}).lean();
+        // Si no hay usuarios, devolver los default para que el frontend los use o los cree
+        if (users.length === 0) {
+            return res.json([]); 
+        }
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/users', async (req, res) => {
+    try {
+        const u = req.body;
+        const updatedUser = await User.findOneAndUpdate(
+            { id: u.id },
+            u,
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
+        res.json({ success: true, data: updatedUser });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/users/init', async (req, res) => {
+    try {
+        const initialUsers = req.body;
+        if (!Array.isArray(initialUsers) || initialUsers.length === 0) return res.status(400).json({ error: "No data" });
+        
+        const operations = initialUsers.map(u => ({
+            updateOne: {
+                filter: { id: u.name }, // Usamos nombre como ID inicial para compatibilidad
+                update: { $set: { ...u, id: u.name } }, // Aseguramos que tenga ID
+                upsert: true
+            }
+        }));
+        
+        await User.bulkWrite(operations);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+    try {
+        await User.deleteOne({ id: req.params.id });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // 1. DOCTORS
 app.get('/api/doctors', async (req, res) => {
@@ -242,6 +326,39 @@ app.post('/api/procedures', async (req, res) => {
 app.delete('/api/procedures/:id', async (req, res) => {
     try {
         await Procedure.deleteOne({ id: req.params.id });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 4. OPERATIONS
+app.get('/api/operations', async (req, res) => {
+    try {
+        const ops = await Operation.find({}).sort({ date: -1 }).lean();
+        res.json(ops);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/operations', async (req, res) => {
+    try {
+        const op = req.body;
+        await Operation.findOneAndUpdate(
+            { id: op.id },
+            op,
+            { new: true, upsert: true }
+        );
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/operations/:id', async (req, res) => {
+    try {
+        await Operation.deleteOne({ id: req.params.id });
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });

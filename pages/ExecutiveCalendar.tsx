@@ -675,7 +675,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
 
        {/* CALENDAR VIEW */}
-       <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-white/50 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[600px]">
+       <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-white/50 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[65vh] md:h-[75vh] min-h-[500px]">
 
 
            <div className="flex-1 overflow-auto bg-slate-50/30">
@@ -704,7 +704,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                                    <span className="-mt-3 bg-white pr-2 z-10">{time}</span>
                                                    <button 
                                                         onClick={(e) => { e.stopPropagation(); handleTimeSlotClick(time); }}
-                                                        className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-full p-1 transition-all transform hover:scale-110 z-20"
+                                                        className="absolute right-0 top-0 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-full p-1.5 transition-all transform active:scale-95 z-20 md:opacity-0 md:group-hover:opacity-100"
                                                         title="Planear Visita aquí"
                                                    >
                                                        <Plus className="h-3 w-3" />
@@ -727,9 +727,10 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                                 return (
                                                     <div 
                                                         key={time} 
+                                                        onClick={() => handleTimeSlotClick(time)}
                                                         onDragOver={handleDragOver}
                                                         onDrop={(e) => handleDrop(e, day, time)}
-                                                        className="absolute w-full hover:bg-blue-50/30 transition-colors z-0"
+                                                        className="absolute w-full hover:bg-blue-50/30 transition-colors z-0 cursor-pointer"
                                                         style={{ top: `${tIdx * 6}rem`, height: '6rem' }}
                                                     >
                                                         {slotEvents.map((evt, i) => renderEventChip(evt, i, true))}
@@ -773,7 +774,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
        {/* 1. Plan Visit Modal */}
        {isModalOpen && (
            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-               <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+               <div className="bg-white rounded-3xl shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                        <h3 className="text-lg font-black text-slate-800 flex items-center">
                            {isAppointmentMode ? <Clock className="w-5 h-5 mr-2 text-pink-500" /> : <Calendar className="w-5 h-5 mr-2 text-blue-500" />}
@@ -867,7 +868,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
        {/* 2. Report/Edit Modal */}
        {reportModalOpen && selectedVisitToReport && (
            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-               <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+               <div className="bg-white rounded-3xl shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                        <div>
                            <div className="flex space-x-4 mb-2">
@@ -875,7 +876,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                     Reportar
                                 </button>
                                 <button onClick={() => setIsEditingPlan(true)} className={`text-sm font-black uppercase border-b-2 pb-1 transition-colors ${isEditingPlan ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
-                                    Editar Plan
+                                    Reprogramar / Editar
                                 </button>
                            </div>
                            <h3 className="text-base font-bold text-slate-800 uppercase flex items-center">
@@ -915,7 +916,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
 
                        {/* Common Fields */}
-                       <div className="grid grid-cols-2 gap-4">
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div>
                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
                                <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-white" />
@@ -985,7 +986,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                        </span>
                                    </div>
                                    
-                                   <div className="grid grid-cols-2 gap-4 mt-2">
+                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                        <div>
                                            <label className="block text-[10px] font-black text-blue-400 uppercase mb-1">Fecha</label>
                                            <DatePicker 
@@ -1028,7 +1029,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
        {/* 3. Time Off Modal */}
        {isTimeOffModalOpen && (
            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-               <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+               <div className="bg-white rounded-3xl shadow-2xl w-[95%] md:w-full md:max-w-md overflow-hidden flex flex-col">
                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-orange-50">
                        <h3 className="text-lg font-black text-orange-800 flex items-center">
                            <Coffee className="w-5 h-5 mr-2" />
@@ -1037,7 +1038,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                        <button onClick={() => setIsTimeOffModalOpen(false)}><X className="w-6 h-6 text-orange-400 hover:text-orange-600" /></button>
                    </div>
                    <div className="p-6 space-y-4">
-                       <div className="grid grid-cols-2 gap-4">
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div>
                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Desde</label>
                                <DatePicker
@@ -1095,7 +1096,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
        {/* 4. Time Off Detail/Delete Modal */}
        {selectedTimeOff && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-3xl shadow-xl p-6 w-full max-sm:max-w-xs max-w-sm">
+                <div className="bg-white rounded-3xl shadow-xl p-6 w-[95%] md:w-full max-w-sm">
                     <div className="flex justify-between items-start mb-4">
                         <h3 className="text-lg font-black text-slate-800 uppercase">{selectedTimeOff.reason}</h3>
                         <button onClick={() => setSelectedTimeOff(null)}><X className="w-5 h-5 text-slate-400" /></button>

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CalendarDays, User, LogOut, Shield, ChevronLeft, ChevronRight, X, Activity, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Users, CalendarDays, User, LogOut, Shield, ChevronLeft, ChevronRight, X, Activity, Wifi, WifiOff, RefreshCw, Briefcase, BarChart3, Settings } from 'lucide-react';
 import { User as UserType } from '../types';
 
 interface SidebarProps {
@@ -72,6 +72,15 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isMobileOpen, closeMo
                         <SidebarLink to="/calendar" icon={<CalendarDays />} label="Planificación" isActive={isActive('/calendar', false)} collapsed={isCollapsed} />
                         <SidebarLink to="/doctors" icon={<Users />} label="Directorio" isActive={isActive('/doctors', false)} collapsed={isCollapsed} />
                         <SidebarLink to="/procedures" icon={<Activity />} label="Procedimientos" isActive={isActive('/procedures', false)} collapsed={isCollapsed} />
+                        {(user.role === 'admin' || user.role === 'admin_restricted') && (
+                            <>
+                                <SidebarLink to="/operations-dashboard" icon={<BarChart3 />} label="Dashboard Operativos" isActive={isActive('/operations-dashboard', false)} collapsed={isCollapsed} />
+                                <SidebarLink to="/operations" icon={<Briefcase />} label="Operativos" isActive={isActive('/operations', false)} collapsed={isCollapsed} />
+                                {user.role === 'admin' && (
+                                    <SidebarLink to="/users" icon={<Settings />} label="Usuarios" isActive={isActive('/users', false)} collapsed={isCollapsed} />
+                                )}
+                            </>
+                        )}
                     </nav>
                 </div>
 

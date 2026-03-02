@@ -441,9 +441,8 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
       // Validación de Check-in
       if (!checkIn) {
-          if (!window.confirm("⚠️ ADVERTENCIA: No has registrado tu ubicación.\n\nEs obligatorio registrar la ubicación para asegurar la visita.\n\n¿Deseas continuar sin registrar la ubicación?")) {
-              return;
-          }
+          alert("⚠️ RESTRICCIÓN: Es obligatorio registrar la ubicación (Check-in) para poder finalizar el reporte de la visita.");
+          return;
       }
       
       const doc = doctors.find(d => d.id === selectedVisitToReport.docId);
@@ -1006,7 +1005,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
                                <div>
                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Resultado</label>
-                                   <select value={reportOutcome} onChange={(e) => setReportOutcome(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                   <select value={reportOutcome} onChange={(e) => setReportOutcome(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black shadow-sm">
                                        <option value="SEGUIMIENTO">SEGUIMIENTO</option>
                                        <option value="COTIZACIÓN">COTIZACIÓN</option>
                                        <option value="INTERESADO">INTERESADO</option>

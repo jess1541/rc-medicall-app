@@ -14,10 +14,8 @@ import { Doctor, User, Procedure, Operation, TimeOffEvent } from './types';
 import { Menu } from 'lucide-react';
 import { parseData } from './constants';
 
-import LocationHistory from './pages/LocationHistory';
-
 // Ajuste de puerto a 8080 para coincidir con server.js
-const API_BASE_URL = '/api';
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8080/api' : '/api';
 const SYNC_INTERVAL = 30000;
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
@@ -32,7 +30,6 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
-  const [dbStatus, setDbStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
   
   const syncTimerRef = useRef<any>(null);
   const inactivityTimerRef = useRef<any>(null);
@@ -52,29 +49,6 @@ const App: React.FC = () => {
         }, INACTIVITY_TIMEOUT);
     }
   }, [user, handleLogout]);
-
-  const checkDbStatus = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/status`);
-      if (res.ok) {
-        const data = await res.json();
-        setDbStatus(data.database);
-        setIsOnline(data.database === 'connected');
-      } else {
-        setDbStatus('disconnected');
-        setIsOnline(false);
-      }
-    } catch (error) {
-      setDbStatus('disconnected');
-      setIsOnline(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    checkDbStatus();
-    const interval = setInterval(checkDbStatus, 10000);
-    return () => clearInterval(interval);
-  }, [checkDbStatus]);
 
   useEffect(() => {
     const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
@@ -320,37 +294,24 @@ const App: React.FC = () => {
 
   return (
     <HashRouter future={{ v7_startTransition: true }}>
-      <div className="flex flex-col h-[100dvh] bg-[#f8fafc] overflow-hidden">
-        {dbStatus === 'disconnected' && (
-          <div className="bg-red-600 text-white px-4 py-2 text-center text-[10px] font-bold animate-pulse z-[100] shadow-lg uppercase tracking-widest">
-            ⚠️ Error de Conexión MongoDB: Configura MONGO_URI en los ajustes del proyecto para persistir datos.
+      <div className="flex h-[100dvh] bg-[#f8fafc] overflow-hidden">
+        <Sidebar 
+          user={user} 
+          onLogout={handleLogout} 
+          isMobileOpen={isMobileMenuOpen} 
+          closeMobileMenu={() => setIsMobileMenuOpen(false)} 
+          isCollapsed={isSidebarCollapsed}
+          isOnline={isOnline}
+          isSyncing={isSyncing}
+          toggleCollapse={() => { setIsSidebarCollapsed(!isSidebarCollapsed); localStorage.setItem('sidebar_collapsed', String(!isSidebarCollapsed)); }}
+        />
+        
+        <div className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+          <div className="md:hidden p-4 bg-slate-900 text-white flex justify-between items-center">
+             <span className="font-black tracking-tighter text-cyan-400">RC MediCall</span>
+             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-slate-800 rounded-lg"><Menu /></button>
           </div>
-        )}
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar 
-            user={user} 
-            onLogout={handleLogout} 
-            isMobileOpen={isMobileMenuOpen} 
-            closeMobileMenu={() => setIsMobileMenuOpen(false)} 
-            isCollapsed={isSidebarCollapsed}
-            isOnline={isOnline}
-            isSyncing={isSyncing}
-            toggleCollapse={() => { setIsSidebarCollapsed(!isSidebarCollapsed); localStorage.setItem('sidebar_collapsed', String(!isSidebarCollapsed)); }}
-          />
-          
-          <div className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-72'}`}>
-          <div className="md:hidden p-4 bg-slate-900/95 backdrop-blur-xl text-white flex justify-between items-center sticky top-0 z-30 border-b border-slate-800/50 shadow-2xl">
-             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                    <span className="font-black text-white text-xs">RC</span>
-                </div>
-                <span className="font-black tracking-tighter text-lg">MediCall</span>
-             </div>
-             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 bg-slate-800 rounded-xl text-cyan-400 hover:bg-slate-700 transition-colors border border-slate-700 shadow-lg active:scale-95">
-                <Menu className="w-5 h-5" />
-             </button>
-          </div>
-          <main className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar bg-[#f8fafc]">
+          <main className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar">
             <Routes>
               <Route path="/" element={<Dashboard doctors={doctors} user={user} procedures={procedures} isOnline={isOnline} />} />
               <Route path="/doctors" element={
@@ -394,6 +355,7 @@ const App: React.FC = () => {
               <Route path="/operations-dashboard" element={
                   <OperationsDashboard 
                     operations={operations} 
+                    user={user} 
                   />
               } />
               <Route path="/operations" element={
@@ -407,13 +369,11 @@ const App: React.FC = () => {
                   />
               } />
               <Route path="/users" element={<UserManagement user={user} />} />
-              <Route path="/location-history" element={<LocationHistory doctors={doctors} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
         </div>
       </div>
-    </div>
     </HashRouter>
   );
 };

@@ -1,10 +1,10 @@
 
 import React, { useMemo, useState } from 'react';
-import { Doctor, User, Procedure } from '../types';
+import { Doctor, User, Procedure, Visit } from '../types';
 import { 
-  Users, TrendingUp, Filter, 
-  Award, Activity, DollarSign, Calendar, 
-  ArrowUpRight, Clock, MapPin, 
+  Users, ShieldCheck, CheckCircle2, TrendingUp, Filter, 
+  Award, Activity, DollarSign, Target, Calendar, 
+  ArrowUpRight, Clock, MapPin, AlertCircle, 
   BarChart3, PieChart, Zap, ChevronRight, Stethoscope, Wallet,
   Download, FileSpreadsheet, X
 } from 'lucide-react';
@@ -236,32 +236,29 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
   return (
     <div className="space-y-6 pb-16 animate-fadeIn">
       {/* HERO SECTION */}
-      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-100/60 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-full blur-3xl -z-10 opacity-60"></div>
-          
-          <div className="flex flex-col md:flex-row items-center gap-5 md:gap-8 text-center md:text-left z-10">
-            <div className="p-5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-[1.5rem] text-white shadow-2xl shadow-blue-500/30 ring-4 ring-blue-50">
-                <Zap className="w-8 h-8" />
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-xl border border-slate-100">
+          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center md:text-left">
+            <div className="p-4 md:p-5 bg-blue-600 rounded-[1.5rem] md:rounded-[2rem] text-white shadow-2xl shadow-blue-200">
+                <Zap className="w-8 h-8 md:w-10 md:h-10" />
             </div>
             <div>
-                <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter leading-tight">
-                    Dashboard <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Estratégico</span>
+                <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">
+                    Dashboard <span className="text-blue-600">Estratégico</span>
                 </h1>
-                <p className="text-slate-400 font-black uppercase tracking-[0.25em] text-[10px] mt-2 flex items-center gap-2 justify-center md:justify-start">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px] mt-1">
                     {user.role === 'admin' ? `Control Global • ${filterExecutive || 'Todo el Equipo'}` : `Mis KPIs • ${user.name}`}
                 </p>
             </div>
           </div>
           
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-center z-10">
-            <div className={`px-5 py-2.5 rounded-2xl flex items-center gap-2.5 border font-black text-[10px] uppercase tracking-widest shadow-sm ${isOnline ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-rose-500'}`}></div>
+          <div className="flex items-center gap-4 w-full md:w-auto justify-center">
+            <div className={`px-4 py-2 rounded-2xl flex items-center gap-2 border font-black text-[10px] uppercase tracking-widest ${isOnline ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
                 {isOnline ? 'Sincronizado' : 'Modo Local'}
             </div>
             {user.role === 'admin' && filterExecutive && (
-                <button onClick={() => setFilterExecutive(null)} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-all active:scale-95 border border-slate-200">
-                    <Filter className="w-4 h-4" />
+                <button onClick={() => setFilterExecutive(null)} className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-all">
+                    <Filter className="w-5 h-5" />
                 </button>
             )}
           </div>
@@ -270,77 +267,51 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       {/* METRICAS PRINCIPALES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Card 1: Cartera */}
-        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-100/60 relative overflow-hidden group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-50 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
-          <Users className="absolute -right-4 -bottom-4 w-24 h-24 text-slate-100 group-hover:text-blue-50 transition-colors duration-300" />
-          
-          <div className="relative z-10">
-              <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center mb-4 group-hover:bg-blue-50 transition-colors">
-                  <Users className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
-              </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cartera Total</p>
-              <div className="flex items-baseline gap-2">
-                  <span className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">{stats.totalDoctors}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Contactos</span>
-              </div>
+        <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-lg border border-slate-100 relative overflow-hidden group">
+          <Users className="absolute -right-4 -bottom-4 w-24 h-24 md:w-32 md:h-32 text-slate-50 group-hover:text-blue-50 transition-colors" />
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Cartera Total</p>
+          <div className="flex items-end gap-2 relative z-10">
+              <span className="text-4xl md:text-5xl font-black text-slate-900">{stats.totalDoctors}</span>
+              <span className="text-xs font-bold text-blue-600 mb-2 uppercase">Contactos</span>
           </div>
         </div>
 
         {/* Card 2: Efectividad */}
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 md:p-8 rounded-[2.5rem] shadow-2xl shadow-blue-500/20 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -mr-16 -mt-16"></div>
-          <TrendingUp className="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 group-hover:scale-110 transition-transform duration-500" />
-          
-          <div className="relative z-10">
-              <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center mb-4 backdrop-blur-sm">
-                  <Activity className="w-5 h-5 text-white" />
-              </div>
-              <p className="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1">Efectividad {currentMonthName}</p>
-              <div className="flex items-baseline gap-3">
-                  <span className="text-4xl md:text-5xl font-black tracking-tight">{stats.performance}%</span>
-                  <div className="px-2 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10">
-                      <p className="text-[9px] font-bold uppercase leading-none">{stats.completedMonth} Visitas</p>
-                  </div>
+        <div className="bg-blue-600 p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl shadow-blue-200 text-white relative overflow-hidden">
+          <TrendingUp className="absolute -right-4 -bottom-4 w-24 h-24 md:w-32 md:h-32 text-white/10" />
+          <p className="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-4 relative z-10">Efectividad {currentMonthName}</p>
+          <div className="flex items-end gap-2 relative z-10">
+              <span className="text-4xl md:text-5xl font-black">{stats.performance}%</span>
+              <div className="mb-2">
+                  <p className="text-[10px] font-bold uppercase leading-none">{stats.completedMonth} Visitas</p>
+                  <p className="text-[10px] font-bold uppercase opacity-60">Logradas</p>
               </div>
           </div>
         </div>
 
         {/* Card 3: Ventas */}
-        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-100/60 relative overflow-hidden group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-50 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
-          
-          <div className="relative z-10">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center mb-4 group-hover:bg-emerald-100 transition-colors">
-                  <DollarSign className="w-5 h-5 text-emerald-500" />
-              </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ventas del Mes</p>
-              <div className="flex items-center gap-2">
-                  <span className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">${stats.totalRevenue.toLocaleString()}</span>
-              </div>
-              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
-                  <ArrowUpRight className="w-3 h-3" />
-                  <span className="text-[9px] font-black uppercase tracking-wide">Facturación</span>
-              </div>
+        <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-lg border border-slate-100 group">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Ventas del Mes</p>
+          <div className="flex items-center gap-3">
+              <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl"><DollarSign className="w-6 h-6" /></div>
+              <span className="text-2xl md:text-3xl font-black text-slate-900">${stats.totalRevenue.toLocaleString()}</span>
           </div>
+          <p className="text-[9px] font-bold text-emerald-600 uppercase mt-4 flex items-center gap-1">
+              <ArrowUpRight className="w-3 h-3" /> Facturación Procedimientos
+          </p>
         </div>
 
-        {/* Card 4: Comisiones */}
-        <div className="bg-gradient-to-br from-purple-600 to-fuchsia-700 p-6 md:p-8 rounded-[2.5rem] shadow-2xl shadow-purple-500/20 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -mr-16 -mt-16"></div>
-          <Wallet className="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 group-hover:scale-110 transition-transform duration-500" />
-          
-          <div className="relative z-10">
-              <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center mb-4 backdrop-blur-sm">
-                  <PieChart className="w-5 h-5 text-white" />
-              </div>
-              <p className="text-[10px] font-black text-purple-100 uppercase tracking-widest mb-1">Comisiones (3%)</p>
-              <div className="flex items-baseline gap-2">
-                  <span className="text-3xl md:text-4xl font-black text-white tracking-tight">
-                    ${stats.totalCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-              </div>
-              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10">
-                  <span className="text-[9px] font-black uppercase tracking-wide">Estimado Mensual</span>
+        {/* Card 4: Comisiones (NUEVO) */}
+        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-xl shadow-purple-200 text-white relative overflow-hidden">
+          <Wallet className="absolute -right-4 -bottom-4 w-24 h-24 md:w-32 md:h-32 text-white/10" />
+          <p className="text-[10px] font-black text-purple-100 uppercase tracking-widest mb-4 relative z-10">Comisiones (3%)</p>
+          <div className="flex items-end gap-2 relative z-10">
+              <span className="text-3xl md:text-4xl lg:text-4xl xl:text-5xl font-black text-white">
+                ${stats.totalCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <div className="mb-2">
+                  <p className="text-[10px] font-bold uppercase opacity-80">Estimado</p>
+                  <p className="text-[10px] font-bold uppercase">Mensual</p>
               </div>
           </div>
         </div>

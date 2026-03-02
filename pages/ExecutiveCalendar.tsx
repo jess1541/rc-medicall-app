@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 // Explicit import from react-router-dom
 import { useLocation } from 'react-router-dom';
 import { Doctor, Visit, User, TimeOffEvent } from '../types';
-import { ChevronLeft, ChevronRight, Plus, Search, Calendar, X, Lock, Clock, MapPin, Coffee, CalendarClock, CheckCircle2, User as UserIcon, Trash2, Building, Stethoscope, Loader2, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Check, Search, Edit3, Calendar, ExternalLink, X, Lock, Clock, MapPin, Coffee, CalendarClock, CheckCircle2, User as UserIcon, Trash2, Building, Briefcase, Stethoscope, Loader2, CheckCircle } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 // Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
 import { es } from 'date-fns/locale';
@@ -332,9 +332,9 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [checkIn, setCheckIn] = useState<{lat: number, lng: number, timestamp: string, accuracy: number} | undefined>(undefined);
 
-  const handleGetLocation = (silent = false) => {
+  const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      if (!silent) alert("Tu navegador no soporta geolocalización.");
+      alert("Tu navegador no soporta geolocalización.");
       return;
     }
 
@@ -348,18 +348,16 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
             accuracy: position.coords.accuracy
         });
         setIsGettingLocation(false);
-        if (!silent) alert("Ubicación registrada correctamente.");
+        alert("Ubicación registrada correctamente.");
       },
       (error) => {
         console.error("Error obteniendo ubicación:", error);
         setIsGettingLocation(false);
-        if (!silent) {
-            let msg = "No se pudo obtener la ubicación.";
-            if (error.code === 1) msg = "Permiso de ubicación denegado.";
-            else if (error.code === 2) msg = "Ubicación no disponible.";
-            else if (error.code === 3) msg = "Tiempo de espera agotado.";
-            alert(msg);
-        }
+        let msg = "No se pudo obtener la ubicación.";
+        if (error.code === 1) msg = "Permiso de ubicación denegado.";
+        else if (error.code === 2) msg = "Ubicación no disponible.";
+        else if (error.code === 3) msg = "Tiempo de espera agotado.";
+        alert(msg);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -383,9 +381,6 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
       setNextVisitTime('09:00'); 
       setCheckIn(undefined); // Reset check-in
       setReportModalOpen(true);
-      
-      // Activar automáticamente la función de registrar ubicación al abrir el reporte
-      setTimeout(() => handleGetLocation(true), 100);
   };
 
   const confirmDeleteVisit = () => {
@@ -429,25 +424,18 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
           return;
       }
 
-      // Validación de tiempo: No sea mayor a 24 horas una vez realizada la visita
-      const visitDateTime = new Date(`${reportDate}T${reportTime || '00:00'}`);
-      const now = new Date();
-      const diffInHours = (now.getTime() - visitDateTime.getTime()) / (1000 * 60 * 60);
-
-      if (diffInHours > 24) {
-          alert("⚠️ RESTRICCIÓN: Han pasado más de 24 horas desde la fecha/hora de la visita. El reporte ha quedado restringido.");
-          return;
-      }
-
-      if (diffInHours < -2) { // Pequeño margen para zonas horarias o errores de reloj, pero bloquea futuro lejano
-          alert("⚠️ RESTRICCIÓN: No puedes reportar visitas futuras.");
+      // Validación de fecha: Solo se puede reportar el día de la visita
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (reportDate !== todayStr) {
+          alert("⚠️ RESTRICCIÓN: Solo puedes finalizar reportes el mismo día de la visita.\n\nNo es posible cerrar visitas de días anteriores ni futuros.");
           return;
       }
 
       // Validación de Check-in
       if (!checkIn) {
-          alert("⚠️ RESTRICCIÓN: Es obligatorio registrar la ubicación (Check-in) para poder finalizar el reporte de la visita.");
-          return;
+          if (!window.confirm("⚠️ ADVERTENCIA: No has registrado tu ubicación.\n\nEs obligatorio registrar la ubicación para asegurar la visita.\n\n¿Deseas continuar sin registrar la ubicación?")) {
+              return;
+          }
       }
       
       const doc = doctors.find(d => d.id === selectedVisitToReport.docId);
@@ -861,7 +849,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                     placeholder="BUSCAR MÉDICO..." 
                                     value={searchDoctorTerm} 
                                     onChange={(e) => setSearchDoctorTerm(e.target.value.toUpperCase())}
-                                    className="w-full pl-10 border border-slate-200 bg-slate-50 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-blue-500 outline-none text-black shadow-sm"
+                                    className="w-full pl-10 border border-slate-200 bg-slate-50 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
                             </div>
                             {searchDoctorTerm && (
@@ -891,7 +879,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                 disabled={!!editingAppointment}
                                 dateFormat="dd/MM/yyyy"
                                 locale="es"
-                                className={`w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none text-black shadow-sm ${!!editingAppointment ? 'bg-slate-100 cursor-not-allowed text-slate-500' : 'bg-white'}`}
+                                className={`w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none ${!!editingAppointment ? 'bg-slate-100 cursor-not-allowed text-slate-500' : 'bg-white'}`}
                             />
                         </div>
 
@@ -901,7 +889,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                 value={appointmentTime} 
                                 onChange={(e) => setAppointmentTime(e.target.value)}
                                 disabled={!!editingAppointment}
-                                className={`w-full border border-slate-200 bg-white rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none text-black shadow-sm ${!!editingAppointment ? 'bg-slate-100 cursor-not-allowed text-slate-500' : ''}`}
+                                className={`w-full border border-slate-200 bg-white rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none ${!!editingAppointment ? 'bg-slate-100 cursor-not-allowed text-slate-500' : ''}`}
                             >
                                 {(isAppointmentMode ? appointmentTimeSlots : visitTimeSlots).map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
@@ -914,7 +902,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                 value={planObjective}
                                 onChange={(e) => setPlanObjective(e.target.value.toUpperCase())}
                                 disabled={isAppointmentMode || !!editingAppointment}
-                                className={`w-full border border-slate-200 rounded-xl p-3 text-sm uppercase font-medium focus:ring-2 focus:ring-blue-500 outline-none resize-none text-black shadow-sm ${isAppointmentMode || !!editingAppointment ? 'bg-slate-100 cursor-not-allowed text-slate-500' : 'bg-white'}`}
+                                className={`w-full border border-slate-200 rounded-xl p-3 text-sm uppercase font-medium focus:ring-2 focus:ring-blue-500 outline-none resize-none ${isAppointmentMode || !!editingAppointment ? 'bg-slate-100 cursor-not-allowed text-slate-500' : 'bg-white'}`}
                                 placeholder={isAppointmentMode ? "MOTIVO DE LA CITA..." : "ESPECÍFICO, MEDIBLE, ALCANZABLE..."}
                             />
                         </div>
@@ -981,11 +969,11 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div>
                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
-                               <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-white text-black shadow-sm" />
+                               <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-white" />
                            </div>
                            <div>
                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hora</label>
-                               <select value={reportTime} onChange={(e) => setReportTime(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-white text-black shadow-sm">
+                               <select value={reportTime} onChange={(e) => setReportTime(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-white">
                                    {visitTimeSlots.map(t => <option key={t} value={t}>{t}</option>)}
                                </select>
                            </div>
@@ -998,7 +986,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                    rows={3}
                                    value={editObjective}
                                    onChange={(e) => setEditObjective(e.target.value.toUpperCase())}
-                                   className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase bg-white text-black shadow-sm"
+                                   className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase bg-white"
                                />
                            </div>
                        ) : (
@@ -1010,7 +998,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
                                <div>
                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Resultado</label>
-                                   <select value={reportOutcome} onChange={(e) => setReportOutcome(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black shadow-sm">
+                                   <select value={reportOutcome} onChange={(e) => setReportOutcome(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                                        <option value="SEGUIMIENTO">SEGUIMIENTO</option>
                                        <option value="COTIZACIÓN">COTIZACIÓN</option>
                                        <option value="INTERESADO">INTERESADO</option>
@@ -1024,7 +1012,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                        rows={3}
                                        value={reportNote}
                                        onChange={(e) => setReportNote(e.target.value.toUpperCase())}
-                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none bg-white text-black shadow-sm"
+                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none bg-white"
                                        placeholder="DETALLES DE LA VISITA..."
                                    />
                                </div>
@@ -1035,13 +1023,13 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                        rows={2}
                                        value={reportFollowUp}
                                        onChange={(e) => setReportFollowUp(e.target.value.toUpperCase())}
-                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none bg-white text-black shadow-sm"
+                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none bg-white"
                                        placeholder="COMPROMISOS..."
                                    />
                                </div>
 
                                <div className="flex items-center gap-4 pt-2">
-                                    <button type="button" onClick={() => handleGetLocation()} disabled={isGettingLocation || !!checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
+                                    <button type="button" onClick={handleGetLocation} disabled={isGettingLocation || !!checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
                                         {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : checkIn ? <CheckCircle className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
                                         {isGettingLocation ? 'Obteniendo...' : checkIn ? 'Ubicación Registrada' : 'Registrar Ubicación (Check-in)'}
                                     </button>
@@ -1064,7 +1052,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                                 dateFormat="dd/MM/yyyy"
                                                 locale="es"
                                                 placeholderText="Seleccione fecha"
-                                                className="w-full text-xs font-bold p-2.5 rounded-xl border border-blue-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-black shadow-sm"
+                                                className="w-full text-xs font-bold p-2.5 rounded-xl border border-blue-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                                            />
                                        </div>
                                        <div>
@@ -1072,7 +1060,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                            <select 
                                                 value={nextVisitTime} 
                                                 onChange={(e) => setNextVisitTime(e.target.value)}
-                                                className="w-full text-xs font-bold p-2.5 rounded-xl border border-blue-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-black shadow-sm"
+                                                className="w-full text-xs font-bold p-2.5 rounded-xl border border-blue-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                                            >
                                                {visitTimeSlots.map(t => <option key={t} value={t}>{t}</option>)}
                                            </select>

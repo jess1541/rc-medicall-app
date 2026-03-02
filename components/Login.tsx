@@ -27,24 +27,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [dbStatus, setDbStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
-
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/status`);
-        if (res.ok) {
-          const data = await res.json();
-          setDbStatus(data.database);
-        } else {
-          setDbStatus('disconnected');
-        }
-      } catch (e) {
-        setDbStatus('disconnected');
-      }
-    };
-    checkStatus();
-  }, []);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -108,15 +90,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <img src="/logotipo.png" alt="RC MediCall" className="h-24 w-auto object-contain" />
           </div>
           <p className="text-slate-500 text-sm mt-4 font-medium">Plataforma de Gestión Comercial</p>
-          
-          {dbStatus === 'disconnected' && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-2xl">
-              <p className="text-[10px] text-red-600 font-black uppercase tracking-widest leading-relaxed">
-                ⚠️ Error de Conexión MongoDB<br/>
-                <span className="font-medium normal-case text-red-500">El sistema está operando en modo lectura/escritura local temporal. Los datos no se guardarán permanentemente hasta que se configure MONGO_URI.</span>
-              </p>
-            </div>
-          )}
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">

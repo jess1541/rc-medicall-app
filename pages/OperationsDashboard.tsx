@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Operation } from '../types';
+import { Operation, User } from '../types';
 import { 
   Activity, DollarSign, FileSpreadsheet, 
   Stethoscope
@@ -9,9 +9,10 @@ import { saveAs } from 'file-saver';
 
 interface OperationsDashboardProps {
   operations: Operation[];
+  user: User;
 }
 
-const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations }) => {
+const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, user }) => {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const currentMonthName = new Date().toLocaleDateString('es-ES', { month: 'long' });

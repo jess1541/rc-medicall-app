@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 // Explicit imports from react-router-dom
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Doctor, Visit, ScheduleSlot, User } from '../types';
-import { Save, ArrowLeft, FileText, Calendar, UserCheck, ClipboardList, CheckCircle, MapPin, Trash2, Mail, Phone, Edit3, CreditCard, UserPlus, ExternalLink, Loader2 } from 'lucide-react';
+import { Save, ArrowLeft, Clock, FileText, Calendar, UserCheck, ClipboardList, CheckCircle, MapPin, Trash2, Award, Brain, StickyNote, Mail, Phone, Building, Edit3, X, CreditCard, UserPlus, ExternalLink, Loader2 } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 // Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
 import { es } from 'date-fns/locale';
@@ -115,9 +115,9 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
 
   const [isGettingLocation, setIsGettingLocation] = useState(false);
 
-  const handleGetLocation = (silent = false) => {
+  const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      if (!silent) alert("Tu navegador no soporta geolocalización.");
+      alert("Tu navegador no soporta geolocalización.");
       return;
     }
 
@@ -134,29 +134,20 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
           }
         }));
         setIsGettingLocation(false);
-        if (!silent) alert("Ubicación registrada correctamente.");
+        alert("Ubicación registrada correctamente.");
       },
       (error) => {
         console.error("Error obteniendo ubicación:", error);
         setIsGettingLocation(false);
-        if (!silent) {
-            let msg = "No se pudo obtener la ubicación.";
-            if (error.code === 1) msg = "Permiso de ubicación denegado.";
-            else if (error.code === 2) msg = "Ubicación no disponible.";
-            else if (error.code === 3) msg = "Tiempo de espera agotado.";
-            alert(msg);
-        }
+        let msg = "No se pudo obtener la ubicación.";
+        if (error.code === 1) msg = "Permiso de ubicación denegado.";
+        else if (error.code === 2) msg = "Ubicación no disponible.";
+        else if (error.code === 3) msg = "Tiempo de espera agotado.";
+        alert(msg);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
-
-  // Activar automáticamente la función de registrar ubicación al seleccionar "Reportar Visita"
-  useEffect(() => {
-    if (visitType === 'report' && !newVisit.checkIn) {
-        handleGetLocation(true);
-    }
-  }, [visitType]);
 
   const handleAddInteraction = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,25 +159,18 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
     } else {
         if (!newVisit.note || !newVisit.objective || !newVisit.followUp) { alert("Error: Todos los campos son obligatorios."); return; }
         
-        // Validación de tiempo: No sea mayor a 24 horas una vez realizada la visita
-        const visitDateTime = new Date(`${newVisit.date}T${newVisit.time || '00:00'}`);
-        const now = new Date();
-        const diffInHours = (now.getTime() - visitDateTime.getTime()) / (1000 * 60 * 60);
-
-        if (diffInHours > 24) {
-            alert("⚠️ RESTRICCIÓN: Han pasado más de 24 horas desde la fecha/hora de la visita. El reporte ha quedado restringido.");
-            return;
-        }
-
-        if (diffInHours < -2) { // Pequeño margen para zonas horarias o errores de reloj, pero bloquea futuro lejano
-            alert("⚠️ RESTRICCIÓN: No puedes reportar visitas futuras.");
+        // Validación de fecha: Solo se puede reportar el día de la visita
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (newVisit.date !== todayStr) {
+            alert("⚠️ RESTRICCIÓN: Solo puedes finalizar reportes el mismo día de la visita.\n\nNo es posible cerrar visitas de días anteriores ni futuros.");
             return;
         }
 
         // Validación de Check-in para visitas reportadas
         if (!newVisit.checkIn) {
-            alert("⚠️ RESTRICCIÓN: Es obligatorio registrar la ubicación (Check-in) para poder finalizar el reporte de la visita.");
-            return;
+            if (!window.confirm("⚠️ ADVERTENCIA: No has registrado tu ubicación.\n\nEs obligatorio registrar la ubicación para asegurar la visita.\n\n¿Deseas continuar sin registrar la ubicación?")) {
+                return;
+            }
         }
 
         visit = { 
@@ -250,7 +234,7 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
         <ArrowLeft className="h-4 w-4 mr-2" /> {fromParam === 'calendar' ? 'Volver al Calendario' : 'Volver al Directorio'}
       </button>
 
-      <div className="bg-white/80 backdrop-blur-md rounded-[2.5rem] shadow-xl shadow-blue-500/5 border border-white/60 overflow-hidden relative">
+      <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl shadow-blue-500/5 border border-white/60 overflow-hidden relative">
         <div className="h-4 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600"></div>
         <div className="p-6 md:p-8 md:flex md:items-center md:justify-between">
           <div className="flex-1 min-w-0">
@@ -281,7 +265,7 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
         </div>
       </div>
 
-      <div className="bg-white/90 backdrop-blur-sm rounded-[2.5rem] shadow-sm border border-white/60 p-8 min-h-[500px]">
+      <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-sm border border-white/60 p-8 min-h-[500px]">
           {activeTab === 'profile' && (
             <div className="space-y-10 animate-fadeIn">
                 <div className="flex justify-between items-center pb-4 border-b border-slate-100 sticky top-0 bg-white/95 z-20 backdrop-blur-sm">
@@ -305,11 +289,11 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                                     <UserPlus className="w-3 h-3 mr-1 text-blue-500" /> Ejecutivo Asignado
                                 </label>
                                 {isEditing && user.role === 'admin' ? (
-                                    <select name="executive" value={formData.executive || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-bold uppercase shadow-sm">
+                                    <select name="executive" value={formData.executive || ''} onChange={handleInputChange} className="block w-full border border-blue-200 rounded-xl p-3 text-sm text-blue-900 focus:ring-2 focus:ring-blue-500 bg-blue-50/50 font-bold uppercase">
                                         {executives.map(e => <option key={e} value={e}>{e}</option>)}
                                     </select>
                                 ) : (
-                                    <p className="text-black font-black text-base uppercase bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between">
+                                    <p className="text-blue-900 font-black text-base uppercase bg-blue-50 p-3 rounded-xl border border-blue-100 flex items-center justify-between">
                                         {doctor.executive}
                                         {user.role === 'admin' && !isEditing && <span className="text-[8px] font-bold text-blue-400 bg-white px-2 py-0.5 rounded border border-blue-100">EDITABLE POR ADMIN</span>}
                                     </p>
@@ -317,33 +301,33 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                             </div>
                             <div className="lg:col-span-2">
                                 <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Nombre</label>
-                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="name" value={formData.name || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-bold text-base uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.name}</p>)}
+                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="name" value={formData.name || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase" />) : (<p className="text-slate-900 font-bold text-base uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.name}</p>)}
                             </div>
                             <div className="lg:col-span-3">
                                 <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Dirección</label>
-                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="address" value={formData.address || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.address}</p>)}
+                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="address" value={formData.address || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase" />) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.address}</p>)}
                             </div>
                             <div>
                                 <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Fecha de Nacimiento</label>
-                                {isEditing ? (<DatePicker selected={parseDateString(formData.birthDate || '')} onChange={(date) => handleDateChange(date, 'birthDate')} dateFormat="dd/MM/yyyy" locale="es" className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" placeholderText="DD/MM/AAAA" showYearDropdown scrollableYearDropdown yearDropdownItemNumber={100} />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent flex items-center"><Calendar className="w-3 h-3 mr-2 text-slate-400"/>{doctor.birthDate ? parseDateString(doctor.birthDate)?.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : 'NO REGISTRADA'}</p>)}
+                                {isEditing ? (<DatePicker selected={parseDateString(formData.birthDate || '')} onChange={(date) => handleDateChange(date, 'birthDate')} dateFormat="dd/MM/yyyy" locale="es" className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium" placeholderText="DD/MM/AAAA" showYearDropdown scrollableYearDropdown yearDropdownItemNumber={100} />) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent flex items-center"><Calendar className="w-3 h-3 mr-2 text-slate-400"/>{doctor.birthDate ? parseDateString(doctor.birthDate)?.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : 'NO REGISTRADA'}</p>)}
                             </div>
                             <div>
                                 <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Cédula Profesional</label>
-                                {isEditing ? (<input type="text" name="cedula" value={formData.cedula || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="#######" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent flex items-center"><CreditCard className="w-3 h-3 mr-2 text-slate-400"/>{doctor.cedula || 'NO REGISTRADA'}</p>)}
+                                {isEditing ? (<input type="text" name="cedula" value={formData.cedula || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase" placeholder="#######" />) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent flex items-center"><CreditCard className="w-3 h-3 mr-2 text-slate-400"/>{doctor.cedula || 'NO REGISTRADA'}</p>)}
                             </div>
                             <div>
                                 <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Teléfono</label>
-                                {isEditing ? (<input type="text" name="phone" value={formData.phone || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" placeholder="### ### ####" />) : (<p className="text-black font-medium bg-slate-50 p-3 rounded-xl border border-transparent flex items-center"><Phone className="w-3 h-3 mr-2 text-slate-400"/> {doctor.phone || 'NO REGISTRADO'}</p>)}
+                                {isEditing ? (<input type="text" name="phone" value={formData.phone || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium" placeholder="### ### ####" />) : (<p className="text-slate-900 font-medium bg-slate-50 p-3 rounded-xl border border-transparent flex items-center"><Phone className="w-3 h-3 mr-2 text-slate-400"/> {doctor.phone || 'NO REGISTRADO'}</p>)}
                             </div>
                             <div>
                                 <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Correo Electrónico</label>
-                                {isEditing ? (<input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" />) : (<p className="text-black font-medium bg-slate-50 p-3 rounded-xl border border-transparent flex items-center lowercase"><Mail className="w-3 h-3 mr-2 text-slate-400"/> {doctor.email || 'NO REGISTRADO'}</p>)}
+                                {isEditing ? (<input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium" />) : (<p className="text-slate-900 font-medium bg-slate-50 p-3 rounded-xl border border-transparent flex items-center lowercase"><Mail className="w-3 h-3 mr-2 text-slate-400"/> {doctor.email || 'NO REGISTRADO'}</p>)}
                             </div>
                             <div>
                                 <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Hospital / Ubicación</label>
-                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="hospital" value={formData.hospital || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.hospital || 'NO REGISTRADO'}</p>)}
+                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="hospital" value={formData.hospital || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase" />) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.hospital || 'NO REGISTRADO'}</p>)}
                             </div>
-                            {!isHospital && (<><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Piso</label>{isEditing ? (<input type="text" name="floor" value={formData.floor || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="EJ: 3" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.floor || 'N/A'}</p>)}</div><div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Oficina</label>{isEditing ? (<input type="text" name="officeNumber" value={formData.officeNumber || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="EJ: 305" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.officeNumber || 'N/A'}</p>)}</div></div></>)}
+                            {!isHospital && (<><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Piso</label>{isEditing ? (<input type="text" name="floor" value={formData.floor || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase" placeholder="EJ: 3" />) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.floor || 'N/A'}</p>)}</div><div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Oficina</label>{isEditing ? (<input type="text" name="officeNumber" value={formData.officeNumber || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase" placeholder="EJ: 305" />) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.officeNumber || 'N/A'}</p>)}</div></div></>)}
                             {isMedico && isEditing && (
                                 <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200 mt-2"><span className="text-xs font-extrabold text-slate-500 uppercase">¿Es Médico de Aseguradora?</span><label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" className="sr-only peer" checked={formData.isInsuranceDoctor || false} onChange={(e) => setFormData({...formData, isInsuranceDoctor: e.target.checked})} /><div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div></label></div>
                             )}
@@ -353,19 +337,19 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                         <div className="lg:col-span-3">
                             <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2 mt-4">Perfil Profesional</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Especialidad</label>{isEditing ? (<input spellCheck={true} lang="es" type="text" name="specialty" value={formData.specialty || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.specialty || 'GENERAL'}</p>)}</div>
-                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Subespecialidad</label>{isEditing ? (<input spellCheck={true} lang="es" type="text" name="subSpecialty" value={formData.subSpecialty || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="EJ: ONCOLOGÍA" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.subSpecialty || 'N/A'}</p>)}</div>
+                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Especialidad</label>{isEditing ? (<input spellCheck={true} lang="es" type="text" name="specialty" value={formData.specialty || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase" />) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.specialty || 'GENERAL'}</p>)}</div>
+                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Subespecialidad</label>{isEditing ? (<input spellCheck={true} lang="es" type="text" name="subSpecialty" value={formData.subSpecialty || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase" placeholder="EJ: ONCOLOGÍA" />) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.subSpecialty || 'N/A'}</p>)}</div>
                                 <div>
                                     <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Categoría (Clasificación)</label>
                                     {isEditing ? (
-                                        <select name="classification" value={formData.classification || 'C'} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm">
+                                        <select name="classification" value={formData.classification || 'C'} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase">
                                             <option value="A">TOP PRODUCTIVO (A)</option>
                                             <option value="B">POTENCIAL ALTO (B)</option>
                                             <option value="C">OCASIONAL (C)</option>
                                             <option value="D">NO ESTRATÉGICO (D)</option>
                                         </select>
                                     ) : (
-                                        <p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">
+                                        <p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">
                                             {getClassificationLabel(doctor.classification)}
                                         </p>
                                     )}
@@ -377,8 +361,8 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                         <div className="lg:col-span-3">
                             <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2 mt-4">Perfilamiento Psigráfico</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Estilo Social</label>{isEditing ? (<select name="socialStyle" value={formData.socialStyle || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm"><option value="">SELECCIONAR</option><option value="ANALÍTICO">ANALÍTICO</option><option value="EMPRENDEDOR">EMPRENDEDOR</option><option value="AFABLE">AFABLE</option><option value="EXPRESIVO">EXPRESIVO</option></select>) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.socialStyle || 'NO DEFINIDO'}</p>)}</div>
-                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Segmento Actitudinal</label>{isEditing ? (<select name="attitudinalSegment" value={formData.attitudinalSegment || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm"><option value="">SELECCIONAR</option><option value="RELACIÓN">RELACIÓN</option><option value="PACIENTE">PACIENTE</option><option value="INNOVACIÓN">INNOVACIÓN</option><option value="EXPERIENCIA">EXPERIENCIA</option></select>) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.attitudinalSegment || 'NO DEFINIDO'}</p>)}</div>
+                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Estilo Social</label>{isEditing ? (<select name="socialStyle" value={formData.socialStyle || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium"><option value="">SELECCIONAR</option><option value="ANALÍTICO">ANALÍTICO</option><option value="EMPRENDEDOR">EMPRENDEDOR</option><option value="AFABLE">AFABLE</option><option value="EXPRESIVO">EXPRESIVO</option></select>) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.socialStyle || 'NO DEFINIDO'}</p>)}</div>
+                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Segmento Actitudinal</label>{isEditing ? (<select name="attitudinalSegment" value={formData.attitudinalSegment || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium"><option value="">SELECCIONAR</option><option value="RELACIÓN">RELACIÓN</option><option value="PACIENTE">PACIENTE</option><option value="INNOVACIÓN">INNOVACIÓN</option><option value="EXPERIENCIA">EXPERIENCIA</option></select>) : (<p className="text-slate-900 font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.attitudinalSegment || 'NO DEFINIDO'}</p>)}</div>
                             </div>
                         </div>
                     )}
@@ -400,63 +384,14 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
             <div className="space-y-8 animate-fadeIn">
                <div className="bg-slate-50/50 rounded-3xl border border-slate-200 overflow-hidden">
                    <div className="flex border-b border-slate-200 bg-white p-2 gap-2"><button onClick={() => setVisitType('report')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${visitType === 'report' ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-inner' : 'text-slate-500 hover:bg-slate-50'}`}>Reportar Visita</button><button onClick={() => setVisitType('plan')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${visitType === 'plan' ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-inner' : 'text-slate-500 hover:bg-slate-50'}`}>Planear Siguiente</button></div>
-                    <div className="p-8">
-                        <form onSubmit={handleAddInteraction} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Fecha</label>
-                                    <DatePicker selected={parseDateString(newVisit.date || '')} onChange={(date) => setNewVisit({...newVisit, date: formatDateToString(date)})} dateFormat="dd/MM/yyyy" locale="es" showMonthDropdown showYearDropdown dropdownMode="select" className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm" required />
-                                </div>
-                                {visitType === 'plan' && (
-                                    <div>
-                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Hora</label>
-                                        <select value={newVisit.time} onChange={(e) => setNewVisit({...newVisit, time: e.target.value})} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm">
-                                            <option value="">SIN HORA</option>
-                                            {timeSlots.map(time => <option key={time} value={time}>{time}</option>)}
-                                        </select>
-                                    </div>
-                                )}
-                                {visitType === 'report' && (
-                                    <div>
-                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Resultado</label>
-                                        <select value={newVisit.outcome || 'SEGUIMIENTO'} onChange={(e) => setNewVisit({...newVisit, outcome: e.target.value as any})} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm">
-                                            <option value="SEGUIMIENTO">SEGUIMIENTO</option>
-                                            <option value="COTIZACIÓN">COTIZACIÓN</option>
-                                            <option value="INTERESADO">INTERESADO</option>
-                                            <option value="PROGRAMAR PROCEDIMIENTO">PROGRAMAR PROCEDIMIENTO</option>
-                                        </select>
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Objetivo de la Visita</label>
-                                <textarea spellCheck={true} lang="es" value={newVisit.objective || ''} onChange={(e) => setNewVisit({...newVisit, objective: e.target.value.toUpperCase()})} placeholder="DESCRIBA EL PROPÓSITO DE LA VISITA..." rows={2} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
-                            </div>
-                            {visitType === 'report' && (
-                                <>
-                                    <div>
-                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Reporte / Resultado</label>
-                                        <textarea spellCheck={true} lang="es" value={newVisit.note || ''} onChange={(e) => setNewVisit({...newVisit, note: e.target.value.toUpperCase()})} placeholder="DETALLES RELEVANTES DE LA INTERACCIÓN..." rows={3} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Seguimiento / Próximo Paso</label>
-                                        <textarea spellCheck={true} lang="es" value={newVisit.followUp || ''} onChange={(e) => setNewVisit({...newVisit, followUp: e.target.value.toUpperCase()})} placeholder="COMPROMISOS O ACCIONES A SEGUIR..." rows={2} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
-                                    </div>
-                                    <div className="flex items-center gap-4 pt-2">
-                                        <button type="button" onClick={() => handleGetLocation()} disabled={isGettingLocation || !!newVisit.checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${newVisit.checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
-                                            {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : newVisit.checkIn ? <CheckCircle className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
-                                            {isGettingLocation ? 'Obteniendo...' : newVisit.checkIn ? 'Ubicación Registrada' : 'Registrar Ubicación (Check-in)'}
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-                            <div className="flex justify-end pt-2">
-                                <button type="submit" className={`px-8 py-3 rounded-xl text-white font-bold shadow-lg transition-all active:scale-95 ${visitType === 'plan' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/30' : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-green-500/30'}`}>
-                                    {visitType === 'plan' ? 'Agendar en Calendario' : 'Guardar Reporte'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                   <div className="p-8"><form onSubmit={handleAddInteraction} className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Fecha</label><DatePicker selected={parseDateString(newVisit.date || '')} onChange={(date) => setNewVisit({...newVisit, date: formatDateToString(date)})} dateFormat="dd/MM/yyyy" locale="es" showMonthDropdown showYearDropdown dropdownMode="select" className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 font-medium" required /></div>{visitType === 'plan' && (<div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Hora</label><select value={newVisit.time} onChange={(e) => setNewVisit({...newVisit, time: e.target.value})} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 font-medium shadow-sm"><option value="">SIN HORA</option>{timeSlots.map(time => <option key={time} value={time}>{time}</option>)}</select></div>)}{visitType === 'report' && (<div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Resultado</label><select value={newVisit.outcome || 'SEGUIMIENTO'} onChange={(e) => setNewVisit({...newVisit, outcome: e.target.value as any})} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 font-medium shadow-sm"><option value="SEGUIMIENTO">SEGUIMIENTO</option><option value="COTIZACIÓN">COTIZACIÓN</option><option value="INTERESADO">INTERESADO</option><option value="PROGRAMAR PROCEDIMIENTO">PROGRAMAR PROCEDIMIENTO</option></select></div>)}</div><div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Objetivo de la Visita</label><textarea spellCheck={true} lang="es" value={newVisit.objective || ''} onChange={(e) => setNewVisit({...newVisit, objective: e.target.value.toUpperCase()})} placeholder="DESCRIBA EL PROPÓSITO DE LA VISITA..." rows={2} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" /></div>{visitType === 'report' && (<><div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Reporte / Resultado</label><textarea spellCheck={true} lang="es" value={newVisit.note || ''} onChange={(e) => setNewVisit({...newVisit, note: e.target.value.toUpperCase()})} placeholder="DETALLES RELEVANTES DE LA INTERACCIÓN..." rows={3} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" /></div><div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Seguimiento / Próximo Paso</label><textarea spellCheck={true} lang="es" value={newVisit.followUp || ''} onChange={(e) => setNewVisit({...newVisit, followUp: e.target.value.toUpperCase()})} placeholder="COMPROMISOS O ACCIONES A SEGUIR..." rows={2} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" /></div>
+<div className="flex items-center gap-4 pt-2">
+    <button type="button" onClick={handleGetLocation} disabled={isGettingLocation || !!newVisit.checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${newVisit.checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
+        {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : newVisit.checkIn ? <CheckCircle className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+        {isGettingLocation ? 'Obteniendo...' : newVisit.checkIn ? 'Ubicación Registrada' : 'Registrar Ubicación (Check-in)'}
+    </button>
+</div>
+</>)}<div className="flex justify-end pt-2"><button type="submit" className={`px-8 py-3 rounded-xl text-white font-bold shadow-lg transition-all active:scale-95 ${visitType === 'plan' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/30' : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-green-500/30'}`}>{visitType === 'plan' ? 'Agendar en Calendario' : 'Guardar Reporte'}</button></div></form></div>
                </div>
 
                <div className="mt-10">

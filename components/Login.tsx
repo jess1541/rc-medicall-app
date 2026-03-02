@@ -17,7 +17,7 @@ const DEFAULT_USERS: User[] = [
   { name: 'LIZ', role: 'admin_restricted', password: 'liz01' },
 ];
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8080/api' : '/api';
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [users, setUsers] = useState<User[]>([]);

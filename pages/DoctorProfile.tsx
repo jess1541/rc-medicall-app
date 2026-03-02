@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 // Explicit imports from react-router-dom
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Doctor, Visit, ScheduleSlot, User } from '../types';
-import { Save, ArrowLeft, Clock, FileText, Calendar, UserCheck, ClipboardList, CheckCircle, MapPin, Trash2, Award, Brain, StickyNote, Mail, Phone, Building, Edit3, X, CreditCard, UserPlus, ExternalLink, Loader2 } from 'lucide-react';
+import { Save, ArrowLeft, FileText, Calendar, UserCheck, ClipboardList, CheckCircle, MapPin, Trash2, Mail, Phone, Edit3, CreditCard, UserPlus, ExternalLink, Loader2 } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 // Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
 import { es } from 'date-fns/locale';
@@ -234,7 +234,7 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
         <ArrowLeft className="h-4 w-4 mr-2" /> {fromParam === 'calendar' ? 'Volver al Calendario' : 'Volver al Directorio'}
       </button>
 
-      <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl shadow-blue-500/5 border border-white/60 overflow-hidden relative">
+      <div className="bg-white/80 backdrop-blur-md rounded-[2.5rem] shadow-xl shadow-blue-500/5 border border-white/60 overflow-hidden relative">
         <div className="h-4 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600"></div>
         <div className="p-6 md:p-8 md:flex md:items-center md:justify-between">
           <div className="flex-1 min-w-0">
@@ -265,7 +265,7 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
         </div>
       </div>
 
-      <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-sm border border-white/60 p-8 min-h-[500px]">
+      <div className="bg-white/90 backdrop-blur-sm rounded-[2.5rem] shadow-sm border border-white/60 p-8 min-h-[500px]">
           {activeTab === 'profile' && (
             <div className="space-y-10 animate-fadeIn">
                 <div className="flex justify-between items-center pb-4 border-b border-slate-100 sticky top-0 bg-white/95 z-20 backdrop-blur-sm">
@@ -384,14 +384,63 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
             <div className="space-y-8 animate-fadeIn">
                <div className="bg-slate-50/50 rounded-3xl border border-slate-200 overflow-hidden">
                    <div className="flex border-b border-slate-200 bg-white p-2 gap-2"><button onClick={() => setVisitType('report')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${visitType === 'report' ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-inner' : 'text-slate-500 hover:bg-slate-50'}`}>Reportar Visita</button><button onClick={() => setVisitType('plan')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${visitType === 'plan' ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-inner' : 'text-slate-500 hover:bg-slate-50'}`}>Planear Siguiente</button></div>
-                   <div className="p-8"><form onSubmit={handleAddInteraction} className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Fecha</label><DatePicker selected={parseDateString(newVisit.date || '')} onChange={(date) => setNewVisit({...newVisit, date: formatDateToString(date)})} dateFormat="dd/MM/yyyy" locale="es" showMonthDropdown showYearDropdown dropdownMode="select" className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 font-medium" required /></div>{visitType === 'plan' && (<div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Hora</label><select value={newVisit.time} onChange={(e) => setNewVisit({...newVisit, time: e.target.value})} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 font-medium shadow-sm"><option value="">SIN HORA</option>{timeSlots.map(time => <option key={time} value={time}>{time}</option>)}</select></div>)}{visitType === 'report' && (<div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Resultado</label><select value={newVisit.outcome || 'SEGUIMIENTO'} onChange={(e) => setNewVisit({...newVisit, outcome: e.target.value as any})} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 font-medium shadow-sm"><option value="SEGUIMIENTO">SEGUIMIENTO</option><option value="COTIZACIÓN">COTIZACIÓN</option><option value="INTERESADO">INTERESADO</option><option value="PROGRAMAR PROCEDIMIENTO">PROGRAMAR PROCEDIMIENTO</option></select></div>)}</div><div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Objetivo de la Visita</label><textarea spellCheck={true} lang="es" value={newVisit.objective || ''} onChange={(e) => setNewVisit({...newVisit, objective: e.target.value.toUpperCase()})} placeholder="DESCRIBA EL PROPÓSITO DE LA VISITA..." rows={2} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" /></div>{visitType === 'report' && (<><div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Reporte / Resultado</label><textarea spellCheck={true} lang="es" value={newVisit.note || ''} onChange={(e) => setNewVisit({...newVisit, note: e.target.value.toUpperCase()})} placeholder="DETALLES RELEVANTES DE LA INTERACCIÓN..." rows={3} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" /></div><div><label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Seguimiento / Próximo Paso</label><textarea spellCheck={true} lang="es" value={newVisit.followUp || ''} onChange={(e) => setNewVisit({...newVisit, followUp: e.target.value.toUpperCase()})} placeholder="COMPROMISOS O ACCIONES A SEGUIR..." rows={2} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" /></div>
-<div className="flex items-center gap-4 pt-2">
-    <button type="button" onClick={handleGetLocation} disabled={isGettingLocation || !!newVisit.checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${newVisit.checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
-        {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : newVisit.checkIn ? <CheckCircle className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
-        {isGettingLocation ? 'Obteniendo...' : newVisit.checkIn ? 'Ubicación Registrada' : 'Registrar Ubicación (Check-in)'}
-    </button>
-</div>
-</>)}<div className="flex justify-end pt-2"><button type="submit" className={`px-8 py-3 rounded-xl text-white font-bold shadow-lg transition-all active:scale-95 ${visitType === 'plan' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/30' : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-green-500/30'}`}>{visitType === 'plan' ? 'Agendar en Calendario' : 'Guardar Reporte'}</button></div></form></div>
+                    <div className="p-8">
+                        <form onSubmit={handleAddInteraction} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Fecha</label>
+                                    <DatePicker selected={parseDateString(newVisit.date || '')} onChange={(date) => setNewVisit({...newVisit, date: formatDateToString(date)})} dateFormat="dd/MM/yyyy" locale="es" showMonthDropdown showYearDropdown dropdownMode="select" className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 font-medium" required />
+                                </div>
+                                {visitType === 'plan' && (
+                                    <div>
+                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Hora</label>
+                                        <select value={newVisit.time} onChange={(e) => setNewVisit({...newVisit, time: e.target.value})} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 font-medium shadow-sm">
+                                            <option value="">SIN HORA</option>
+                                            {timeSlots.map(time => <option key={time} value={time}>{time}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                {visitType === 'report' && (
+                                    <div>
+                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Resultado</label>
+                                        <select value={newVisit.outcome || 'SEGUIMIENTO'} onChange={(e) => setNewVisit({...newVisit, outcome: e.target.value as any})} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 font-medium shadow-sm">
+                                            <option value="SEGUIMIENTO">SEGUIMIENTO</option>
+                                            <option value="COTIZACIÓN">COTIZACIÓN</option>
+                                            <option value="INTERESADO">INTERESADO</option>
+                                            <option value="PROGRAMAR PROCEDIMIENTO">PROGRAMAR PROCEDIMIENTO</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Objetivo de la Visita</label>
+                                <textarea spellCheck={true} lang="es" value={newVisit.objective || ''} onChange={(e) => setNewVisit({...newVisit, objective: e.target.value.toUpperCase()})} placeholder="DESCRIBA EL PROPÓSITO DE LA VISITA..." rows={2} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
+                            </div>
+                            {visitType === 'report' && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Reporte / Resultado</label>
+                                        <textarea spellCheck={true} lang="es" value={newVisit.note || ''} onChange={(e) => setNewVisit({...newVisit, note: e.target.value.toUpperCase()})} placeholder="DETALLES RELEVANTES DE LA INTERACCIÓN..." rows={3} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Seguimiento / Próximo Paso</label>
+                                        <textarea spellCheck={true} lang="es" value={newVisit.followUp || ''} onChange={(e) => setNewVisit({...newVisit, followUp: e.target.value.toUpperCase()})} placeholder="COMPROMISOS O ACCIONES A SEGUIR..." rows={2} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
+                                    </div>
+                                    <div className="flex items-center gap-4 pt-2">
+                                        <button type="button" onClick={handleGetLocation} disabled={isGettingLocation || !!newVisit.checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${newVisit.checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
+                                            {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : newVisit.checkIn ? <CheckCircle className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                                            {isGettingLocation ? 'Obteniendo...' : newVisit.checkIn ? 'Ubicación Registrada' : 'Registrar Ubicación (Check-in)'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                            <div className="flex justify-end pt-2">
+                                <button type="submit" className={`px-8 py-3 rounded-xl text-white font-bold shadow-lg transition-all active:scale-95 ${visitType === 'plan' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/30' : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-green-500/30'}`}>
+                                    {visitType === 'plan' ? 'Agendar en Calendario' : 'Guardar Reporte'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                </div>
 
                <div className="mt-10">

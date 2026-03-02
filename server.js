@@ -1,12 +1,10 @@
 
-
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { createServer as createViteServer } from 'vite';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -15,8 +13,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = 3000; // Hardcoded to 3000 as per environment requirements
-
 // Límite aumentado para la carga inicial masiva
 app.use(express.json({ limit: '100mb' }));
 app.use(cors());
@@ -88,7 +84,6 @@ const DoctorSchema = new mongoose.Schema({
     importantNotes: String,
     visits: [VisitSchema],
     schedule: [ScheduleSlotSchema],
-    status: { type: String, default: 'active' } // Added status field for archiving
 }, { timestamps: true });
 
 const TimeOffSchema = new mongoose.Schema({
@@ -370,24 +365,14 @@ app.delete('/api/operations/:id', async (req, res) => {
     }
 });
 
-// --- VITE MIDDLEWARE & STATIC FILES ---
+// --- STATIC FILES (Frontend) ---
+app.use(express.static(join(__dirname, 'dist')));
 
-if (process.env.NODE_ENV !== 'production') {
-    // Development: Use Vite middleware
-    const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: 'spa',
-    });
-    app.use(vite.middlewares);
-} else {
-    // Production: Serve static files
-    app.use(express.static(join(__dirname, 'dist')));
-    app.get('*', (req, res) => {
-        if (!req.path.startsWith('/api')) {
-            res.sendFile(join(__dirname, 'dist', 'index.html'));
-        }
-    });
-}
+app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+        res.sendFile(join(__dirname, 'dist', 'index.html'));
+    }
+});
 
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Elite CRM (Mongo Edition) Online Port ${PORT}`));
-

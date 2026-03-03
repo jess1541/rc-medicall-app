@@ -8,7 +8,7 @@ import {
   BarChart3, PieChart, Zap, ChevronRight, Stethoscope, Wallet,
   Download, FileSpreadsheet, X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
 
 interface DashboardProps {
@@ -20,7 +20,20 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnline }) => {
   const navigate = useNavigate();
-  const [filterExecutive, setFilterExecutive] = useState<string | null>(user.role === 'executive' ? user.name : null);
+  const location = useLocation();
+  const [filterExecutive, setFilterExecutive] = useState<string | null>(() => {
+      if (user.role === 'executive') return user.name;
+      const params = new URLSearchParams(location.search);
+      return params.get('exec');
+  });
+
+  // Update filter when URL changes
+  React.useEffect(() => {
+      if (user.role === 'admin') {
+          const params = new URLSearchParams(location.search);
+          setFilterExecutive(params.get('exec'));
+      }
+  }, [location.search, user.role, user.name]);
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
 
   const filteredDoctors = useMemo(() => {
@@ -260,7 +273,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                 {isOnline ? 'Sincronizado' : 'Modo Local'}
             </div>
             {user.role === 'admin' && filterExecutive && (
-                <button onClick={() => setFilterExecutive(null)} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-all active:scale-95 border border-slate-200">
+                <button onClick={() => { setFilterExecutive(null); navigate('/'); }} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-all active:scale-95 border border-slate-200">
                     <Filter className="w-4 h-4" />
                 </button>
             )}

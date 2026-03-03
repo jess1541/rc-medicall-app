@@ -213,6 +213,42 @@ const App: React.FC = () => {
     }
   };
 
+  const handleBulkDeleteDoctors = async (ids: string[]) => {
+    const docsToProcess = doctors.filter(d => ids.includes(d.id));
+    if (docsToProcess.length === 0) return;
+
+    const alreadyArchived = docsToProcess.filter(d => d.status === 'archived');
+    const toArchive = docsToProcess.filter(d => d.status !== 'archived');
+
+    // 1. Handle permanent deletion for those already archived
+    if (alreadyArchived.length > 0) {
+        const archivedIds = alreadyArchived.map(d => d.id);
+        setDoctors(prev => prev.filter(d => !archivedIds.includes(d.id)));
+        // We could call a bulk delete API if it existed, but we'll do individual for now or just one if the backend supports it
+        for (const id of archivedIds) {
+            try {
+                await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' });
+            } catch (e) {}
+        }
+    }
+
+    // 2. Handle archiving for active ones
+    if (toArchive.length > 0) {
+        const archivedDocs = toArchive.map(d => ({ ...d, status: 'archived' as const }));
+        const archivedIds = archivedDocs.map(d => d.id);
+        
+        setDoctors(prev => prev.map(d => archivedIds.includes(d.id) ? archivedDocs.find(ad => ad.id === d.id)! : d));
+        
+        try {
+            await fetch(`${API_BASE_URL}/doctors/bulk`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(archivedDocs)
+            });
+        } catch (e) {}
+    }
+  };
+
   const handleClearCategory = async (category: string) => {
       if (!window.confirm(`⚠️ ADVERTENCIA DE SEGURIDAD ⚠️\n\nEstás a punto de ELIMINAR TODOS los registros de la categoría: ${category}.\n\nEsta acción borrará permanentemente todos los contactos y sus historiales de visitas asociados a esta categoría.\n\n¿Estás absolutamente seguro de continuar?`)) return;
       
@@ -360,6 +396,7 @@ const App: React.FC = () => {
                     onAddDoctor={updateDoctor} 
                     onBulkAddDoctors={handleBulkAddDoctors} 
                     onDeleteDoctor={handleDeleteDoctor}
+                    onBulkDeleteDoctors={handleBulkDeleteDoctors}
                     onClearCategory={handleClearCategory}
                 />} 
               />
@@ -394,6 +431,7 @@ const App: React.FC = () => {
               <Route path="/operations-dashboard" element={
                   <OperationsDashboard 
                     operations={operations} 
+                    procedures={procedures}
                   />
               } />
               <Route path="/operations" element={

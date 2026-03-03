@@ -1,24 +1,33 @@
 import React, { useMemo } from 'react';
-import { Operation } from '../types';
+import { Operation, Procedure } from '../types';
 import { 
   Activity, DollarSign, FileSpreadsheet, 
-  Stethoscope
+  Stethoscope, Users, User as UserIcon
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
 interface OperationsDashboardProps {
   operations: Operation[];
+  procedures: Procedure[];
 }
 
-const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations }) => {
+const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, procedures }) => {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const currentMonthName = new Date().toLocaleDateString('es-ES', { month: 'long' });
 
+  const technicians = [
+    "ALAN GARCÍA", 
+    "ANGEL GUERRERO", 
+    "GABRIEL LÓPEZ", 
+    "RODRIGO GUTIÉRREZ", 
+    "KEVIN VILLEDA", 
+    "MAURICIO HERRERA"
+  ];
+
   const stats = useMemo(() => {
     const monthlyOps = operations.filter(op => {
-      // Parse date manually to avoid timezone issues with "YYYY-MM-DD"
       const [year, month, day] = op.date.split('-').map(Number);
       const opDate = new Date(year, month - 1, day);
       
@@ -27,17 +36,41 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations })
              opDate.getFullYear() === currentYear;
     });
 
+    const monthlyProcs = procedures.filter(p => {
+        const [year, month, day] = p.date.split('-').map(Number);
+        const pDate = new Date(year, month - 1, day);
+        return p.status === 'performed' && 
+               pDate.getMonth() === currentMonth && 
+               pDate.getFullYear() === currentYear;
+    });
+
     const totalProcedures = monthlyOps.length;
     const totalSales = monthlyOps.reduce((acc, op) => acc + (op.cost || 0), 0);
     const totalCommissions = totalSales * 0.05;
+
+    // Combine both operations and procedures for technician stats
+    const technicianStats = technicians.map(tech => {
+        const techOps = monthlyOps.filter(op => op.technician === tech);
+        const techProcs = monthlyProcs.filter(p => p.technician === tech);
+        
+        const combinedSales = [...techOps, ...techProcs].reduce((acc, item) => acc + (item.cost || 0), 0);
+        const combinedCount = techOps.length + techProcs.length;
+
+        return {
+            name: tech,
+            commission: combinedSales * 0.05,
+            count: combinedCount
+        };
+    });
 
     return {
       totalProcedures,
       totalSales,
       totalCommissions,
-      monthlyOps
+      monthlyOps,
+      technicianStats
     };
-  }, [operations, currentMonth, currentYear]);
+  }, [operations, procedures, currentMonth, currentYear]);
 
   const recentProcedures = useMemo(() => {
     return [...operations]
@@ -134,6 +167,31 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations })
               </div>
           </div>
         </div>
+      </div>
+
+      {/* COMISIONES POR TÉCNICO */}
+      <div className="space-y-6">
+          <div className="flex items-center gap-3 px-4">
+              <Users className="w-6 h-6 text-indigo-500" />
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Comisiones por Técnico (Gestión)</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {stats.technicianStats.map((tech, idx) => (
+                  <div key={idx} className="bg-white p-6 rounded-[2rem] shadow-lg border border-slate-100 hover:shadow-xl transition-all group">
+                      <div className="flex justify-between items-start mb-4">
+                          <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                              <UserIcon className="w-5 h-5" />
+                          </div>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{tech.count} Proc.</span>
+                      </div>
+                      <h4 className="text-sm font-black text-slate-800 uppercase mb-1">{tech.name}</h4>
+                      <div className="flex items-center gap-2">
+                          <span className="text-xl font-black text-indigo-600">${tech.commission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase">Comisión 5%</span>
+                      </div>
+                  </div>
+              ))}
+          </div>
       </div>
 
       {/* PROCEDIMIENTOS RECIENTES */}

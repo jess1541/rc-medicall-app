@@ -10,11 +10,12 @@ interface DoctorListProps {
   onAddDoctor?: (doc: Doctor) => void;
   onBulkAddDoctors?: (docs: Doctor[]) => void;
   onDeleteDoctor?: (id: string) => void;
+  onBulkDeleteDoctors?: (ids: string[]) => void;
   onClearCategory?: (category: string) => void;
   user: User;
 }
 
-const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAddDoctors, onDeleteDoctor, onClearCategory, user }) => {
+const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAddDoctors, onDeleteDoctor, onBulkDeleteDoctors, onClearCategory, user }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedExecutive, setSelectedExecutive] = useState(user.role === 'executive' ? user.name : 'TODOS');
@@ -22,6 +23,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(20); 
   const [isFiltering, setIsFiltering] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   const observerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,6 +39,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
   // Efecto de filtrado optimizado
   useEffect(() => {
     setIsFiltering(true);
+    setSelectedIds([]); // Reset selection on filter change
     const timer = setTimeout(() => {
         setIsFiltering(false);
         setVisibleCount(20);
@@ -182,11 +185,46 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
               .filter(d => d.executive === selectedExecutive && d.status !== 'archived')
               .map(d => d.id);
           
-          if (onDeleteDoctor) {
+          if (onBulkDeleteDoctors) {
+              onBulkDeleteDoctors(idsToArchive);
+          } else if (onDeleteDoctor) {
               idsToArchive.forEach(id => onDeleteDoctor(id));
           }
           alert(`Se han archivado ${count} registros de ${selectedExecutive}.`);
       }
+  };
+
+  const handleSelectedBulkDelete = () => {
+      if (selectedIds.length === 0) return;
+
+      const isArchivedTab = activeTab === 'ARCHIVADOS';
+      const actionText = isArchivedTab ? 'ELIMINAR PERMANENTEMENTE' : 'ARCHIVAR';
+      const warningText = isArchivedTab ? '\n\nEsta acción no se puede deshacer.' : '\n\nSe moverán a la pestaña de Archivados.';
+
+      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ${actionText} los ${selectedIds.length} registros seleccionados?${warningText}`)) {
+          if (onBulkDeleteDoctors) {
+              onBulkDeleteDoctors(selectedIds);
+          } else if (onDeleteDoctor) {
+              selectedIds.forEach(id => onDeleteDoctor(id));
+          }
+          setSelectedIds([]);
+          alert(`Acción completada para ${selectedIds.length} registros.`);
+      }
+  };
+
+  const toggleSelectAll = () => {
+      if (selectedIds.length === filteredItems.length) {
+          setSelectedIds([]);
+      } else {
+          setSelectedIds(filteredItems.map(i => i.id));
+      }
+  };
+
+  const toggleSelectId = (e: React.MouseEvent, id: string) => {
+      e.stopPropagation();
+      setSelectedIds(prev => 
+          prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      );
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -321,6 +359,15 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                 accept=".csv" 
                 className="hidden" 
             />
+            {user.role === 'admin' && selectedIds.length > 0 && (
+                <button 
+                    onClick={handleSelectedBulkDelete}
+                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all shadow-lg font-black text-[10px] uppercase tracking-widest active:scale-95 border border-red-500"
+                >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar ({selectedIds.length})
+                </button>
+            )}
             {user.role === 'admin' && onClearCategory && (
                 <button 
                     onClick={() => onClearCategory(activeTab)}
@@ -366,16 +413,30 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
 
       {/* FILTROS INTEGRADOS */}
       <div className="bg-white p-4 md:p-6 rounded-[2.5rem] shadow-xl border border-slate-100/60 space-y-4 md:space-y-6">
-        <div className="flex flex-wrap gap-2 p-1.5 bg-slate-50 rounded-2xl w-full md:w-fit overflow-x-auto no-scrollbar border border-slate-100">
-            {(['MEDICO', 'ADMINISTRATIVO', 'HOSPITAL', 'ARCHIVADOS'] as TabType[]).map(tab => (
-                <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-2 p-1.5 bg-slate-50 rounded-2xl w-full md:w-fit overflow-x-auto no-scrollbar border border-slate-100">
+                {(['MEDICO', 'ADMINISTRATIVO', 'HOSPITAL', 'ARCHIVADOS'] as TabType[]).map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                    >
+                        {tab === 'MEDICO' ? 'Médicos' : (tab === 'ADMINISTRATIVO' ? 'Admin' : (tab === 'HOSPITAL' ? 'Hospitales' : 'Archivados'))}
+                    </button>
+                ))}
+            </div>
+
+            {user.role === 'admin' && filteredItems.length > 0 && (
+                <button 
+                    onClick={toggleSelectAll}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all font-black text-[10px] uppercase tracking-widest"
                 >
-                    {tab === 'MEDICO' ? 'Médicos' : (tab === 'ADMINISTRATIVO' ? 'Admin' : (tab === 'HOSPITAL' ? 'Hospitales' : 'Archivados'))}
+                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${selectedIds.length === filteredItems.length ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'}`}>
+                        {selectedIds.length === filteredItems.length && <Plus className="w-3 h-3 text-white rotate-45" />}
+                    </div>
+                    {selectedIds.length === filteredItems.length ? 'Desmarcar Todo' : 'Seleccionar Todo'}
                 </button>
-            ))}
+            )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -421,13 +482,23 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
               <div
                 key={item.id}
                 onClick={() => navigate(`/doctors/${item.id}`)}
-                className="bg-white rounded-[2.5rem] shadow-lg border border-slate-100 p-8 hover:shadow-2xl hover:-translate-y-2 transition-all cursor-pointer group flex flex-col h-full relative overflow-hidden"
+                className={`bg-white rounded-[2.5rem] shadow-lg border p-8 hover:shadow-2xl hover:-translate-y-2 transition-all cursor-pointer group flex flex-col h-full relative overflow-hidden ${selectedIds.includes(item.id) ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-100'}`}
               >
                 <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full opacity-5 group-hover:opacity-10 transition-opacity ${activeTab === 'MEDICO' ? 'bg-blue-600' : 'bg-emerald-600'}`}></div>
                 
                 <div className="flex justify-between items-start mb-6">
-                    <div className={`p-4 rounded-2xl text-white shadow-lg ${activeTab === 'MEDICO' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : activeTab === 'ADMINISTRATIVO' ? 'bg-gradient-to-br from-purple-500 to-indigo-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600'}`}>
-                        {activeTab === 'MEDICO' ? <Stethoscope className="h-6 w-6" /> : activeTab === 'ADMINISTRATIVO' ? <Briefcase className="h-6 w-6" /> : <Building2 className="h-6 w-6" />}
+                    <div className="flex items-center gap-4">
+                        {user.role === 'admin' && (
+                            <div 
+                                onClick={(e) => toggleSelectId(e, item.id)}
+                                className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all z-20 ${selectedIds.includes(item.id) ? 'bg-blue-600 border-blue-600 shadow-lg shadow-blue-500/30' : 'bg-white border-slate-200 hover:border-blue-400'}`}
+                            >
+                                {selectedIds.includes(item.id) && <Plus className="w-4 h-4 text-white rotate-45" />}
+                            </div>
+                        )}
+                        <div className={`p-4 rounded-2xl text-white shadow-lg ${activeTab === 'MEDICO' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : activeTab === 'ADMINISTRATIVO' ? 'bg-gradient-to-br from-purple-500 to-indigo-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600'}`}>
+                            {activeTab === 'MEDICO' ? <Stethoscope className="h-6 w-6" /> : activeTab === 'ADMINISTRATIVO' ? <Briefcase className="h-6 w-6" /> : <Building2 className="h-6 w-6" />}
+                        </div>
                     </div>
                     
                     <div className="flex flex-col items-end gap-2">
@@ -508,6 +579,22 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Dirección</label>
                           <textarea required rows={3} className="w-full border border-slate-200 bg-slate-50 rounded-2xl p-4.5 font-black uppercase text-sm text-black focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner resize-none" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
                       </div>
+                      {user.role === 'admin' && (
+                          <div>
+                              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Ejecutivo Asignado</label>
+                              <select 
+                                  className="w-full border border-slate-200 bg-slate-50 rounded-2xl p-4.5 font-black uppercase text-sm text-black focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner appearance-none cursor-pointer"
+                                  value={formData.executive}
+                                  onChange={e => setFormData({...formData, executive: e.target.value})}
+                              >
+                                  <option value="LUIS">LUIS</option>
+                                  <option value="ORALIA">ORALIA</option>
+                                  <option value="TALINA">TALINA</option>
+                                  <option value="LIZ">LIZ</option>
+                                  <option value="SIN ASIGNAR">SIN ASIGNAR</option>
+                              </select>
+                          </div>
+                      )}
                       <div className="flex justify-end gap-4 mt-8">
                           <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-8 py-4 font-black text-slate-400 uppercase text-xs tracking-widest">Cancelar</button>
                           <button type="submit" className="px-10 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/30 active:scale-95 transition-all">Guardar</button>

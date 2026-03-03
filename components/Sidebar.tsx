@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CalendarDays, User, LogOut, Shield, ChevronLeft, ChevronRight, Activity, RefreshCw, Briefcase, BarChart3, Settings, MapPin } from 'lucide-react';
+import { LayoutDashboard, Users, CalendarDays, User, LogOut, Shield, ChevronLeft, ChevronRight, Activity, RefreshCw, Briefcase, BarChart3, Settings } from 'lucide-react';
 import { User as UserType } from '../types';
 
 interface SidebarProps {
@@ -31,7 +31,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isMobileOpen, closeMo
   const executives = [
       { name: 'LUIS', color: 'from-blue-400 to-blue-600', initials: 'LU' },
       { name: 'ORALIA', color: 'from-pink-400 to-rose-600', initials: 'OR' },
-      { name: 'TALINA', color: 'from-teal-400 to-emerald-600', initials: 'TA' }
+      { name: 'TALINA', color: 'from-teal-400 to-emerald-600', initials: 'TA' },
+      { name: 'LIZ', color: 'from-purple-400 to-indigo-600', initials: 'LI' }
   ];
 
   return (
@@ -90,7 +91,6 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, isMobileOpen, closeMo
                                             <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{isCollapsed ? 'SYS' : 'Sistema'}</p>
                                         </div>
                                         <SidebarLink to="/users" icon={<Settings />} label="Usuarios" isActive={isActive('/users', false)} collapsed={isCollapsed} />
-                                        <SidebarLink to="/location-history" icon={<MapPin />} label="Ubicaciones" isActive={isActive('/location-history', false)} collapsed={isCollapsed} />
                                     </>
                                 )}
                             </>

@@ -49,16 +49,15 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
       if (!searchTerm) return [];
       return doctors.filter(d => {
           const isNotArchived = d.status !== 'archived';
-          const matchesCategory = d.category === 'MEDICO' || !d.category;
           const matchesSearch = d.name.toLowerCase().includes(searchTerm.toLowerCase());
           const matchesProfile = user.role === 'admin' || d.executive === user.name;
-          return isNotArchived && matchesCategory && matchesSearch && matchesProfile;
+          return isNotArchived && matchesSearch && matchesProfile;
       });
   }, [doctors, searchTerm, user]);
 
   useEffect(() => {
       if (formData.cost) {
-          const comm = formData.cost * 0.03; 
+          const comm = formData.cost * 0.05; 
           setFormData(prev => ({ ...prev, commission: comm }));
       } else {
           setFormData(prev => ({ ...prev, commission: 0 }));
@@ -615,7 +614,7 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Comisión (3%)</label>
+                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Comisión (5%)</label>
                                 <div className="relative">
                                     <DollarSign className="absolute left-3 top-3 w-4 h-4 text-emerald-500" />
                                     <input 
@@ -669,13 +668,19 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                             </div>
                             <div>
                                 <label className="block text-xs font-black text-slate-500 uppercase mb-2">Nombre del Técnico</label>
-                                <input 
-                                    type="text"
+                                <select 
                                     value={formData.technician || ''}
-                                    onChange={e => setFormData({...formData, technician: e.target.value.toUpperCase()})}
-                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 uppercase text-slate-900 bg-white"
-                                    placeholder="NOMBRE..."
-                                />
+                                    onChange={e => setFormData({...formData, technician: e.target.value})}
+                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm uppercase text-slate-900 bg-white appearance-none cursor-pointer"
+                                >
+                                    <option value="">SELECCIONAR TÉCNICO...</option>
+                                    <option value="ALAN GARCÍA">ALAN GARCÍA</option>
+                                    <option value="ANGEL GUERRERO">ANGEL GUERRERO</option>
+                                    <option value="GABRIEL LÓPEZ">GABRIEL LÓPEZ</option>
+                                    <option value="RODRIGO GUTIÉRREZ">RODRIGO GUTIÉRREZ</option>
+                                    <option value="KEVIN VILLEDA">KEVIN VILLEDA</option>
+                                    <option value="MAURICIO HERRERA">MAURICIO HERRERA</option>
+                                </select>
                             </div>
                         </div>
 

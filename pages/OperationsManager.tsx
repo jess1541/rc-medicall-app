@@ -49,8 +49,7 @@ const OperationsManager: React.FC<OperationsManagerProps> = ({ operations, docto
       return doctors.filter(d => {
           const isNotArchived = d.status !== 'archived';
           const matchesSearch = d.name.toLowerCase().includes(searchTerm.toLowerCase());
-          const matchesProfile = user.role === 'admin' || d.executive === user.name;
-          return isNotArchived && matchesSearch && matchesProfile;
+          return isNotArchived && matchesSearch;
       });
   }, [doctors, searchTerm, user]);
 
@@ -359,12 +358,26 @@ const OperationsManager: React.FC<OperationsManagerProps> = ({ operations, docto
                                         </span>
                                     </td>
                                     <td className="p-4 text-right">
-                                        <button 
-                                            onClick={() => openModal(undefined, op)}
-                                            className="p-2 text-slate-300 hover:text-indigo-600 transition-colors bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md"
-                                        >
-                                            <Activity className="w-4 h-4" />
-                                        </button>
+                                        <div className="flex justify-end gap-2">
+                                            <button 
+                                                onClick={() => openModal(undefined, op)}
+                                                className="p-2 text-slate-300 hover:text-indigo-600 transition-colors bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md"
+                                                title="Editar"
+                                            >
+                                                <Activity className="w-4 h-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    if (confirm("¿Está seguro de eliminar este operativo permanentemente?")) {
+                                                        onDeleteOperation(op.id);
+                                                    }
+                                                }}
+                                                className="p-2 text-slate-300 hover:text-red-600 transition-colors bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md"
+                                                title="Eliminar"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

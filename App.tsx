@@ -184,67 +184,19 @@ const App: React.FC = () => {
   };
 
   const handleDeleteDoctor = async (id: string) => {
-    const doc = doctors.find(d => d.id === id);
-    if (!doc) return;
-
-    if (doc.status === 'archived') {
-        // Hard delete if already archived
-        setDoctors(prev => prev.filter(d => d.id !== id));
-        try {
-            await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' });
-        } catch (e) {
-            console.error("Error al eliminar doctor permanentemente", e);
-        }
-    } else {
-        // Soft delete: update status to 'archived'
-        const updatedDoc = { ...doc, status: 'archived' as const };
-        
-        setDoctors(prev => prev.map(d => d.id === id ? updatedDoc : d));
-        
-        try {
-            await fetch(`${API_BASE_URL}/doctors`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedDoc)
-            });
-        } catch (e) {
-            console.error("Error al archivar doctor", e);
-        }
+    setDoctors(prev => prev.filter(d => d.id !== id));
+    try {
+        await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' });
+    } catch (e) {
+        console.error("Error al eliminar doctor permanentemente", e);
     }
   };
 
   const handleBulkDeleteDoctors = async (ids: string[]) => {
-    const docsToProcess = doctors.filter(d => ids.includes(d.id));
-    if (docsToProcess.length === 0) return;
-
-    const alreadyArchived = docsToProcess.filter(d => d.status === 'archived');
-    const toArchive = docsToProcess.filter(d => d.status !== 'archived');
-
-    // 1. Handle permanent deletion for those already archived
-    if (alreadyArchived.length > 0) {
-        const archivedIds = alreadyArchived.map(d => d.id);
-        setDoctors(prev => prev.filter(d => !archivedIds.includes(d.id)));
-        // We could call a bulk delete API if it existed, but we'll do individual for now or just one if the backend supports it
-        for (const id of archivedIds) {
-            try {
-                await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' });
-            } catch (e) {}
-        }
-    }
-
-    // 2. Handle archiving for active ones
-    if (toArchive.length > 0) {
-        const archivedDocs = toArchive.map(d => ({ ...d, status: 'archived' as const }));
-        const archivedIds = archivedDocs.map(d => d.id);
-        
-        setDoctors(prev => prev.map(d => archivedIds.includes(d.id) ? archivedDocs.find(ad => ad.id === d.id)! : d));
-        
+    setDoctors(prev => prev.filter(d => !ids.includes(d.id)));
+    for (const id of ids) {
         try {
-            await fetch(`${API_BASE_URL}/doctors/bulk`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(archivedDocs)
-            });
+            await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' });
         } catch (e) {}
     }
   };

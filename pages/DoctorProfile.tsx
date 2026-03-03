@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 // Explicit imports from react-router-dom
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Doctor, Visit, ScheduleSlot, User } from '../types';
-import { Save, ArrowLeft, FileText, Calendar, UserCheck, ClipboardList, CheckCircle, MapPin, Trash2, Mail, Phone, Edit3, CreditCard, UserPlus, ExternalLink, Loader2 } from 'lucide-react';
+import { Save, ArrowLeft, FileText, Calendar, UserCheck, ClipboardList, CheckCircle, MapPin, Trash2, Mail, Phone, Edit3, CreditCard, UserPlus, ExternalLink, Loader2, Building2 } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 // Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
 import { es } from 'date-fns/locale';
@@ -264,6 +264,7 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
              </div>
             <p className="mt-4 text-xs md:text-sm text-slate-500 flex flex-wrap items-center font-medium gap-2">
                 {(isMedico || isAdminCat) && (<span className="font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg uppercase tracking-wide shadow-sm border border-blue-100">{doctor.specialty || 'GENERAL'}</span>)}
+                {doctor.hospital && (<span className="font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg uppercase tracking-wide shadow-sm border border-emerald-100 flex items-center"><Building2 className="w-3.5 h-3.5 mr-1.5" />{doctor.hospital}</span>)}
                 <span className="text-slate-600 flex items-center uppercase"><MapPin className="w-4 h-4 mr-1 text-slate-400" /> {doctor.address}</span>
             </p>
           </div>

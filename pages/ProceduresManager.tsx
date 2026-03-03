@@ -384,12 +384,26 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                         </span>
                                     </td>
                                     <td className="p-4 text-right">
-                                        <button 
-                                            onClick={() => openModal(undefined, proc)}
-                                            className="p-2 text-slate-300 hover:text-indigo-600 transition-colors bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md"
-                                        >
-                                            <Activity className="w-4 h-4" />
-                                        </button>
+                                        <div className="flex justify-end gap-2">
+                                            <button 
+                                                onClick={() => openModal(undefined, proc)}
+                                                className="p-2 text-slate-300 hover:text-indigo-600 transition-colors bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md"
+                                                title="Editar"
+                                            >
+                                                <Activity className="w-4 h-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    if (confirm("¿Está seguro de eliminar este procedimiento permanentemente?")) {
+                                                        onDeleteProcedure(proc.id);
+                                                    }
+                                                }}
+                                                className="p-2 text-slate-300 hover:text-red-600 transition-colors bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md"
+                                                title="Eliminar"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

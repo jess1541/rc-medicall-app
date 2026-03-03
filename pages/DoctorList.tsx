@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Doctor, User, ScheduleSlot } from '../types';
 import { Search, MapPin, Stethoscope, Building2, Briefcase, Plus, X, ArrowRight, Loader2, Filter, Database, Download, Upload, Trash2, AlertTriangle } from 'lucide-react';
 
-type TabType = 'MEDICO' | 'ADMINISTRATIVO' | 'HOSPITAL' | 'ARCHIVADOS';
+type TabType = 'MEDICO' | 'ADMINISTRATIVO' | 'HOSPITAL';
 
 interface DoctorListProps {
   doctors: Doctor[];
@@ -69,19 +69,16 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
   const filteredItems = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
     return doctors.filter(doc => {
-      // Filter by status: show only active doctors unless in 'ARCHIVADOS' tab
+      // Filter by status: show only active doctors
       const isArchived = doc.status === 'archived';
-      if (activeTab === 'ARCHIVADOS') {
-          if (!isArchived) return false;
-      } else {
-          if (isArchived) return false;
-          if (doc.category !== activeTab) return false;
-      }
+      if (isArchived) return false;
+      if (doc.category !== activeTab) return false;
 
       const matchesSearch = !term || 
                             doc.name.toLowerCase().includes(term) || 
                             doc.address.toLowerCase().includes(term) ||
-                            (doc.specialty || '').toLowerCase().includes(term);
+                            (doc.specialty || '').toLowerCase().includes(term) ||
+                            (doc.hospital || '').toLowerCase().includes(term);
       const matchesExec = selectedExecutive === 'TODOS' || doc.executive === selectedExecutive;
       
       return matchesSearch && matchesExec;
@@ -97,7 +94,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
 
       const newDoctor: Doctor = {
           id: `new-${Date.now()}`,
-          category: activeTab === 'ARCHIVADOS' ? 'MEDICO' : activeTab,
+          category: activeTab,
           name: formData.name.toUpperCase(),
           executive: formData.executive?.toUpperCase() || 'SIN ASIGNAR',
           specialty: formData.specialty?.toUpperCase() || (activeTab === 'HOSPITAL' ? 'HOSPITAL' : 'GENERAL'),
@@ -113,7 +110,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
       
       onAddDoctor(newDoctor);
       setIsAddModalOpen(false);
-      setFormData({ name: '', specialty: '', address: '', executive: user.name, category: activeTab === 'ARCHIVADOS' ? 'MEDICO' : activeTab });
+      setFormData({ name: '', specialty: '', address: '', executive: user.name, category: activeTab });
   };
 
   const handleExport = () => {
@@ -159,14 +156,8 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
 
   const handleDeleteClick = (e: React.MouseEvent, id: string, name: string) => {
       e.stopPropagation();
-      if (activeTab === 'ARCHIVADOS') {
-          if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE a ${name}?\n\nEsta acción no se puede deshacer.`)) {
-              if (onDeleteDoctor) onDeleteDoctor(id); 
-          }
-      } else {
-          if (window.confirm(`¿Estás seguro de que deseas ARCHIVAR a ${name}?\n\nEl registro se moverá a la pestaña de Archivados y no aparecerá en las listas principales, pero sus datos históricos se conservarán.`)) {
-              if (onDeleteDoctor) onDeleteDoctor(id);
-          }
+      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE a ${name}?\n\nEsta acción no se puede deshacer.`)) {
+          if (onDeleteDoctor) onDeleteDoctor(id); 
       }
   };
 
@@ -180,35 +171,31 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
           return;
       }
 
-      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ARCHIVAR toda la cartera de ${selectedExecutive}?\n\nSe archivarán ${count} registros. Esta acción los moverá a la pestaña de Archivados.`)) {
-          const idsToArchive = doctors
+      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE toda la cartera de ${selectedExecutive}?\n\nSe eliminarán ${count} registros. Esta acción no se puede deshacer.`)) {
+          const idsToDelete = doctors
               .filter(d => d.executive === selectedExecutive && d.status !== 'archived')
               .map(d => d.id);
           
           if (onBulkDeleteDoctors) {
-              onBulkDeleteDoctors(idsToArchive);
+              onBulkDeleteDoctors(idsToDelete);
           } else if (onDeleteDoctor) {
-              idsToArchive.forEach(id => onDeleteDoctor(id));
+              idsToDelete.forEach(id => onDeleteDoctor(id));
           }
-          alert(`Se han archivado ${count} registros de ${selectedExecutive}.`);
+          alert(`Se han eliminado ${count} registros de ${selectedExecutive}.`);
       }
   };
 
   const handleSelectedBulkDelete = () => {
       if (selectedIds.length === 0) return;
 
-      const isArchivedTab = activeTab === 'ARCHIVADOS';
-      const actionText = isArchivedTab ? 'ELIMINAR PERMANENTEMENTE' : 'ARCHIVAR';
-      const warningText = isArchivedTab ? '\n\nEsta acción no se puede deshacer.' : '\n\nSe moverán a la pestaña de Archivados.';
-
-      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ${actionText} los ${selectedIds.length} registros seleccionados?${warningText}`)) {
+      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE los ${selectedIds.length} registros seleccionados?\n\nEsta acción no se puede deshacer.`)) {
           if (onBulkDeleteDoctors) {
               onBulkDeleteDoctors(selectedIds);
           } else if (onDeleteDoctor) {
               selectedIds.forEach(id => onDeleteDoctor(id));
           }
           setSelectedIds([]);
-          alert(`Acción completada para ${selectedIds.length} registros.`);
+          alert(`Se han eliminado ${selectedIds.length} registros.`);
       }
   };
 
@@ -377,13 +364,13 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                     Limpiar
                 </button>
             )}
-            {user.role === 'admin' && selectedExecutive !== 'TODOS' && activeTab !== 'ARCHIVADOS' && (
+            {user.role === 'admin' && selectedExecutive !== 'TODOS' && (
                 <button 
                     onClick={handleBulkArchive}
                     className="col-span-2 md:col-span-1 flex items-center justify-center px-4 py-3 bg-orange-50 text-orange-500 rounded-xl hover:bg-orange-100 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-orange-100"
                 >
                     <AlertTriangle className="h-4 w-4 mr-2" />
-                    Archivar {selectedExecutive}
+                    Eliminar {selectedExecutive}
                 </button>
             )}
             <button 
@@ -415,13 +402,13 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
       <div className="bg-white p-4 md:p-6 rounded-[2.5rem] shadow-xl border border-slate-100/60 space-y-4 md:space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap gap-2 p-1.5 bg-slate-50 rounded-2xl w-full md:w-fit overflow-x-auto no-scrollbar border border-slate-100">
-                {(['MEDICO', 'ADMINISTRATIVO', 'HOSPITAL', 'ARCHIVADOS'] as TabType[]).map(tab => (
+                {(['MEDICO', 'ADMINISTRATIVO', 'HOSPITAL'] as TabType[]).map(tab => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
                     >
-                        {tab === 'MEDICO' ? 'Médicos' : (tab === 'ADMINISTRATIVO' ? 'Admin' : (tab === 'HOSPITAL' ? 'Hospitales' : 'Archivados'))}
+                        {tab === 'MEDICO' ? 'Médicos' : (tab === 'ADMINISTRATIVO' ? 'Admin' : 'Hospitales')}
                     </button>
                 ))}
             </div>
@@ -509,8 +496,8 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                         {user.role === 'admin' && (
                             <button 
                                 onClick={(e) => handleDeleteClick(e, item.id, item.name)}
-                                className={`p-2 rounded-lg transition-colors z-10 ${activeTab === 'ARCHIVADOS' ? 'bg-red-50 text-red-400 hover:bg-red-500 hover:text-white' : 'bg-orange-50 text-orange-400 hover:bg-orange-500 hover:text-white'}`}
-                                title={activeTab === 'ARCHIVADOS' ? "Eliminar Permanentemente" : "Archivar Lead"}
+                                className="p-2 rounded-lg transition-colors z-10 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white"
+                                title="Eliminar Permanentemente"
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
@@ -519,7 +506,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                 </div>
                 
                 <h3 className="text-base font-black text-black uppercase leading-tight group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">{item.name}</h3>
-                <div className="flex items-center gap-2 mb-6">
+                <div className="flex items-center gap-2 mb-4">
                     <p className="text-[10px] text-slate-500 font-black uppercase tracking-wider">{item.specialty || 'GENERAL'}</p>
                     <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
                         item.classification === 'A' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
@@ -530,6 +517,13 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                         {item.classification || 'C'}
                     </span>
                 </div>
+
+                {item.hospital && (
+                    <div className="flex items-center gap-2 mb-4 text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                        <Building2 className="w-3 h-3" />
+                        <span className="truncate">{item.hospital}</span>
+                    </div>
+                )}
                 
                 <div className="mt-auto flex items-start text-[11px] text-black font-bold uppercase border-t border-slate-50 pt-6">
                     <MapPin className="h-4 w-4 mr-2 text-slate-300 flex-shrink-0" />

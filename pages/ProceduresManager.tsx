@@ -57,12 +57,34 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
 
   useEffect(() => {
       if (formData.cost) {
-          const comm = formData.cost * 0.05; 
+          const technicians5 = ['ALAN GARCÍA', 'ANGEL GUERRERO', 'GABRIEL LÓPEZ', 'RODRIGO GUTIÉRREZ', 'KEVIN VILLEDA', 'MAURICIO HERRERA'];
+          const executives3 = ['LUIS', 'ORALIA', 'TALINA', 'LIZ'];
+          
+          let techPercentage = 0;
+          let execPercentage = 0;
+
+          // Technician Commission (5% if in list)
+          if (formData.technician && technicians5.includes(formData.technician.toUpperCase())) {
+              techPercentage = 0.05;
+          }
+
+          // Executive Commission (3% if in list)
+          const doc = doctors.find(d => d.id === formData.doctorId);
+          const executive = doc ? doc.executive : '';
+          if (executive && executives3.includes(executive.toUpperCase())) {
+              execPercentage = 0.03;
+          } else if (!formData.technician) {
+              // Default fallback if no technician and no specific executive? 
+              // The previous logic had a default of 3% for procedures.
+              execPercentage = 0.03;
+          }
+          
+          const comm = formData.cost * (techPercentage + execPercentage); 
           setFormData(prev => ({ ...prev, commission: comm }));
       } else {
           setFormData(prev => ({ ...prev, commission: 0 }));
       }
-  }, [formData.cost]);
+  }, [formData.cost, formData.technician, formData.doctorId, doctors]);
 
   useEffect(() => {
       if (formData.time) {
@@ -628,7 +650,22 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Comisión (5%)</label>
+                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">
+                                    Comisión ({
+                                        (() => {
+                                            const technicians5 = ['ALAN GARCÍA', 'ANGEL GUERRERO', 'GABRIEL LÓPEZ', 'RODRIGO GUTIÉRREZ', 'KEVIN VILLEDA', 'MAURICIO HERRERA'];
+                                            const executives3 = ['LUIS', 'ORALIA', 'TALINA', 'LIZ'];
+                                            let tech = 0;
+                                            let exec = 0;
+                                            if (formData.technician && technicians5.includes(formData.technician.toUpperCase())) tech = 5;
+                                            const doc = doctors.find(d => d.id === formData.doctorId);
+                                            const executive = doc ? doc.executive : '';
+                                            if (executive && executives3.includes(executive.toUpperCase())) exec = 3;
+                                            else if (!formData.technician) exec = 3; // Default fallback
+                                            return `${tech + exec}%`;
+                                        })()
+                                    })
+                                </label>
                                 <div className="relative">
                                     <DollarSign className="absolute left-3 top-3 w-4 h-4 text-emerald-500" />
                                     <input 

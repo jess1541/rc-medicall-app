@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Operation, Procedure } from '../types';
+import { Operation, Procedure, Doctor } from '../types';
 import { 
   Activity, DollarSign, FileSpreadsheet, 
   Stethoscope, Users, User as UserIcon
@@ -10,9 +10,10 @@ import { saveAs } from 'file-saver';
 interface OperationsDashboardProps {
   operations: Operation[];
   procedures: Procedure[];
+  doctors: Doctor[];
 }
 
-const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, procedures }) => {
+const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, procedures, doctors }) => {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const currentMonthName = new Date().toLocaleDateString('es-ES', { month: 'long' });
@@ -44,21 +45,51 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
                pDate.getFullYear() === currentYear;
     });
 
-    const totalProcedures = monthlyOps.length;
-    const totalSales = monthlyOps.reduce((acc, op) => acc + (op.cost || 0), 0);
-    const totalCommissions = totalSales * 0.05;
+    // De-duplicate: If a procedure exists in both lists, prefer the one in operations
+    const seenKeys = new Set();
+    const uniqueMonthlyOps = [...monthlyOps];
+    uniqueMonthlyOps.forEach(op => {
+        const normalizedType = (op.operationType || '').toLowerCase().trim();
+        const key = `${op.date}-${op.doctorId}-${normalizedType}`;
+        seenKeys.add(key);
+    });
+
+    const uniqueMonthlyProcs = monthlyProcs.filter(p => {
+        const normalizedType = (p.procedureType || '').toLowerCase().trim();
+        const key = `${p.date}-${p.doctorId}-${normalizedType}`;
+        return !seenKeys.has(key);
+    });
+
+    const allMonthlyEvents = [
+        ...uniqueMonthlyOps.map(op => ({
+            ...op,
+            type: op.operationType,
+            executive: op.executive || ''
+        })),
+        ...uniqueMonthlyProcs.map(p => {
+            const doc = doctors.find(d => d.id === p.doctorId);
+            return {
+                ...p,
+                type: p.procedureType,
+                executive: doc ? doc.executive : '',
+                remissionNumber: ''
+            };
+        })
+    ];
+
+    const totalProcedures = allMonthlyEvents.length;
+    const totalSales = allMonthlyEvents.reduce((acc, item) => acc + (item.cost || 0), 0);
+    const totalCommissions = allMonthlyEvents.reduce((acc, item) => acc + (item.commission || 0), 0);
 
     // Combine both operations and procedures for technician stats
     const technicianStats = technicians.map(tech => {
-        const techOps = monthlyOps.filter(op => op.technician === tech);
-        const techProcs = monthlyProcs.filter(p => p.technician === tech);
-        
-        const combinedSales = [...techOps, ...techProcs].reduce((acc, item) => acc + (item.cost || 0), 0);
-        const combinedCount = techOps.length + techProcs.length;
+        const techEvents = allMonthlyEvents.filter(e => e.technician === tech);
+        const combinedCommission = techEvents.reduce((acc, item) => acc + (item.commission || 0), 0);
+        const combinedCount = techEvents.length;
 
         return {
             name: tech,
-            commission: combinedSales * 0.05,
+            commission: combinedCommission,
             count: combinedCount
         };
     });
@@ -67,31 +98,71 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
       totalProcedures,
       totalSales,
       totalCommissions,
-      monthlyOps,
+      allMonthlyEvents,
       technicianStats
     };
-  }, [operations, procedures, currentMonth, currentYear]);
+  }, [operations, procedures, currentMonth, currentYear, doctors]);
 
   const recentProcedures = useMemo(() => {
-    return [...operations]
+    // Combine both and de-duplicate for the recent list as well
+    const all = [
+        ...operations.map(o => ({ 
+            ...o, 
+            type: o.operationType,
+            executive: o.executive || ''
+        })),
+        ...procedures.map(p => {
+            const doc = doctors.find(d => d.id === p.doctorId);
+            return { 
+                ...p, 
+                type: p.procedureType,
+                executive: doc ? doc.executive : '',
+                remissionNumber: ''
+            };
+        })
+    ];
+    
+    const seen = new Set();
+    const unique = all.filter(item => {
+        const normalizedType = (item.type || '').toLowerCase().trim();
+        const key = `${item.date}-${item.doctorId}-${normalizedType}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+
+    return unique
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 10);
-  }, [operations]);
+  }, [operations, procedures, doctors]);
 
   const handleExportExcel = () => {
-    const dataToExport = operations.map(op => ({
-      FECHA: op.date,
-      MEDICO: op.doctorName,
-      REMISION: op.remissionNumber || '',
-      HOSPITAL: op.hospital || '',
-      PROCEDIMIENTO: op.operationType,
-      TECNICO: op.technician || '',
-      EJECUTIVO: op.executive || '',
-      MONTO: op.cost || 0,
-      COMISION: (op.cost || 0) * 0.05,
-      ESTADO: op.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO',
-      NOTAS: op.notes || ''
-    }));
+    const technicians5 = ['ALAN GARCÍA', 'ANGEL GUERRERO', 'GABRIEL LÓPEZ', 'RODRIGO GUTIÉRREZ', 'KEVIN VILLEDA', 'MAURICIO HERRERA'];
+    
+    const dataToExport = stats.allMonthlyEvents.map(item => {
+      const cost = item.cost || 0;
+      const isTech5 = item.technician && technicians5.includes(item.technician.toUpperCase());
+      
+      // Calculate both commissions for the report
+      const commEjecutivo = cost * 0.03;
+      const commTecnico = isTech5 ? cost * 0.05 : 0;
+
+      return {
+        FECHA: item.date,
+        MEDICO: item.doctorName,
+        REMISION: item.remissionNumber || '',
+        HOSPITAL: item.hospital || '',
+        PROCEDIMIENTO: item.type,
+        TECNICO: item.technician || '',
+        EJECUTIVO: item.executive || '',
+        MONTO: cost,
+        'COMISIÓN EJECUTIVO': commEjecutivo,
+        'COMISIÓN TÉCNICO': commTecnico,
+        'COMISIÓN TOTAL': commEjecutivo + commTecnico,
+        ESTADO: item.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO',
+        NOTAS: item.notes || ''
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
@@ -235,7 +306,7 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
                                   <span className="text-xs font-medium text-slate-500 uppercase">{op.hospital || '-'}</span>
                               </td>
                               <td className="py-5">
-                                  <span className="text-xs font-medium text-slate-500 uppercase">{op.operationType}</span>
+                                  <span className="text-xs font-medium text-slate-500 uppercase">{op.type}</span>
                               </td>
                               <td className="py-5">
                                   <span className="text-xs font-medium text-slate-500 uppercase">{op.technician || '-'}</span>

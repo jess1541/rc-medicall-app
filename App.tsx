@@ -384,6 +384,7 @@ const App: React.FC = () => {
                   <OperationsDashboard 
                     operations={operations} 
                     procedures={procedures}
+                    doctors={doctors}
                   />
               } />
               <Route path="/operations" element={

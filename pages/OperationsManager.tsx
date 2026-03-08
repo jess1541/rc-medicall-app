@@ -55,12 +55,26 @@ const OperationsManager: React.FC<OperationsManagerProps> = ({ operations, docto
 
   useEffect(() => {
       if (formData.cost) {
-          const comm = formData.cost * 0.05; 
+          const technicians5 = ['ALAN GARCÍA', 'ANGEL GUERRERO', 'GABRIEL LÓPEZ', 'RODRIGO GUTIÉRREZ', 'KEVIN VILLEDA', 'MAURICIO HERRERA'];
+          const executives3 = ['LUIS', 'ORALIA', 'TALINA', 'LIZ'];
+          
+          let techPercentage = 0;
+          let execPercentage = 0;
+
+          if (formData.technician && technicians5.includes(formData.technician.toUpperCase())) {
+              techPercentage = 0.05;
+          }
+          
+          if (formData.executive && executives3.includes(formData.executive.toUpperCase())) {
+              execPercentage = 0.03;
+          }
+          
+          const comm = formData.cost * (techPercentage + execPercentage); 
           setFormData(prev => ({ ...prev, commission: comm }));
       } else {
           setFormData(prev => ({ ...prev, commission: 0 }));
       }
-  }, [formData.cost]);
+  }, [formData.cost, formData.technician, formData.executive]);
 
   // --- HELPERS ---
   const formatCurrency = (amount: number) => {
@@ -608,7 +622,19 @@ const OperationsManager: React.FC<OperationsManagerProps> = ({ operations, docto
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Comisión (5%)</label>
+                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">
+                                    Comisión ({
+                                        (() => {
+                                            const technicians5 = ['ALAN GARCÍA', 'ANGEL GUERRERO', 'GABRIEL LÓPEZ', 'RODRIGO GUTIÉRREZ', 'KEVIN VILLEDA', 'MAURICIO HERRERA'];
+                                            const executives3 = ['LUIS', 'ORALIA', 'TALINA', 'LIZ'];
+                                            let tech = 0;
+                                            let exec = 0;
+                                            if (formData.technician && technicians5.includes(formData.technician.toUpperCase())) tech = 5;
+                                            if (formData.executive && executives3.includes(formData.executive.toUpperCase())) exec = 3;
+                                            return `${tech + exec}%`;
+                                        })()
+                                    })
+                                </label>
                                 <div className="relative">
                                     <DollarSign className="absolute left-3 top-3 w-4 h-4 text-emerald-500" />
                                     <input 

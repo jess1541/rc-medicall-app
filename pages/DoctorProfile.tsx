@@ -173,18 +173,20 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
         const now = new Date();
         const diffInHours = (now.getTime() - visitDateTime.getTime()) / (1000 * 60 * 60);
 
-        if (diffInHours > 24) {
-            alert("⚠️ RESTRICCIÓN: Han pasado más de 24 horas desde la fecha/hora de la visita. El reporte ha quedado restringido.");
-            return;
-        }
+        if (user.role !== 'admin' && user.role !== 'admin_restricted') {
+            if (diffInHours > 24) {
+                alert("⚠️ RESTRICCIÓN: Han pasado más de 24 horas desde la fecha/hora de la visita. El reporte ha quedado restringido.");
+                return;
+            }
 
-        if (diffInHours < -2) { // Pequeño margen para zonas horarias o errores de reloj, pero bloquea futuro lejano
-            alert("⚠️ RESTRICCIÓN: No puedes reportar visitas futuras.");
-            return;
+            if (diffInHours < -2) { // Pequeño margen para zonas horarias o errores de reloj, pero bloquea futuro lejano
+                alert("⚠️ RESTRICCIÓN: No puedes reportar visitas futuras.");
+                return;
+            }
         }
 
         // Validación de Check-in para visitas reportadas
-        if (!newVisit.checkIn) {
+        if (user.role !== 'admin' && user.role !== 'admin_restricted' && !newVisit.checkIn) {
             alert("⚠️ RESTRICCIÓN: Es obligatorio registrar la ubicación (Check-in) para poder finalizar el reporte de la visita.");
             return;
         }

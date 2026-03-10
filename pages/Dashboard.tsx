@@ -221,18 +221,14 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
   };
 
   const handleExportProcedures = () => {
-      const technicians5 = ['ALAN GARCÍA', 'ANGEL GUERRERO', 'GABRIEL LÓPEZ', 'RODRIGO GUTIÉRREZ', 'KEVIN VILLEDA', 'MAURICIO HERRERA'];
-      
       const filteredProcedures = procedures.filter(p => 
           filterExecutive ? filteredDoctors.some(d => d.id === p.doctorId) : true
       ).map(p => {
           const doc = doctors.find(d => d.id === p.doctorId);
           const cost = p.cost || 0;
-          const isTech5 = p.technician && technicians5.includes(p.technician.toUpperCase());
           
-          // Calculate both commissions for the report
+          // Only consider executive commission (3%) for procedures
           const commEjecutivo = cost * 0.03;
-          const commTecnico = isTech5 ? cost * 0.05 : 0;
 
           return {
               FECHA: p.date,
@@ -246,8 +242,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
               PAGO: p.paymentType,
               COSTO: cost,
               'COMISIÓN EJECUTIVO': commEjecutivo,
-              'COMISIÓN TÉCNICO': commTecnico,
-              'COMISIÓN TOTAL': commEjecutivo + commTecnico,
+              'COMISIÓN TOTAL': commEjecutivo,
               ESTADO: p.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO'
           };
       }).sort((a, b) => b.FECHA.localeCompare(a.FECHA));

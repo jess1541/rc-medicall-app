@@ -61,18 +61,28 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
     });
 
     const allMonthlyEvents = [
-        ...uniqueMonthlyOps.map(op => ({
-            ...op,
-            type: op.operationType,
-            executive: op.executive || ''
-        })),
+        ...uniqueMonthlyOps.map(op => {
+            const cost = op.cost || 0;
+            const commission = cost * 0.05; // Operations -> 5%
+            return {
+                ...op,
+                type: op.operationType,
+                executive: op.executive || '',
+                category: 'operation',
+                commission
+            };
+        }),
         ...uniqueMonthlyProcs.map(p => {
             const doc = doctors.find(d => d.id === p.doctorId);
+            const cost = p.cost || 0;
+            const commission = cost * 0.03; // Procedures -> 3%
             return {
                 ...p,
                 type: p.procedureType,
                 executive: doc ? doc.executive : '',
-                remissionNumber: ''
+                remissionNumber: '',
+                category: 'procedure',
+                commission
             };
         })
     ];
@@ -137,15 +147,14 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
   }, [operations, procedures, doctors]);
 
   const handleExportExcel = () => {
-    const technicians5 = ['ALAN GARCÍA', 'ANGEL GUERRERO', 'GABRIEL LÓPEZ', 'RODRIGO GUTIÉRREZ', 'KEVIN VILLEDA', 'MAURICIO HERRERA'];
-    
     const dataToExport = stats.allMonthlyEvents.map(item => {
       const cost = item.cost || 0;
-      const isTech5 = item.technician && technicians5.includes(item.technician.toUpperCase());
       
-      // Calculate both commissions for the report
-      const commEjecutivo = cost * 0.03;
-      const commTecnico = isTech5 ? cost * 0.05 : 0;
+      // Calculate commission based on category
+      // Operations -> 5% (Technician)
+      // Procedures -> 3% (Executive)
+      const commEjecutivo = (item as any).category === 'procedure' ? cost * 0.03 : 0;
+      const commTecnico = (item as any).category === 'operation' ? cost * 0.05 : 0;
 
       return {
         FECHA: item.date,

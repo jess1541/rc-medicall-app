@@ -75,7 +75,7 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
         ...uniqueMonthlyProcs.map(p => {
             const doc = doctors.find(d => d.id === p.doctorId);
             const cost = p.cost || 0;
-            const commission = cost * 0.03; // Procedures -> 3%
+            const commission = cost * 0.05; // In Operations Dashboard, everything is 5%
             return {
                 ...p,
                 type: p.procedureType,
@@ -150,11 +150,9 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
     const dataToExport = stats.allMonthlyEvents.map(item => {
       const cost = item.cost || 0;
       
-      // Calculate commission based on category
-      // Operations -> 5% (Technician)
-      // Procedures -> 3% (Executive)
-      const commEjecutivo = (item as any).category === 'procedure' ? cost * 0.03 : 0;
-      const commTecnico = (item as any).category === 'operation' ? cost * 0.05 : 0;
+      // Calculate both commissions for the Excel report
+      const commEjecutivo = cost * 0.03;
+      const commTecnico = cost * 0.05;
 
       return {
         FECHA: item.date,
@@ -165,8 +163,8 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
         TECNICO: item.technician || '',
         EJECUTIVO: item.executive || '',
         MONTO: cost,
-        'COMISIÓN EJECUTIVO': commEjecutivo,
-        'COMISIÓN TÉCNICO': commTecnico,
+        'COMISIÓN EJECUTIVO (3%)': commEjecutivo,
+        'COMISIÓN TÉCNICO (5%)': commTecnico,
         'COMISIÓN TOTAL': commEjecutivo + commTecnico,
         ESTADO: item.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO',
         NOTAS: item.notes || ''

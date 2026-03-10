@@ -227,8 +227,9 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
           const doc = doctors.find(d => d.id === p.doctorId);
           const cost = p.cost || 0;
           
-          // Only consider executive commission (3%) for procedures
+          // Calculate both commissions for the report
           const commEjecutivo = cost * 0.03;
+          const commTecnico = cost * 0.05;
 
           return {
               FECHA: p.date,
@@ -241,8 +242,9 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
               TECNICO: p.technician || '',
               PAGO: p.paymentType,
               COSTO: cost,
-              'COMISIÓN EJECUTIVO': commEjecutivo,
-              'COMISIÓN TOTAL': commEjecutivo,
+              'COMISIÓN EJECUTIVO (3%)': commEjecutivo,
+              'COMISIÓN TÉCNICO (5%)': commTecnico,
+              'COMISIÓN TOTAL': commEjecutivo + commTecnico,
               ESTADO: p.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO'
           };
       }).sort((a, b) => b.FECHA.localeCompare(a.FECHA));

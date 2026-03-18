@@ -1,177 +1,604 @@
-import React, { useState, useMemo } from 'react';
-import { Doctor, Visit } from '../types';
-import { MapPin, User as UserIcon, ExternalLink, Filter } from 'lucide-react';
-import DatePicker, { registerLocale } from 'react-datepicker';
-import { es } from 'date-fns/locale';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Doctor, User, ScheduleSlot } from '../types';
+import { Search, MapPin, Stethoscope, Building2, Briefcase, Plus, X, ArrowRight, Loader2, Filter, Database, Download, Upload, Trash2, AlertTriangle } from 'lucide-react';
 
-registerLocale('es', es);
+type TabType = 'MEDICO' | 'ADMINISTRATIVO' | 'HOSPITAL';
 
-interface LocationHistoryProps {
+interface DoctorListProps {
   doctors: Doctor[];
+  onAddDoctor?: (doc: Doctor) => void;
+  onBulkAddDoctors?: (docs: Doctor[]) => void;
+  onDeleteDoctor?: (id: string) => void;
+  onBulkDeleteDoctors?: (ids: string[]) => void;
+  onClearCategory?: (category: string) => void;
+  user: User;
 }
 
-const LocationHistory: React.FC<LocationHistoryProps> = ({ doctors }) => {
-  const [selectedExecutive, setSelectedExecutive] = useState<string>('TODOS');
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAddDoctors, onDeleteDoctor, onBulkDeleteDoctors, onClearCategory, user }) => {
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedExecutive, setSelectedExecutive] = useState(user.role === 'executive' ? user.name : 'TODOS');
+  const [activeTab, setActiveTab] = useState<TabType>('MEDICO');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(20); 
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
+  const observerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [formData, setFormData] = useState<Partial<Doctor>>({
+      name: '',
+      executive: user.role === 'executive' ? user.name : 'SIN ASIGNAR',
+      specialty: '',
+      address: '',
+      category: 'MEDICO'
+  });
+
+  // Efecto de filtrado optimizado
+  useEffect(() => {
+    setIsFiltering(true);
+    setSelectedIds([]); // Reset selection on filter change
+    const timer = setTimeout(() => {
+        setIsFiltering(false);
+        setVisibleCount(20);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedExecutive, activeTab]);
+
+  // Scroll infinito
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+        (entries) => {
+            if (entries[0].isIntersecting && !isFiltering) {
+                setVisibleCount(prev => prev + 20);
+            }
+        },
+        { threshold: 0.1 }
+    );
+    if (observerRef.current) observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  }, [isFiltering]);
+
   const executivesList = useMemo(() => {
     const execs = new Set(doctors.map(d => d.executive));
     return ['TODOS', ...Array.from(execs).sort()];
   }, [doctors]);
 
-  const visitsWithLocation = useMemo(() => {
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    const allVisits: { docName: string; docAddress: string; visit: Visit; executive: string }[] = [];
+  const filteredItems = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+    return doctors.filter(doc => {
+      // Filter by status: show only active doctors
+      const isArchived = doc.status === 'archived';
+      if (isArchived) return false;
+      if (doc.category !== activeTab) return false;
 
-    doctors.forEach(doc => {
-      if (selectedExecutive !== 'TODOS' && doc.executive !== selectedExecutive) return;
+      const matchesSearch = !term || 
+                            doc.name.toLowerCase().includes(term) || 
+                            doc.address.toLowerCase().includes(term) ||
+                            (doc.specialty || '').toLowerCase().includes(term) ||
+                            (doc.hospital || '').toLowerCase().includes(term);
+      const matchesExec = selectedExecutive === 'TODOS' || doc.executive === selectedExecutive;
       
-      (doc.visits || []).forEach(visit => {
-        if (visit.date === dateStr && visit.checkIn) {
-          allVisits.push({
-            docName: doc.name,
-            docAddress: doc.address,
-            visit: visit,
-            executive: doc.executive
-          });
-        }
-      });
+      return matchesSearch && matchesExec;
     });
+  }, [doctors, searchTerm, selectedExecutive, activeTab]);
 
-    // Sort by timestamp
-    return allVisits.sort((a, b) => {
-        const timeA = new Date(a.visit.checkIn!.timestamp).getTime();
-        const timeB = new Date(b.visit.checkIn!.timestamp).getTime();
-        return timeA - timeB;
-    });
-  }, [doctors, selectedExecutive, selectedDate]);
+  const itemsToShow = useMemo(() => filteredItems.slice(0, visibleCount), [filteredItems, visibleCount]);
 
-  const generateRouteLink = () => {
-      if (visitsWithLocation.length < 2) return '';
+  const handleAddSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!formData.name?.trim()) return;
+      if (!onAddDoctor) return;
+
+      const newDoctor: Doctor = {
+          id: `new-${Date.now()}`,
+          category: activeTab,
+          name: formData.name.toUpperCase(),
+          executive: formData.executive?.toUpperCase() || 'SIN ASIGNAR',
+          specialty: formData.specialty?.toUpperCase() || (activeTab === 'HOSPITAL' ? 'HOSPITAL' : 'GENERAL'),
+          address: formData.address?.toUpperCase() || '',
+          visits: [],
+          schedule: Array(7).fill(null).map((_, i) => ({ 
+              day: ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'][i], 
+              time: '', 
+              active: false 
+          })),
+          isInsuranceDoctor: false
+      };
       
-      const baseUrl = "https://www.google.com/maps/dir/?api=1";
-      const origin = `${visitsWithLocation[0].visit.checkIn!.lat},${visitsWithLocation[0].visit.checkIn!.lng}`;
-      const destination = `${visitsWithLocation[visitsWithLocation.length - 1].visit.checkIn!.lat},${visitsWithLocation[visitsWithLocation.length - 1].visit.checkIn!.lng}`;
-      
-      let waypoints = '';
-      if (visitsWithLocation.length > 2) {
-          const points = visitsWithLocation.slice(1, -1).map(v => `${v.visit.checkIn!.lat},${v.visit.checkIn!.lng}`).join('|');
-          waypoints = `&waypoints=${points}`;
+      onAddDoctor(newDoctor);
+      setIsAddModalOpen(false);
+      setFormData({ name: '', specialty: '', address: '', executive: user.name, category: activeTab });
+  };
+
+  const handleExport = () => {
+      if (filteredItems.length === 0) {
+          alert("No hay datos para exportar");
+          return;
       }
 
-      return `${baseUrl}&origin=${origin}&destination=${destination}${waypoints}`;
+      // Preparar datos para CSV
+      const csvData = filteredItems.map(doc => ({
+          NOMBRE: doc.name,
+          CATEGORIA: doc.category,
+          ESPECIALIDAD: doc.specialty,
+          EJECUTIVO: doc.executive,
+          DIRECCION: doc.address.replace(/,/g, ' '), // Evitar conflictos con comas
+          HOSPITAL: doc.hospital || '',
+          TELEFONO: doc.phone || '',
+          EMAIL: doc.email || '',
+          CLASIFICACION: doc.classification || 'C'
+      }));
+
+      // Generar CSV
+      const headers = Object.keys(csvData[0]);
+      const csvContent = [
+          headers.join(','),
+          ...csvData.map(row => headers.map(header => `"${(row as any)[header]}"`).join(','))
+      ].join('\n');
+
+      // Descargar archivo
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Directorio_RC_MediCall_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+
+  const handleImportClick = () => {
+      fileInputRef.current?.click();
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, id: string, name: string) => {
+      e.stopPropagation();
+      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE a ${name}?\n\nEsta acción no se puede deshacer.`)) {
+          if (onDeleteDoctor) onDeleteDoctor(id); 
+      }
+  };
+
+  const handleBulkArchive = () => {
+      if (selectedExecutive === 'TODOS') return;
+      
+      const count = doctors.filter(d => d.executive === selectedExecutive && d.status !== 'archived').length;
+      
+      if (count === 0) {
+          alert(`No hay registros activos asignados a ${selectedExecutive}.`);
+          return;
+      }
+
+      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE toda la cartera de ${selectedExecutive}?\n\nSe eliminarán ${count} registros. Esta acción no se puede deshacer.`)) {
+          const idsToDelete = doctors
+              .filter(d => d.executive === selectedExecutive && d.status !== 'archived')
+              .map(d => d.id);
+          
+          if (onBulkDeleteDoctors) {
+              onBulkDeleteDoctors(idsToDelete);
+          } else if (onDeleteDoctor) {
+              idsToDelete.forEach(id => onDeleteDoctor(id));
+          }
+          alert(`Se han eliminado ${count} registros de ${selectedExecutive}.`);
+      }
+  };
+
+  const handleSelectedBulkDelete = () => {
+      if (selectedIds.length === 0) return;
+
+      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE los ${selectedIds.length} registros seleccionados?\n\nEsta acción no se puede deshacer.`)) {
+          if (onBulkDeleteDoctors) {
+              onBulkDeleteDoctors(selectedIds);
+          } else if (onDeleteDoctor) {
+              selectedIds.forEach(id => onDeleteDoctor(id));
+          }
+          setSelectedIds([]);
+          alert(`Se han eliminado ${selectedIds.length} registros.`);
+      }
+  };
+
+  const toggleSelectAll = () => {
+      if (selectedIds.length === filteredItems.length) {
+          setSelectedIds([]);
+      } else {
+          setSelectedIds(filteredItems.map(i => i.id));
+      }
+  };
+
+  const toggleSelectId = (e: React.MouseEvent, id: string) => {
+      e.stopPropagation();
+      setSelectedIds(prev => 
+          prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      );
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+          const text = event.target?.result as string;
+          if (!text) return;
+
+          const lines = text.split('\n');
+          if (lines.length < 2) return;
+
+          // Obtener headers y normalizarlos
+          const headers = lines[0].split(',').map(h => h.trim().toUpperCase().replace(/^"|"$/g, ''));
+          
+          const newDoctors: Doctor[] = [];
+
+          // Procesar cada línea
+          lines.slice(1).forEach((line, index) => {
+              if (!line.trim()) return;
+
+              // Parser robusto para CSV con comillas
+              const parts: string[] = [];
+              let currentPart = '';
+              let inQuotes = false;
+              for (let i = 0; i < line.length; i++) {
+                  const char = line[i];
+                  if (char === '"') inQuotes = !inQuotes;
+                  else if (char === ',' && !inQuotes) {
+                      parts.push(currentPart.trim().replace(/^"|"$/g, ''));
+                      currentPart = '';
+                  } else {
+                      currentPart += char;
+                  }
+              }
+              parts.push(currentPart.trim().replace(/^"|"$/g, ''));
+
+              // Mapear datos
+              const getData = (headerName: string) => {
+                  const idx = headers.indexOf(headerName);
+                  return idx !== -1 && parts[idx] ? parts[idx] : '';
+              };
+
+              const name = getData('NOMBRE');
+              if (!name) return;
+
+              // Determinar Categoría
+              let category: 'MEDICO' | 'HOSPITAL' | 'ADMINISTRATIVO' = 'MEDICO';
+              const rawCat = getData('CATEGORIA').toUpperCase();
+              if (rawCat.includes('HOSPITAL')) category = 'HOSPITAL';
+              else if (rawCat.includes('ADMIN') || rawCat.includes('PERSONAL')) category = 'ADMINISTRATIVO';
+              else if (rawCat.includes('MEDICO') || rawCat.includes('DOCTOR')) category = 'MEDICO';
+
+              const initialSchedule: ScheduleSlot[] = [
+                { day: 'LUNES', time: '', active: false },
+                { day: 'MARTES', time: '', active: false },
+                { day: 'MIÉRCOLES', time: '', active: false },
+                { day: 'JUEVES', time: '', active: false },
+                { day: 'VIERNES', time: '', active: false },
+                { day: 'SÁBADO', time: '', active: false },
+                { day: 'DOMINGO', time: '', active: false }
+              ];
+
+              const newDoc: Doctor = {
+                  id: `imp-${Date.now()}-${index}`,
+                  name: name.toUpperCase(),
+                  category: category,
+                  executive: getData('EJECUTIVO').toUpperCase() || 'SIN ASIGNAR',
+                  specialty: getData('ESPECIALIDAD').toUpperCase() || (category === 'MEDICO' ? 'GENERAL' : ''),
+                  subSpecialty: getData('SUB ESPECIALIDAD').toUpperCase(),
+                  address: getData('DIRECCION').toUpperCase(),
+                  phone: getData('TELEFONO'),
+                  email: getData('EMAIL'),
+                  hospital: getData('HOSPITAL').toUpperCase(),
+                  officeNumber: getData('CONSULTORIO'),
+                  floor: getData('PISO'),
+                  cedula: getData('CEDULA'),
+                  birthDate: getData('FECHA DE NACIMIENTO'),
+                  classification: (getData('CLASIFICACION').toUpperCase() as any) || 'C',
+                  isInsuranceDoctor: getData('ASEGURADORA').toUpperCase() === 'SI' || getData('ASEGURADORA').toUpperCase() === 'TRUE',
+                  importantNotes: getData('OBSERVACIONES').toUpperCase(),
+                  socialStyle: getData('ESTILO SOCIAL').toUpperCase() as any,
+                  attitudinalSegment: getData('SEGMENTO ACTITUDINAL').toUpperCase() as any,
+                  visits: [],
+                  schedule: initialSchedule
+              };
+
+              newDoctors.push(newDoc);
+          });
+
+          if (newDoctors.length > 0) {
+              if (onBulkAddDoctors) {
+                  onBulkAddDoctors(newDoctors);
+              } else if (onAddDoctor) {
+                  // Fallback si no existe la función bulk (legacy)
+                  newDoctors.forEach(doc => onAddDoctor(doc));
+              }
+              alert(`Importación completada: ${newDoctors.length} registros procesados.`);
+          } else {
+              alert("No se encontraron registros válidos o el formato CSV es incorrecto.");
+          }
+
+          if (fileInputRef.current) fileInputRef.current.value = '';
+      };
+      reader.readAsText(file);
   };
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-400 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-full blur-3xl -z-10 opacity-60"></div>
+        
+        <div className="relative z-10">
             <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                <MapPin className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
-                Historial de Ubicaciones
+                <div className="p-3 bg-blue-100 text-blue-700 rounded-2xl border border-blue-200">
+                    <Database className="w-6 h-6" />
+                </div>
+                Directorio <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700">Central</span>
             </h1>
-            <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] ml-9 md:ml-11">
-                Auditoría de visitas geolocalizadas.
+            <p className="text-slate-700 font-bold uppercase tracking-widest text-[10px] ml-[4.5rem] mt-1">
+                {filteredItems.length} registros activos
             </p>
+        </div>
+        
+        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-3 relative z-10">
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                accept=".csv" 
+                className="hidden" 
+            />
+            {user.role === 'admin' && selectedIds.length > 0 && (
+                <button 
+                    onClick={handleSelectedBulkDelete}
+                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-lg font-black text-[10px] uppercase tracking-widest active:scale-95 border border-red-100"
+                >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar ({selectedIds.length})
+                </button>
+            )}
+            {user.role === 'admin' && onClearCategory && (
+                <button 
+                    onClick={() => onClearCategory(activeTab)}
+                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 py-3 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-rose-100"
+                >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpiar
+                </button>
+            )}
+            {user.role === 'admin' && selectedExecutive !== 'TODOS' && (
+                <button 
+                    onClick={handleBulkArchive}
+                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 py-3 bg-orange-50 text-orange-600 rounded-xl hover:bg-orange-600 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-orange-100"
+                >
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Eliminar {selectedExecutive}
+                </button>
+            )}
+            <button 
+                onClick={handleImportClick}
+                className="flex items-center justify-center px-4 py-3 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-700 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-indigo-200"
+            >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar
+            </button>
+            
+            <button 
+                onClick={handleExport}
+                className="flex items-center justify-center px-4 py-3 bg-emerald-100 text-emerald-700 rounded-xl hover:bg-emerald-700 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-emerald-200"
+            >
+                <Download className="h-4 w-4 mr-2" />
+                Excel
+            </button>
+            <button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="col-span-2 md:col-span-1 flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-500 hover:to-blue-600 transition-all shadow-lg shadow-blue-500/20 font-black text-[10px] uppercase tracking-widest active:scale-95 border border-white/10"
+            >
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo
+            </button>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-slate-100 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div>
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Fecha</label>
-                  <DatePicker 
-                      selected={selectedDate} 
-                      onChange={(date) => date && setSelectedDate(date)} 
-                      dateFormat="dd/MM/yyyy"
-                      locale="es"
-                      className="w-full border border-slate-200 bg-slate-50 rounded-xl p-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none uppercase"
-                  />
-              </div>
-              <div>
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Ejecutivo</label>
-                  <div className="relative">
-                      <select
-                          className="w-full border border-slate-200 bg-slate-50 rounded-xl p-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none uppercase appearance-none"
-                          value={selectedExecutive}
-                          onChange={(e) => setSelectedExecutive(e.target.value)}
-                      >
-                          {executivesList.map(exec => <option key={exec} value={exec}>{exec}</option>)}
-                      </select>
-                      <Filter className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
-                  </div>
-              </div>
-              <div className="flex items-end">
-                  {visitsWithLocation.length > 1 ? (
-                      <a 
-                          href={generateRouteLink()} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="w-full flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-500/30"
-                      >
-                          <MapPin className="w-4 h-4 mr-2" />
-                          Ver Ruta Completa en Maps
-                      </a>
-                  ) : (
-                      <button disabled className="w-full flex items-center justify-center px-6 py-3 bg-slate-100 text-slate-400 rounded-xl font-black text-xs uppercase tracking-widest cursor-not-allowed">
-                          <MapPin className="w-4 h-4 mr-2" />
-                          Ruta no disponible
-                      </button>
-                  )}
-              </div>
-          </div>
+      {/* FILTROS INTEGRADOS */}
+      <div className="bg-white p-4 md:p-6 rounded-[2.5rem] shadow-lg border border-slate-400 space-y-4 md:space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100 rounded-2xl w-full md:w-fit overflow-x-auto no-scrollbar border border-slate-200">
+                {(['MEDICO', 'ADMINISTRATIVO', 'HOSPITAL'] as TabType[]).map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20 ring-1 ring-white/20' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200'}`}
+                    >
+                        {tab === 'MEDICO' ? 'Médicos' : (tab === 'ADMINISTRATIVO' ? 'Admin' : 'Hospitales')}
+                    </button>
+                ))}
+            </div>
+
+            {user.role === 'admin' && filteredItems.length > 0 && (
+                <button 
+                    onClick={toggleSelectAll}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-800 rounded-xl hover:bg-slate-200 transition-all font-black text-[10px] uppercase tracking-widest border border-slate-200"
+                >
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedIds.length === filteredItems.length ? 'bg-blue-600 border-blue-500' : 'bg-white border-slate-400'}`}>
+                        {selectedIds.length === filteredItems.length && <Plus className="w-3 h-3 text-white rotate-45" />}
+                    </div>
+                    {selectedIds.length === filteredItems.length ? 'Desmarcar Todo' : 'Seleccionar Todo'}
+                </button>
+            )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-slate-500 group-focus-within:text-blue-600 transition-colors" />
+                </div>
+                <input
+                    type="text"
+                    className="block w-full pl-14 pr-4 py-4 border border-slate-400 rounded-2xl bg-slate-100 text-slate-900 font-bold placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm"
+                    placeholder="BUSCAR POR NOMBRE, ESPECIALIDAD O DIRECCIÓN..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <Filter className="h-5 w-5 text-slate-500 group-focus-within:text-blue-600 transition-colors" />
+                </div>
+                <select
+                    className="block w-full pl-14 pr-10 py-4 border border-slate-400 rounded-2xl bg-slate-100 text-slate-900 font-bold focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm appearance-none cursor-pointer"
+                    value={selectedExecutive}
+                    onChange={(e) => setSelectedExecutive(e.target.value)}
+                    disabled={user.role === 'executive'}
+                >
+                    {executivesList.map(exec => <option key={exec} value={exec} className="bg-white text-slate-900">{exec}</option>)}
+                </select>
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                    <div className="h-1.5 w-1.5 rounded-full bg-slate-300"></div>
+                </div>
+            </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-          {visitsWithLocation.length > 0 ? (
-              visitsWithLocation.map((item, index) => (
-                  <div key={`${item.visit.id}-${index}`} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-md transition-all">
-                      <div className="flex items-start gap-4">
-                          <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-sm border border-blue-100 shrink-0">
-                              {index + 1}
-                          </div>
-                          <div>
-                              <h3 className="text-sm font-black text-slate-900 uppercase">{item.docName}</h3>
-                              <p className="text-xs text-slate-500 font-bold uppercase flex items-center mt-1">
-                                  <UserIcon className="w-3 h-3 mr-1" /> {item.executive}
-                              </p>
-                              <p className="text-[10px] text-slate-400 font-medium uppercase mt-1">
-                                  {item.docAddress}
-                              </p>
-                          </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end gap-2 w-full md:w-auto">
-                          <div className="flex items-center gap-2">
-                              <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-black uppercase">
-                                  {new Date(item.visit.checkIn!.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                              </span>
-                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide ${item.visit.checkIn!.accuracy < 50 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                  Precisión: {Math.round(item.visit.checkIn!.accuracy)}m
-                              </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <a 
-                                href={`https://www.google.com/maps?q=${item.visit.checkIn!.lat},${item.visit.checkIn!.lng}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs font-bold text-blue-500 hover:text-blue-700 flex items-center uppercase tracking-wide"
+      {isFiltering ? (
+          <div className="flex flex-col items-center justify-center py-40 animate-pulse">
+              <Loader2 className="w-12 h-12 text-blue-400 animate-spin mb-4" />
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Cargando resultados...</p>
+          </div>
+      ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {itemsToShow.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => navigate(`/doctors/${item.id}`)}
+                className={`bg-white rounded-[2.5rem] shadow-lg border p-8 hover:shadow-blue-500/10 hover:-translate-y-2 transition-all cursor-pointer group flex flex-col h-full relative overflow-hidden ${selectedIds.includes(item.id) ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-400'}`}
+              >
+                <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full opacity-5 group-hover:opacity-10 transition-opacity ${activeTab === 'MEDICO' ? 'bg-blue-600' : 'bg-emerald-600'}`}></div>
+                
+                <div className="flex justify-between items-start mb-6">
+                    <div className="flex items-center gap-4">
+                        {user.role === 'admin' && (
+                            <div 
+                                onClick={(e) => toggleSelectId(e, item.id)}
+                                className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all z-20 ${selectedIds.includes(item.id) ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/30' : 'bg-slate-100 border-slate-400 hover:border-blue-500'}`}
                             >
-                                Ver Ubicación <ExternalLink className="w-3 h-3 ml-1" />
-                            </a>
-                          </div>
-                      </div>
-                  </div>
-              ))
-          ) : (
-              <div className="py-20 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
-                  <MapPin className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-                  <p className="text-slate-400 font-black uppercase tracking-widest text-xs">No hay registros de ubicación para esta selección</p>
+                                {selectedIds.includes(item.id) && <Plus className="w-4 h-4 text-white rotate-45" />}
+                            </div>
+                        )}
+                        <div className={`p-4 rounded-2xl text-white shadow-lg ${activeTab === 'MEDICO' ? 'bg-gradient-to-br from-blue-600 to-blue-700' : activeTab === 'ADMINISTRATIVO' ? 'bg-gradient-to-br from-indigo-600 to-blue-700' : 'bg-gradient-to-br from-emerald-600 to-teal-700'}`}>
+                            {activeTab === 'MEDICO' ? <Stethoscope className="h-6 w-6" /> : activeTab === 'ADMINISTRATIVO' ? <Briefcase className="h-6 w-6" /> : <Building2 className="h-6 w-6" />}
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-end gap-2">
+                        <div className="flex gap-1">
+                            <span className="text-[9px] font-black bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-400">{item.category}</span>
+                            <span className="text-[9px] font-black bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-400">{item.executive}</span>
+                        </div>
+                        {user.role === 'admin' && (
+                            <button 
+                                onClick={(e) => handleDeleteClick(e, item.id, item.name)}
+                                className="p-2 rounded-lg transition-colors z-10 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white"
+                                title="Eliminar Permanentemente"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+                
+                <h3 className="text-base font-black text-slate-900 uppercase leading-tight group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">{item.name}</h3>
+                <div className="flex items-center gap-2 mb-4">
+                    <p className="text-[10px] text-slate-800 font-black uppercase tracking-wider">{item.specialty || 'GENERAL'}</p>
+                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
+                        item.classification === 'A' ? 'bg-emerald-200 text-emerald-800 border-emerald-300' :
+                        item.classification === 'B' ? 'bg-blue-200 text-blue-800 border-blue-300' :
+                        item.classification === 'C' ? 'bg-yellow-200 text-yellow-800 border-yellow-300' :
+                        'bg-slate-200 text-slate-900 border-slate-400'
+                    }`}>
+                        {item.classification || 'C'}
+                    </span>
+                </div>
+
+                {item.hospital && (
+                    <div className="flex items-center gap-2 mb-4 text-[10px] text-slate-800 font-bold uppercase tracking-tight">
+                        <Building2 className="w-3 h-3" />
+                        <span className="truncate">{item.hospital}</span>
+                    </div>
+                )}
+                
+                <div className="mt-auto flex items-start text-[11px] text-slate-900 font-bold uppercase border-t border-slate-400 pt-6">
+                    <MapPin className="h-4 w-4 mr-2 text-slate-700 flex-shrink-0" />
+                    <span className="line-clamp-2 leading-relaxed">{item.address}</span>
+                </div>
+                
+                <div className="mt-6 flex justify-end">
+                    <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center transform translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all shadow-xl shadow-blue-500/20">
+                        <ArrowRight className="h-5 w-5" />
+                    </div>
+                </div>
               </div>
-          )}
-      </div>
+            ))}
+          </div>
+      )}
+
+      {filteredItems.length === 0 && !isFiltering && (
+          <div className="py-40 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-400">
+              <Database className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-800 font-black uppercase tracking-widest text-xs">No se encontraron registros</p>
+          </div>
+      )}
+
+      <div ref={observerRef} className="h-10"></div>
+
+      {/* MODAL NUEVO REGISTRO */}
+      {isAddModalOpen && (
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn border border-slate-400">
+                  <div className="p-10 border-b border-slate-200 flex justify-between items-center bg-slate-100">
+                      <div>
+                        <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Nuevo Registro</h3>
+                        <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mt-1">Categoría: {activeTab}</p>
+                      </div>
+                      <button onClick={() => setIsAddModalOpen(false)} className="p-3 bg-slate-200 rounded-2xl text-slate-500 hover:text-rose-500 transition-all border border-slate-300"><X className="h-6 w-6" /></button>
+                  </div>
+                  <form onSubmit={handleAddSubmit} className="p-10 space-y-6">
+                      <div>
+                          <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-3 ml-1">Nombre Completo</label>
+                          <input type="text" required className="w-full border border-slate-300 bg-slate-100 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                      </div>
+                      <div>
+                          <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-3 ml-1">Especialidad</label>
+                          <input type="text" className="w-full border border-slate-300 bg-slate-100 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner" value={formData.specialty} onChange={e => setFormData({...formData, specialty: e.target.value})} />
+                      </div>
+                      <div>
+                          <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-3 ml-1">Dirección</label>
+                          <textarea required rows={3} className="w-full border border-slate-300 bg-slate-100 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner resize-none" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+                      </div>
+                      {user.role === 'admin' && (
+                          <div>
+                              <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-3 ml-1">Ejecutivo Asignado</label>
+                              <select 
+                                  className="w-full border border-slate-300 bg-slate-100 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner appearance-none cursor-pointer"
+                                  value={formData.executive}
+                                  onChange={e => setFormData({...formData, executive: e.target.value})}
+                              >
+                                  <option value="LUIS" className="bg-white">LUIS</option>
+                                  <option value="ORALIA" className="bg-white">ORALIA</option>
+                                  <option value="TALINA" className="bg-white">TALINA</option>
+                                  <option value="LIZ" className="bg-white">LIZ</option>
+                                  <option value="SIN ASIGNAR" className="bg-white">SIN ASIGNAR</option>
+                              </select>
+                          </div>
+                      )}
+                      <div className="flex justify-end gap-4 mt-8">
+                          <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-8 py-4 font-black text-slate-700 hover:text-slate-900 transition-colors uppercase text-xs tracking-widest">Cancelar</button>
+                          <button type="submit" className="px-10 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/30 active:scale-95 transition-all border border-white/10">Guardar</button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      )}
     </div>
   );
 };
 
-export default LocationHistory;
+export default DoctorList;

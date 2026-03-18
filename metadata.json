@@ -1,5 +1,4 @@
-{
-  "name": "Copy of RC MediCall Endoscopic",
-  "description": "CRM especializado para la gestión de visitas médicas, asignación de ejecutivos y control de fichas de médicos para RC MediCall Endoscopy Services.",
-  "requestFramePermissions": []
-}
+# .env.example
+MONGO_URI=
+PORT=3000
+NODE_ENV=development

@@ -1,744 +1,762 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Doctor, Procedure, User } from '../types';
-import { ChevronLeft, ChevronRight, Plus, Check, Search, Activity, X, Trash2, DollarSign, User as UserIcon, Building2, Clock, CreditCard, LayoutList, Calendar as CalendarIcon } from 'lucide-react';
-import DatePicker, { registerLocale } from 'react-datepicker';
-// Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
-import { es } from 'date-fns/locale';
+import React, { useMemo, useState } from 'react';
+import { Doctor, User, Procedure } from '../types';
+import { 
+  Users, TrendingUp, Filter, 
+  Award, Activity, DollarSign, Calendar, 
+  ArrowUpRight, Clock, MapPin, 
+  BarChart3, PieChart, Zap, ChevronRight, Stethoscope,
+  Download, FileSpreadsheet, X
+} from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns';
 
-registerLocale('es', es);
-
-interface ProceduresManagerProps {
-  procedures: Procedure[];
+interface DashboardProps {
   doctors: Doctor[];
-  onAddProcedure: (proc: Procedure) => void;
-  onUpdateProcedure: (proc: Procedure) => void;
-  onDeleteProcedure: (id: string) => void;
   user: User;
+  procedures: Procedure[];
+  isOnline: boolean;
 }
 
-type ViewMode = 'month' | 'week' | 'day';
-
-const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, doctors, onAddProcedure, onUpdateProcedure, onDeleteProcedure, user }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('month');
-  const [isListView, setIsListView] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProcedure, setEditingProcedure] = useState<Procedure | null>(null);
-  
-  const [formData, setFormData] = useState<Partial<Procedure>>({
-      date: new Date().toISOString().split('T')[0],
-      time: '',
-      hospital: '',
-      doctorId: '',
-      doctorName: '',
-      procedureType: '',
-      paymentType: 'DIRECTO',
-      cost: 0,
-      commission: 0,
-      technician: '',
-      notes: '',
-      status: 'scheduled'
+const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnline }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [filterExecutive, setFilterExecutive] = useState<string | null>(() => {
+      if (user.role === 'executive') return user.name;
+      const params = new URLSearchParams(location.search);
+      return params.get('exec');
   });
-  
-  const [selectedTime, setSelectedTime] = useState<Date | null>(null);
-  const [displayCost, setDisplayCost] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+
+  // Update filter when URL changes
+  React.useEffect(() => {
+      if (user.role === 'admin') {
+          const params = new URLSearchParams(location.search);
+          setFilterExecutive(params.get('exec'));
+      }
+  }, [location.search, user.role, user.name]);
+  const [selectedStage, setSelectedStage] = useState<string | null>(null);
 
   const filteredDoctors = useMemo(() => {
-      if (!searchTerm) return [];
-      return doctors.filter(d => {
-          const isNotArchived = d.status !== 'archived';
-          const matchesSearch = d.name.toLowerCase().includes(searchTerm.toLowerCase());
-          const matchesProfile = user.role === 'admin' || d.executive === user.name;
-          return isNotArchived && matchesSearch && matchesProfile;
+      // Filter out archived doctors for the main list, but we might need them for historical data?
+      // Actually, usually dashboard shows active portfolio.
+      // If we filter them out here, they won't contribute to 'totalDoctors' count, which is correct.
+      // However, their visits will also be excluded from 'completedMonth', 'performance', etc.
+      // If the user wants "permanezcan en el directorio y en procedimiento el registro", they probably want the history to count.
+      // So we should NOT filter them out here if we want their visits to count.
+      // BUT, we should filter them out for 'totalDoctors' count.
+      // Let's keep them in 'filteredDoctors' but handle the count separately.
+      // Wait, if I keep them, they might show up in lists where they shouldn't.
+      // Let's filter them out from 'filteredDoctors' to keep the dashboard focused on active portfolio, 
+      // UNLESS the user explicitly wants to see historical performance including archived.
+      // Standard CRM behavior: Dashboard reflects ACTIVE portfolio.
+      // However, if a visit happened this month, it should probably count.
+      // Let's filter by status !== 'archived' for now to be consistent with DoctorList.
+      // If the user complains that stats dropped, we can adjust.
+      // Actually, let's filter them out.
+      const activeDocs = doctors.filter(d => d.status !== 'archived');
+      return filterExecutive ? activeDocs.filter(d => d.executive === filterExecutive) : activeDocs;
+  }, [doctors, filterExecutive]);
+
+  const stageDetails = useMemo(() => {
+      if (!selectedStage) return [];
+      const details: any[] = [];
+      filteredDoctors.forEach(doc => {
+          (doc.visits || []).forEach(v => {
+              if (v.status === 'completed' && v.outcome === selectedStage) {
+                  details.push({
+                      date: v.date,
+                      doctor: doc.name,
+                      specialty: doc.specialty,
+                      category: doc.category,
+                      classification: doc.classification,
+                      executive: doc.executive,
+                      notes: v.note,
+                      docId: doc.id
+                  });
+              }
+          });
       });
-  }, [doctors, searchTerm, user]);
+      return details.sort((a, b) => b.date.localeCompare(a.date));
+  }, [filteredDoctors, selectedStage]);
 
-  useEffect(() => {
-      if (formData.cost) {
-          let execPercentage = 0.03; // Flat 3% for Procedures (Executive)
-          
-          const comm = formData.cost * execPercentage; 
-          setFormData(prev => ({ ...prev, commission: comm }));
-      } else {
-          setFormData(prev => ({ ...prev, commission: 0 }));
-      }
-  }, [formData.cost, formData.doctorId, doctors]);
+  const stats = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
-  useEffect(() => {
-      if (formData.time) {
-          const [hours, minutes] = formData.time.split(':').map(Number);
-          const date = new Date();
-          date.setHours(hours);
-          date.setMinutes(minutes);
-          setSelectedTime(date);
-      } else {
-          setSelectedTime(null);
-      }
-  }, [isModalOpen, editingProcedure]);
+    let completedMonth = 0;
+    let plannedMonth = 0;
+    let completedWeek = 0;
+    let plannedWeek = 0;
+    
+    const outcomes = {
+        INTERESADO: 0,
+        COTIZACIÓN: 0,
+        'PROGRAMAR PROCEDIMIENTO': 0,
+        SEGUIMIENTO: 0
+    };
 
-  // --- HELPERS ---
-  const formatCurrency = (amount: number) => {
-      return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
-  };
+    const classifications = { A: 0, B: 0, C: 0, D: 0 };
+    const upcomingVisits: any[] = [];
+    const recentActivity: any[] = [];
 
-  const parseCurrencyInput = (val: string) => {
-      const cleanVal = val.replace(/[^0-9.]/g, '');
-      const num = parseFloat(cleanVal);
-      return isNaN(num) ? 0 : num;
-  };
+    filteredDoctors.forEach(doc => {
+        // Stats por clasificación
+        if (doc.classification === 'A') classifications.A++;
+        else if (doc.classification === 'B') classifications.B++;
+        else if (doc.classification === 'C') classifications.C++;
+        else classifications.D++; // Counts D or undefined as D
 
-  const handleCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const rawValue = e.target.value;
-      const numericValue = parseCurrencyInput(rawValue);
-      setFormData(prev => ({...prev, cost: numericValue}));
-      setDisplayCost(rawValue); 
-  };
+        (doc.visits || []).forEach(v => {
+            const vDate = parseISO(v.date);
+            const isThisMonth = vDate.getMonth() === currentMonth && vDate.getFullYear() === currentYear;
+            const isThisWeek = isWithinInterval(vDate, { start: weekStart, end: weekEnd });
 
-  const handleCostBlur = () => {
-      if (formData.cost) {
-          setDisplayCost(new Intl.NumberFormat('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(formData.cost));
-      } else {
-          setDisplayCost('');
-      }
-  };
+            if (isThisMonth) {
+                if (v.status === 'completed') completedMonth++;
+                else plannedMonth++;
+            }
 
-  const getProcedureExecutive = (doctorId: string) => {
-      const doc = doctors.find(d => d.id === doctorId);
-      return doc ? doc.executive : 'Desconocido';
-  }
+            if (isThisWeek) {
+                if (v.status === 'completed') completedWeek++;
+                else plannedWeek++;
+            }
 
-  const getDaysForView = (): (Date | null)[] => {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
+            // Pipeline de los últimos resultados reportados
+            if (v.status === 'completed' && outcomes.hasOwnProperty(v.outcome)) {
+                (outcomes as any)[v.outcome]++;
+            }
 
-      if (viewMode === 'month') {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          const firstDayOfMonth = new Date(year, month, 1).getDay(); 
-          const days: (Date | null)[] = [];
-          for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
-          for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
-          return days;
-      } else if (viewMode === 'week') {
-          const startOfWeek = new Date(currentDate);
-          startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
-          const days: Date[] = [];
-          for (let i = 0; i < 7; i++) {
-              const d = new Date(startOfWeek);
-              d.setDate(startOfWeek.getDate() + i);
-              days.push(d);
-          }
-          return days;
-      } else { 
-          return [new Date(currentDate)];
-      }
-  };
+            // Agrupar para listas
+            if (v.status === 'planned' && vDate >= now) {
+                upcomingVisits.push({ ...v, docName: doc.name, docId: doc.id, hospital: doc.hospital });
+            }
+            if (v.status === 'completed') {
+                recentActivity.push({ 
+                    ...v, 
+                    docName: doc.name, 
+                    docId: doc.id,
+                    specialty: doc.specialty,
+                    category: doc.category,
+                    classification: doc.classification,
+                    executive: doc.executive
+                });
+            }
+        });
+    });
 
-  const calendarDays = getDaysForView();
+    const relevantProcedures = procedures.filter(p => {
+        const pDate = parseISO(p.date);
+        const belongs = filterExecutive ? filteredDoctors.some(d => d.id === p.doctorId) : true;
+        return p.status === 'performed' && pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear && belongs;
+    });
 
-  const visibleProcedures = useMemo(() => {
-      if (user.role === 'admin') {
-          return procedures;
-      }
-      return procedures.filter(proc => {
-          const doc = doctors.find(d => d.id === proc.doctorId);
-          return doc && doc.executive === user.name;
-      });
-  }, [procedures, doctors, user]);
+    const recentProcedures = procedures
+        .filter(p => filterExecutive ? filteredDoctors.some(d => d.id === p.doctorId) : true)
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 5);
 
-  const listProcedures = useMemo(() => {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
+    const totalRevenue = relevantProcedures.reduce((a, c) => a + (c.cost || 0), 0);
+    const totalCommissions = totalRevenue * 0.03; // Cálculo del 3%
 
-      return visibleProcedures.filter(p => {
-          if (viewMode === 'month') {
-              return p.date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`);
-          } else if (viewMode === 'week') {
-              const startOfWeek = new Date(currentDate);
-              startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
-              startOfWeek.setHours(0,0,0,0);
-              
-              const endOfWeek = new Date(startOfWeek);
-              endOfWeek.setDate(startOfWeek.getDate() + 6);
-              endOfWeek.setHours(23,59,59,999);
-              
-              const procDate = new Date(p.date + 'T12:00:00');
-              return procDate >= startOfWeek && procDate <= endOfWeek;
-          } else {
-              return p.date === currentDate.toISOString().split('T')[0];
-          }
-      }).sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
-  }, [visibleProcedures, currentDate, viewMode]);
+    return { 
+        totalDoctors: filteredDoctors.length, 
+        completedMonth,
+        plannedMonth,
+        completedWeek,
+        plannedWeek,
+        outcomes,
+        totalRevenue,
+        totalCommissions,
+        performance: (plannedMonth + completedMonth) > 0 ? Math.round((completedMonth / (plannedMonth + completedMonth)) * 100) : 0,
+        classifications,
+        upcomingVisits: upcomingVisits.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5),
+        recentActivity: recentActivity.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5),
+        recentProcedures
+    };
+  }, [filteredDoctors, procedures, filterExecutive]);
 
-  const getProceduresForDay = (day: Date) => {
-      const dateStr = day.toISOString().split('T')[0];
-      return visibleProcedures.filter(p => p.date === dateStr);
-  };
-
-  const handleDragStart = (e: React.DragEvent, proc: Procedure) => {
-      e.dataTransfer.setData("text/plain", JSON.stringify(proc));
-      e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = (e: React.DragEvent, targetDate: Date) => {
-      e.preventDefault();
-      try {
-          const data = e.dataTransfer.getData("text/plain");
-          if (!data) return;
-          const proc = JSON.parse(data) as Procedure;
-          const newDateStr = targetDate.toISOString().split('T')[0];
-          
-          if (proc.date !== newDateStr) {
-              onUpdateProcedure({ ...proc, date: newDateStr });
-          }
-      } catch (error) { console.error("Drop error:", error); }
-  };
-
-  const prevPeriod = () => {
-      const newDate = new Date(currentDate);
-      if (viewMode === 'month') newDate.setMonth(newDate.getMonth() - 1);
-      else if (viewMode === 'week') newDate.setDate(newDate.getDate() - 7);
-      else newDate.setDate(newDate.getDate() - 1);
-      setCurrentDate(newDate);
-  };
-
-  const nextPeriod = () => {
-      const newDate = new Date(currentDate);
-      if (viewMode === 'month') newDate.setMonth(newDate.getMonth() + 1);
-      else if (viewMode === 'week') newDate.setDate(newDate.getDate() + 7);
-      else newDate.setDate(newDate.getDate() + 1);
-      setCurrentDate(newDate);
-  };
-
-  const handleSave = () => {
-      if (!formData.doctorId || !formData.procedureType) {
-          alert("Seleccione un médico y el tipo de procedimiento.");
+  // Funciones de Exportación
+  const downloadCSV = (data: any[], filename: string) => {
+      if (data.length === 0) {
+          alert("No hay datos para generar el reporte.");
           return;
       }
+      const headers = Object.keys(data[0]);
+      const csvContent = [
+          headers.join(','),
+          ...data.map(row => headers.map(header => `"${String((row as any)[header]).replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
 
-      if (editingProcedure) {
-          onUpdateProcedure({ ...editingProcedure, ...formData } as Procedure);
-      } else {
-          onAddProcedure({ 
-              ...formData, 
-              id: `proc-${Date.now()}`,
-              status: 'scheduled' 
-          } as Procedure);
-      }
-      closeModal();
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
   };
 
-  const handleDelete = () => {
-      if (editingProcedure && confirm("¿Está seguro de eliminar este procedimiento agendado permanentemente?")) {
-          onDeleteProcedure(editingProcedure.id);
-          closeModal();
-      }
+  const handleExportVisits = () => {
+      const allVisits = filteredDoctors.flatMap(doc => 
+          (doc.visits || []).map(v => ({
+              FECHA: v.date,
+              HORA: v.time || '',
+              MEDICO: doc.name,
+              ESPECIALIDAD: doc.specialty,
+              EJECUTIVO: doc.executive,
+              HOSPITAL: doc.hospital || '',
+              ESTADO: v.status === 'completed' ? 'REALIZADA' : 'PROGRAMADA',
+              RESULTADO: v.outcome,
+              OBJETIVO: v.objective || '',
+              NOTAS: v.note || '',
+              SEGUIMIENTO: v.followUp || ''
+          }))
+      ).sort((a, b) => b.FECHA.localeCompare(a.FECHA));
+
+      downloadCSV(allVisits, 'Reporte_Visitas_Medicas');
   };
 
-  const closeModal = () => {
-      setIsModalOpen(false);
-      setEditingProcedure(null);
-      setFormData({
-        date: new Date().toISOString().split('T')[0],
-        time: '',
-        hospital: '',
-        doctorId: '',
-        doctorName: '',
-        procedureType: '',
-        paymentType: 'DIRECTO',
-        cost: 0,
-        commission: 0,
-        technician: '',
-        notes: '',
-        status: 'scheduled'
-      });
-      setSelectedTime(null);
-      setDisplayCost('');
-      setSearchTerm('');
+  const handleExportProcedures = () => {
+      const filteredProcedures = procedures.filter(p => 
+          filterExecutive ? filteredDoctors.some(d => d.id === p.doctorId) : true
+      ).map(p => {
+          const doc = doctors.find(d => d.id === p.doctorId);
+          const cost = p.cost || 0;
+          
+          // Calculate both commissions for the report
+          const commEjecutivo = cost * 0.03;
+          const commTecnico = cost * 0.05;
+
+          return {
+              FECHA: p.date,
+              HORA: p.time || '',
+              MEDICO: p.doctorName,
+              ESPECIALIDAD: doc?.specialty || '',
+              EJECUTIVO: doc?.executive || '',
+              HOSPITAL: p.hospital || '',
+              TIPO_PROCEDIMIENTO: p.procedureType,
+              TECNICO: p.technician || '',
+              PAGO: p.paymentType,
+              COSTO: cost,
+              'COMISIÓN EJECUTIVO (3%)': commEjecutivo,
+              'COMISIÓN TÉCNICO (5%)': commTecnico,
+              'COMISIÓN TOTAL': commEjecutivo + commTecnico,
+              ESTADO: p.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO'
+          };
+      }).sort((a, b) => b.FECHA.localeCompare(a.FECHA));
+
+      downloadCSV(filteredProcedures, 'Reporte_Procedimientos');
   };
 
-  const openModal = (date?: Date, proc?: Procedure) => {
-      if (proc) {
-          setEditingProcedure(proc);
-          setFormData(proc);
-          setDisplayCost(proc.cost ? new Intl.NumberFormat('es-MX', { minimumFractionDigits: 2 }).format(proc.cost) : '');
-          setSearchTerm(proc.doctorName);
-      } else {
-          if (date) {
-              setFormData(prev => ({ ...prev, date: date.toISOString().split('T')[0] }));
-          } else {
-              setFormData(prev => ({ ...prev, date: currentDate.toISOString().split('T')[0] }));
-          }
-          setDisplayCost('');
-      }
-      setIsModalOpen(true);
-  };
-
-  const getHeaderTitle = () => {
-      if (viewMode === 'day') return currentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-      return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-  }
-
-  const handleTimeChange = (date: Date | null) => {
-      setSelectedTime(date);
-      if (date) {
-          const hours = String(date.getHours()).padStart(2, '0');
-          const minutes = String(date.getMinutes()).padStart(2, '0');
-          setFormData(prev => ({ ...prev, time: `${hours}:${minutes}` }));
-      } else {
-          setFormData(prev => ({ ...prev, time: '' }));
-      }
-  };
+  const currentMonthName = new Date().toLocaleDateString('es-ES', { month: 'long' });
 
   return (
-    <div className="space-y-6 pb-10">
-        <div className="flex flex-col md:flex-row justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-lg gap-4">
+    <div className="space-y-6 pb-16 animate-fadeIn">
+      {/* HERO SECTION */}
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-400 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 rounded-full blur-3xl -z-10 opacity-60"></div>
+          
+          <div className="flex flex-col md:flex-row items-center gap-5 md:gap-8 text-center md:text-left z-10">
+            <div className="p-5 bg-gradient-to-br from-blue-600 to-blue-700 rounded-[1.5rem] text-white shadow-xl shadow-blue-500/20 ring-4 ring-white/50">
+                <Zap className="w-8 h-8" />
+            </div>
             <div>
-                <h1 className="text-2xl font-black text-slate-800">Procedimientos</h1>
-                <p className="text-sm text-slate-500 font-medium">
-                    {user.role === 'admin' ? 'Vista Global de Procedimientos' : 'Mis Procedimientos Asignados'}
+                <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter leading-tight">
+                    Dashboard <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-blue-500">Estratégico</span>
+                </h1>
+                <p className="text-slate-700 font-black uppercase tracking-[0.25em] text-[10px] mt-2 flex items-center gap-2 justify-center md:justify-start">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    {user.role === 'admin' ? `Control Global • ${filterExecutive || 'Todo el Equipo'}` : `Mis KPIs • ${user.name}`}
                 </p>
             </div>
-            
-            <div className="flex gap-3 items-center">
-                <div className="bg-slate-100/50 p-1 rounded-xl flex shadow-inner border border-slate-200/50">
-                   <button onClick={() => setViewMode('month')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'month' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Mes</button>
-                   <button onClick={() => setViewMode('week')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'week' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Semana</button>
-                   <button onClick={() => setViewMode('day')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'day' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Día</button>
-                </div>
-
-                <button 
-                    onClick={() => setIsListView(!isListView)} 
-                    className={`p-2.5 rounded-xl transition-all ${isListView ? 'bg-indigo-100 text-indigo-600' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'}`}
-                    title={isListView ? "Ver Calendario" : "Ver Lista"}
-                >
-                    {isListView ? <CalendarIcon className="w-5 h-5" /> : <LayoutList className="w-5 h-5" />}
-                </button>
-
-                <button onClick={() => openModal()} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg active:scale-95 transition-all flex items-center">
-                    <Plus className="w-5 h-5 mr-2" /> Agendar
-                </button>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-center z-10">
+            <div className={`px-5 py-2.5 rounded-2xl flex items-center gap-2.5 border font-black text-[10px] uppercase tracking-widest shadow-sm ${isOnline ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.2)]' : 'bg-rose-500'}`}></div>
+                {isOnline ? 'Sincronizado' : 'Modo Local'}
             </div>
-        </div>
-
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden min-h-[600px] flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/30">
-                <button onClick={prevPeriod} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-slate-600" /></button>
-                <h2 className="text-xl font-black text-slate-800 capitalize tracking-tight">
-                    {getHeaderTitle()}
-                </h2>
-                <button onClick={nextPeriod} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><ChevronRight className="w-6 h-6 text-slate-600" /></button>
-            </div>
-
-            {isListView ? (
-                <div className="flex-1 overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="text-left border-b border-slate-100 bg-slate-50/50">
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Procedimiento</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hospital</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Costo</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {listProcedures.map(proc => (
-                                <tr key={proc.id} className="group hover:bg-slate-50/50 transition-colors">
-                                    <td className="p-4">
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-slate-700">{proc.date}</span>
-                                            <span className="text-[10px] text-slate-400 font-medium">{proc.time || '--:--'}</span>
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px]">{proc.doctorName.charAt(0)}</div>
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-black text-slate-800 uppercase">{proc.doctorName}</span>
-                                                {user.role === 'admin' && <span className="text-[9px] text-slate-400 uppercase">{getProcedureExecutive(proc.doctorId)}</span>}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="text-xs font-medium text-slate-600 uppercase">{proc.procedureType}</span>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="text-xs font-medium text-slate-500 uppercase">{proc.hospital || '-'}</span>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="text-xs font-bold text-slate-700">{formatCurrency(proc.cost || 0)}</span>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
-                                            proc.status === 'performed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                            'bg-orange-50 text-orange-600 border-orange-100'
-                                        }`}>
-                                            {proc.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO'}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <button 
-                                                onClick={() => openModal(undefined, proc)}
-                                                className="p-2 text-slate-300 hover:text-indigo-600 transition-colors bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md"
-                                                title="Editar"
-                                            >
-                                                <Activity className="w-4 h-4" />
-                                            </button>
-                                            <button 
-                                                onClick={() => {
-                                                    if (confirm("¿Está seguro de eliminar este procedimiento permanentemente?")) {
-                                                        onDeleteProcedure(proc.id);
-                                                    }
-                                                }}
-                                                className="p-2 text-slate-300 hover:text-red-600 transition-colors bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md"
-                                                title="Eliminar"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {listProcedures.length === 0 && (
-                                <tr>
-                                    <td colSpan={7} className="py-20 text-center text-slate-400 text-xs font-medium uppercase tracking-widest">
-                                        No hay procedimientos registrados en este periodo
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            ) : (
-                <div className="overflow-x-auto">
-                    <div className={`${viewMode !== 'day' ? 'min-w-[800px]' : 'w-full'}`}>
-                        {viewMode !== 'day' && (
-                            <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-100">
-                                {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
-                                    <div key={d} className="py-3 text-center text-xs font-extrabold text-slate-400 uppercase tracking-widest">{d}</div>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className={`flex-1 ${viewMode === 'day' ? 'p-4' : 'grid grid-cols-7 auto-rows-fr'}`}>
-                            {calendarDays.map((day, idx) => {
-                                if (viewMode !== 'day' && !day) return <div key={`empty-${idx}`} className="bg-slate-50/20 min-h-[120px] border-b border-r border-slate-100"></div>;
-                                
-                                if (!day) return null; 
-
-                                const dayProcedures = getProceduresForDay(day);
-                                const isToday = new Date().toDateString() === day.toDateString();
-
-                                return (
-                                    <div key={idx} 
-                                         onDragOver={handleDragOver}
-                                         onDrop={(e) => handleDrop(e, day)}
-                                         onClick={() => openModal(day)}
-                                         className={`${viewMode === 'day' ? 'h-full border rounded-2xl bg-slate-50/30 p-4' : 'min-h-[120px] p-2 border-b border-r border-slate-100'} hover:bg-blue-50/20 transition-colors cursor-pointer relative group ${isToday && viewMode !== 'day' ? 'bg-blue-50/30' : ''}`}
-                                    >
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-700'}`}>
-                                                {day.getDate()}
-                                            </span>
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Plus className="w-4 h-4 text-indigo-400" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1.5 overflow-y-auto max-h-[100px] no-scrollbar">
-                                            {dayProcedures.map(proc => (
-                                                <div 
-                                                    key={proc.id}
-                                                    draggable
-                                                    onDragStart={(e) => handleDragStart(e, proc)}
-                                                    onClick={(e) => { e.stopPropagation(); openModal(undefined, proc); }}
-                                                    className={`p-2 rounded-lg text-[10px] font-bold border shadow-sm cursor-grab active:cursor-grabbing transition-transform hover:scale-[1.02] flex flex-col gap-0.5 ${
-                                                        proc.status === 'scheduled' 
-                                                        ? 'bg-gradient-to-r from-red-50 to-white border-red-100 text-red-800' 
-                                                        : 'bg-gradient-to-r from-green-50 to-white border-green-100 text-green-800'
-                                                    }`}
-                                                >
-                                                    <div className="flex justify-between items-start">
-                                                        <span className="truncate uppercase flex-1">{proc.doctorName}</span>
-                                                        {proc.time && <span className="text-[8px] bg-white/50 px-1 rounded ml-1">{proc.time}</span>}
-                                                    </div>
-                                                    {proc.hospital && <span className="text-[8px] opacity-70 truncate">{proc.hospital}</span>}
-                                                    {proc.cost && proc.cost > 0 && (
-                                                        <span className="text-[9px] font-black opacity-70">
-                                                            {formatCurrency(proc.cost)}
-                                                        </span>
-                                                    )}
-                                                    {user.role === 'admin' && (
-                                                        <div className="mt-1 border-t border-white/20 pt-0.5">
-                                                            <span className="text-[8px] opacity-80 uppercase">{getProcedureExecutive(proc.doctorId)}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            {viewMode === 'day' && dayProcedures.length === 0 && (
-                                                <div className="flex items-center justify-center h-40 text-slate-400 text-sm font-medium">
-                                                    No hay procedimientos para este día.
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
+            {user.role === 'admin' && filterExecutive && (
+                <button onClick={() => { setFilterExecutive(null); navigate('/'); }} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl transition-all active:scale-95 border border-slate-200">
+                    <Filter className="w-4 h-4" />
+                </button>
             )}
+          </div>
+      </div>
+
+      {/* METRICAS PRINCIPALES */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        {/* Card 1: Cartera */}
+        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-md border border-slate-300 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-100 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+          <Users className="absolute -right-4 -bottom-4 w-24 h-24 text-slate-200 group-hover:text-blue-500/5 transition-colors duration-300" />
+          
+          <div className="relative z-10">
+              <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
+                  <Users className="w-5 h-5 text-slate-700 group-hover:text-blue-600" />
+              </div>
+              <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Cartera Total</p>
+              <div className="flex items-baseline gap-2">
+                  <span className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">{stats.totalDoctors}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Contactos</span>
+              </div>
+          </div>
         </div>
 
-        {/* MODAL - Updated Layout for Full Visibility */}
-        {isModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-3xl shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden animate-fadeIn scale-100 transform transition-all flex flex-col max-h-[90vh]">
-                    {/* Header - Fixed */}
-                    <div className={`p-6 border-b border-slate-100 flex justify-between items-center flex-shrink-0 bg-gradient-to-r ${formData.status === 'scheduled' ? 'from-slate-50 to-white' : 'from-green-50 to-white'}`}>
-                        <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-xl ${formData.status === 'scheduled' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
-                                <Activity className="w-5 h-5" />
+        {/* Card 2: Efectividad */}
+        <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 md:p-8 rounded-[2.5rem] shadow-xl shadow-blue-500/20 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 border border-white/10">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -mr-16 -mt-16"></div>
+          <TrendingUp className="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 group-hover:scale-110 transition-transform duration-500" />
+          
+          <div className="relative z-10">
+              <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center mb-4 backdrop-blur-sm">
+                  <Activity className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1">Efectividad {currentMonthName}</p>
+              <div className="flex items-baseline gap-3">
+                  <span className="text-4xl md:text-5xl font-black tracking-tight">{stats.performance}%</span>
+                  <div className="px-2 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10">
+                      <p className="text-[9px] font-bold uppercase leading-none">{stats.completedMonth} Visitas</p>
+                  </div>
+              </div>
+          </div>
+        </div>
+
+        {/* Card 3: Ventas */}
+        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-md border border-slate-300 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-100 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+          
+          <div className="relative z-10">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
+                  <DollarSign className="w-5 h-5 text-emerald-600" />
+              </div>
+              <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Ventas del Mes</p>
+              <div className="flex items-center gap-2">
+                  <span className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">${stats.totalRevenue.toLocaleString()}</span>
+              </div>
+              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  <ArrowUpRight className="w-3 h-3" />
+                  <span className="text-[9px] font-black uppercase tracking-wide">Facturación</span>
+              </div>
+          </div>
+        </div>
+
+        {/* Card 4: Comisiones */}
+        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-md border border-slate-300 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-100 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+          
+          <div className="relative z-10">
+              <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center mb-4 group-hover:bg-slate-200 transition-colors">
+                  <PieChart className="w-5 h-5 text-slate-700" />
+              </div>
+              <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Comisiones (3%)</p>
+              <div className="flex items-baseline gap-2">
+                  <span className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+                    ${stats.totalCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+              </div>
+              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                  <span className="text-[9px] font-black uppercase tracking-wide">Estimado Mensual</span>
+              </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CENTRO DE REPORTES Y DESCARGAS */}
+      <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-lg border border-slate-400 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-5"><FileSpreadsheet className="w-40 h-40 text-slate-900" /></div>
+          <div className="relative z-10">
+              <h3 className="text-lg md:text-xl font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-3">
+                  <Download className="w-6 h-6 text-blue-700" /> Centro de Reportes
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button 
+                      onClick={handleExportVisits}
+                      className="bg-slate-100 hover:bg-slate-200 border border-slate-200 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
+                  >
+                      <div className="flex items-center gap-4">
+                          <div className="p-3 bg-blue-700 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Users className="w-6 h-6" /></div>
+                          <div className="text-left">
+                              <p className="text-sm font-bold text-slate-900 uppercase">Reporte de Visitas</p>
+                              <p className="text-[10px] font-medium text-slate-700">Historial completo en Excel</p>
+                          </div>
+                      </div>
+                      <Download className="w-5 h-5 text-slate-400 group-hover:text-blue-700" />
+                  </button>
+
+                  <button 
+                      onClick={handleExportProcedures}
+                      className="bg-slate-100 hover:bg-slate-200 border border-slate-200 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
+                  >
+                      <div className="flex items-center gap-4">
+                          <div className="p-3 bg-indigo-700 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Activity className="w-6 h-6" /></div>
+                          <div className="text-left">
+                              <p className="text-sm font-bold text-slate-900 uppercase">Reporte de Procedimientos</p>
+                              <p className="text-[10px] font-medium text-slate-700">Detalle financiero y estado</p>
+                          </div>
+                      </div>
+                      <Download className="w-5 h-5 text-slate-400 group-hover:text-indigo-700" />
+                  </button>
+              </div>
+          </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* COLUMNA IZQUIERDA: PIPELINE Y CARTERA */}
+          <div className="lg:col-span-2 space-y-8">
+              {/* PIPELINE COMERCIAL */}
+              <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200">
+                  <div className="flex justify-between items-center mb-8">
+                      <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                          <BarChart3 className="w-6 h-6 text-blue-600" /> Pipeline de Conversión
+                      </h3>
+                      <span className="text-[10px] font-black text-slate-400 uppercase">Estado actual de prospectos</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {Object.entries(stats.outcomes).map(([key, value]) => (
+                          <div 
+                            key={key} 
+                            onClick={() => setSelectedStage(key)}
+                            className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:border-blue-500/30 hover:bg-blue-50 transition-all cursor-pointer group"
+                          >
+                              <div className="flex justify-between items-center mb-2">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-600">{key}</p>
+                                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all" />
+                              </div>
+                              <div className="flex justify-between items-end">
+                                  <span className="text-3xl font-black text-slate-900 group-hover:text-blue-600">{value}</span>
+                                  <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                      <div 
+                                        className="h-full bg-blue-600" 
+                                        style={{ width: `${stats.totalDoctors > 0 ? ((value as number) / stats.totalDoctors) * 100 : 0}%` }}
+                                      ></div>
+                                  </div>
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+
+              {/* DISTRIBUCIÓN DE CARTERA */}
+              <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-5"><Award className="w-40 h-40 text-slate-900" /></div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8 relative z-10 flex items-center gap-3">
+                      <PieChart className="w-6 h-6 text-indigo-600" /> Análisis de Clasificación
+                  </h3>
+                  
+                  <div className="space-y-6 relative z-10">
+                      {[
+                        { label: 'Top Productivo (A)', count: stats.classifications.A, color: 'bg-emerald-500' },
+                        { label: 'Potencial Alto (B)', count: stats.classifications.B, color: 'bg-blue-500' },
+                        { label: 'Ocasional (C)', count: stats.classifications.C, color: 'bg-yellow-500' },
+                        { label: 'No Estratégico (D)', count: stats.classifications.D, color: 'bg-slate-400' },
+                      ].map((item) => (
+                        <div key={item.label}>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-black text-slate-400 uppercase">{item.label}</span>
+                                <span className="text-xs font-black text-slate-900">{item.count}</span>
                             </div>
-                            <div>
-                                <h3 className="text-xl font-black text-slate-800">
-                                    {editingProcedure ? 'Editar Procedimiento' : 'Agendar Procedimiento'}
-                                </h3>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                    {formData.status === 'scheduled' ? 'Programación' : 'Realizado'}
-                                </p>
+                            <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                                <div 
+                                    className={`h-full ${item.color} transition-all duration-1000`} 
+                                    style={{ width: `${stats.totalDoctors > 0 ? (item.count / stats.totalDoctors) * 100 : 0}%` }}
+                                ></div>
                             </div>
                         </div>
-                        <button onClick={closeModal} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors text-slate-500"><X className="w-5 h-5" /></button>
+                      ))}
+                  </div>
+              </div>
+          </div>
+
+          {/* COLUMNA DERECHA: AGENDA Y ACTIVIDAD */}
+          <div className="space-y-8">
+              {/* PROXIMAS ACTIVIDADES */}
+              <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200 h-full">
+                  <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-blue-600" /> Próxima Agenda
+                  </h3>
+                  
+                  <div className="space-y-4">
+                      {stats.upcomingVisits.length > 0 ? stats.upcomingVisits.map((visit, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => navigate(`/doctors/${visit.docId}`)}
+                            className="p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-blue-500/30 cursor-pointer transition-all group"
+                          >
+                              <div className="flex justify-between items-start mb-2">
+                                  <span className="text-[9px] font-black bg-white px-2 py-1 rounded-lg text-blue-600 shadow-sm border border-slate-100 uppercase">{visit.date}</span>
+                                  <div className="flex gap-1">
+                                      {visit.priority === 'ALTA' && <div className="w-2 h-2 rounded-full bg-rose-500"></div>}
+                                      <Clock className="w-3 h-3 text-slate-300" />
+                                  </div>
+                              </div>
+                              <p className="text-xs font-black text-slate-800 uppercase truncate group-hover:text-blue-600">{visit.docName}</p>
+                              <div className="flex items-center gap-1 mt-1 opacity-60">
+                                  <MapPin className="w-3 h-3" />
+                                  <p className="text-[9px] font-bold uppercase truncate">{visit.hospital || 'Consultorio'}</p>
+                              </div>
+                          </div>
+                      )) : (
+                          <div className="py-12 text-center">
+                              <Calendar className="w-12 h-12 text-slate-100 mx-auto mb-3" />
+                              <p className="text-[10px] font-black text-slate-300 uppercase">Sin actividades pendientes</p>
+                          </div>
+                      )}
+                      
+                      <button 
+                        onClick={() => navigate('/calendar')}
+                        className="w-full py-4 mt-2 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-blue-500/40 hover:text-blue-600 transition-all"
+                      >
+                          Ver Calendario Completo
+                      </button>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      {/* ACTIVIDAD RECIENTE (CRM FEED) */}
+      <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200">
+          <div className="flex justify-between items-center mb-8">
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                  <Activity className="w-6 h-6 text-emerald-600" /> Actividad Reciente
+              </h3>
+              <div className="flex gap-2">
+                  <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest">Feed Directo</div>
+              </div>
+          </div>
+
+          <div className="overflow-x-auto">
+              <table className="w-full">
+                  <thead>
+                      <tr className="text-left border-b border-slate-100">
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Especialidad</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoría</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Clasificación</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ejecutivo</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Resultado</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Notas</th>
+                          <th className="pb-4"></th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                      {stats.recentActivity.map((act, i) => (
+                          <tr key={i} className="group hover:bg-slate-50 transition-colors">
+                              <td className="py-5">
+                                  <span className="text-xs font-bold text-slate-400">{act.date}</span>
+                              </td>
+                              <td className="py-5">
+                                  <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-[10px]">{act.docName.charAt(0)}</div>
+                                      <span className="text-xs font-black text-slate-800 uppercase">{act.docName}</span>
+                                  </div>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">{act.specialty || '-'}</span>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">{act.category}</span>
+                              </td>
+                              <td className="py-5">
+                                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${
+                                      act.classification === 'A' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                      act.classification === 'B' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                      act.classification === 'C' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
+                                      'bg-slate-50 text-slate-400 border-slate-100'
+                                  }`}>
+                                      {act.classification || 'C'}
+                                  </span>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">{act.executive}</span>
+                              </td>
+                              <td className="py-5">
+                                  <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                                      act.outcome === 'INTERESADO' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                      act.outcome === 'COTIZACIÓN' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                      'bg-slate-50 text-slate-400 border-slate-100'
+                                  }`}>{act.outcome}</span>
+                              </td>
+                              <td className="py-5 max-w-xs">
+                                  <p className="text-xs text-slate-400 truncate italic">{act.note || 'Sin comentarios adicionales.'}</p>
+                              </td>
+                              <td className="py-5 text-right">
+                                  <button onClick={() => navigate(`/doctors/${act.docId}`)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors">
+                                      <ChevronRight className="w-5 h-5" />
+                                  </button>
+                              </td>
+                          </tr>
+                      ))}
+                      {stats.recentActivity.length === 0 && (
+                          <tr>
+                              <td colSpan={9} className="py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                  No hay reportes recientes registrados
+                              </td>
+                          </tr>
+                      )}
+                  </tbody>
+              </table>
+          </div>
+      </div>
+
+      {/* PROCEDIMIENTOS RECIENTES */}
+      <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200">
+          <div className="flex justify-between items-center mb-8">
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                  <Stethoscope className="w-6 h-6 text-indigo-600" /> Procedimientos Recientes
+              </h3>
+              <div className="flex gap-2">
+                  <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[9px] font-black uppercase tracking-widest">Últimos Registros</div>
+              </div>
+          </div>
+
+          <div className="overflow-x-auto">
+              <table className="w-full">
+                  <thead>
+                      <tr className="text-left border-b border-slate-100">
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Procedimiento</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hospital</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pago</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Monto</th>
+                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
+                          <th className="pb-4"></th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                      {stats.recentProcedures.map((proc, i) => (
+                          <tr key={i} className="group hover:bg-slate-50 transition-colors">
+                              <td className="py-5">
+                                  <span className="text-xs font-bold text-slate-400">{proc.date}</span>
+                              </td>
+                              <td className="py-5">
+                                  <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px]">{proc.doctorName.charAt(0)}</div>
+                                      <span className="text-xs font-black text-slate-800 uppercase">{proc.doctorName}</span>
+                                  </div>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">{proc.procedureType}</span>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-medium text-slate-500 uppercase">{proc.hospital || '-'}</span>
+                              </td>
+                              <td className="py-5">
+                                  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${
+                                      proc.paymentType === 'DIRECTO' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                      'bg-blue-50 text-blue-600 border-blue-100'
+                                  }`}>
+                                      {proc.paymentType}
+                                  </span>
+                              </td>
+                              <td className="py-5">
+                                  <span className="text-xs font-bold text-slate-700">${(proc.cost || 0).toLocaleString()}</span>
+                              </td>
+                              <td className="py-5">
+                                  <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                                      proc.status === 'performed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                      'bg-orange-50 text-orange-600 border-orange-100'
+                                  }`}>
+                                      {proc.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO'}
+                                  </span>
+                              </td>
+                              <td className="py-5 text-right">
+                                  <button onClick={() => navigate(`/procedures`)} className="p-2 text-slate-300 hover:text-indigo-600 transition-colors">
+                                      <ChevronRight className="w-5 h-5" />
+                                  </button>
+                              </td>
+                          </tr>
+                      ))}
+                      {stats.recentProcedures.length === 0 && (
+                          <tr>
+                              <td colSpan={8} className="py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                  No hay procedimientos recientes registrados
+                              </td>
+                          </tr>
+                      )}
+                  </tbody>
+              </table>
+          </div>
+      </div>
+      {/* MODAL DETALLE PIPELINE */}
+      {selectedStage && (
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl w-full max-w-4xl overflow-hidden animate-fadeIn border border-slate-200 flex flex-col max-h-[85vh]">
+                <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <div>
+                        <h3 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
+                            <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                            Detalle: <span className="text-blue-600">{selectedStage}</span>
+                        </h3>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 ml-8 md:ml-9">
+                            {stageDetails.length} Registros encontrados
+                        </p>
                     </div>
-                    
-                    {/* Body - Scrollable */}
-                    <div className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1">
-                        {editingProcedure && (
-                            <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-inner">
-                                <span className="text-xs font-black text-slate-500 uppercase tracking-wide">Estado Actual:</span>
-                                <button 
-                                    onClick={() => setFormData(prev => ({...prev, status: prev.status === 'scheduled' ? 'performed' : 'scheduled'}))}
-                                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all shadow-sm ${
-                                        formData.status === 'scheduled' 
-                                        ? 'bg-white border border-red-200 text-red-600 hover:bg-red-50' 
-                                        : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-green-500/30'
-                                    }`}
-                                >
-                                    {formData.status === 'scheduled' ? 'PENDIENTE' : 'REALIZADO'}
-                                </button>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Fecha</label>
-                                <input 
-                                    type="date" 
-                                    value={formData.date}
-                                    onChange={e => setFormData({...formData, date: e.target.value})}
-                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm text-slate-900 bg-white"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Hora (AM/PM)</label>
-                                <div className="relative">
-                                    <Clock className="absolute left-3 top-3 w-4 h-4 text-slate-400 z-10" />
-                                    <DatePicker
-                                        selected={selectedTime}
-                                        onChange={handleTimeChange}
-                                        showTimeSelect
-                                        showTimeSelectOnly
-                                        timeIntervals={15}
-                                        timeCaption="Hora"
-                                        dateFormat="h:mm aa"
-                                        placeholderText="--:-- --"
-                                        className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm text-slate-900 bg-white"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase mb-2">Ejecutivo que Agenda</label>
-                            <div className="relative">
-                                <UserIcon className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                <input 
-                                    type="text" 
-                                    value={user.name} 
-                                    disabled
-                                    className="w-full pl-9 bg-slate-100 border border-slate-200 text-slate-500 rounded-xl p-3 text-sm font-bold outline-none cursor-not-allowed uppercase"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase mb-2">Hospital / Clínica</label>
-                            <div className="relative">
-                                <Building2 className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                <input 
-                                    type="text" 
-                                    value={formData.hospital || ''}
-                                    onChange={e => setFormData({...formData, hospital: e.target.value.toUpperCase()})}
-                                    className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 uppercase text-slate-900 bg-white"
-                                    placeholder="NOMBRE DEL HOSPITAL..."
-                                />
-                            </div>
-                        </div>
-
-                        {/* Payment Type Selection */}
-                        <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase mb-2">Método de Pago</label>
-                            <div className="relative">
-                                <CreditCard className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                <select 
-                                    value={formData.paymentType || 'DIRECTO'}
-                                    onChange={e => setFormData({...formData, paymentType: e.target.value as any})}
-                                    className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm appearance-none cursor-pointer uppercase text-slate-900 bg-white"
-                                >
-                                    <option value="DIRECTO">DIRECTO</option>
-                                    <option value="ASEGURADORA">ASEGURADORA</option>
-                                </select>
-                                <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-500">
-                                    <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Costo (MXN)</label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                    <input 
-                                        type="text"
-                                        value={displayCost}
-                                        onChange={handleCostChange}
-                                        onBlur={handleCostBlur}
-                                        className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 text-slate-900 bg-white"
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">
-                                    Comisión (3%)
-                                </label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-3 w-4 h-4 text-emerald-500" />
-                                    <input 
-                                        type="text"
-                                        readOnly
-                                        value={formData.commission ? new Intl.NumberFormat('es-MX', { minimumFractionDigits: 2 }).format(formData.commission) : '0.00'}
-                                        className="w-full pl-9 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl p-3 text-sm font-bold outline-none cursor-default"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase mb-2">Médico Responsable</label>
-                            <div className="relative group">
-                               <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                               <input 
-                                   type="text" 
-                                   placeholder="BUSCAR POR NOMBRE..." 
-                                   value={searchTerm}
-                                   onChange={e => { setSearchTerm(e.target.value.toUpperCase()); setFormData(prev => ({...prev, doctorId: ''})) }}
-                                   className="w-full pl-10 border border-slate-200 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 text-slate-900 bg-white"
-                               />
-                            </div>
-                            {searchTerm && !formData.doctorId && (
-                                <div className="mt-2 max-h-40 overflow-y-auto border border-slate-100 rounded-xl bg-white shadow-lg w-full z-20">
-                                    {filteredDoctors.map(doc => (
-                                        <div 
-                                            key={doc.id} 
-                                            onClick={() => { setFormData(prev => ({...prev, doctorId: doc.id, doctorName: doc.name})); setSearchTerm(doc.name); }}
-                                            className="p-3 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer uppercase border-b last:border-0 border-slate-50 transition-colors"
-                                        >
-                                            {doc.name}
-                                        </div>
-                                    ))}
-                                    {filteredDoctors.length === 0 && <div className="p-4 text-xs text-slate-400 text-center font-medium">No se encontraron resultados</div>}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Tipo de Procedimiento</label>
-                                <input 
-                                    type="text" 
-                                    value={formData.procedureType}
-                                    onChange={e => setFormData({...formData, procedureType: e.target.value.toUpperCase()})}
-                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 text-slate-900 bg-white"
-                                    placeholder="EJ: ENDOSCOPIA"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Nombre del Técnico</label>
-                                <select 
-                                    value={formData.technician || ''}
-                                    onChange={e => setFormData({...formData, technician: e.target.value})}
-                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm uppercase text-slate-900 bg-white appearance-none cursor-pointer"
-                                >
-                                    <option value="">SELECCIONAR TÉCNICO...</option>
-                                    <option value="ALAN GARCÍA">ALAN GARCÍA</option>
-                                    <option value="ANGEL GUERRERO">ANGEL GUERRERO</option>
-                                    <option value="GABRIEL LÓPEZ">GABRIEL LÓPEZ</option>
-                                    <option value="RODRIGO GUTIÉRREZ">RODRIGO GUTIÉRREZ</option>
-                                    <option value="KEVIN VILLEDA">KEVIN VILLEDA</option>
-                                    <option value="MAURICIO HERRERA">MAURICIO HERRERA</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase mb-2">Notas Adicionales</label>
-                            <textarea 
-                                rows={3}
-                                value={formData.notes}
-                                onChange={e => setFormData({...formData, notes: e.target.value.toUpperCase()})}
-                                className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium uppercase focus:ring-2 focus:ring-indigo-500 outline-none resize-none shadow-sm placeholder-slate-300 text-slate-900 bg-white"
-                                placeholder="DETALLES IMPORTANTES..."
-                            />
-                        </div>
-                    </div>
-
-                    {/* Footer - Fixed */}
-                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center flex-shrink-0">
-                        {editingProcedure ? (
-                            <button 
-                                onClick={handleDelete} 
-                                className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-xl transition-colors"
-                                title="Eliminar registro"
-                            >
-                                <Trash2 className="w-5 h-5"/>
-                            </button>
-                        ) : <div></div>}
-                        
-                        <div className="flex gap-3">
-                            <button onClick={closeModal} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition-colors text-sm">Cancelar</button>
-                            <button onClick={handleSave} className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 text-sm flex items-center">
-                                <Check className="w-4 h-4 mr-2" />
-                                Guardar
-                            </button>
-                        </div>
+                    <button onClick={() => setSelectedStage(null)} className="p-2 md:p-3 bg-slate-100 rounded-2xl text-slate-400 hover:text-rose-500 transition-all shadow-sm border border-slate-200">
+                        <X className="h-5 w-5 md:h-6 md:w-6" />
+                    </button>
+                </div>
+                
+                <div className="p-4 md:p-8 overflow-y-auto custom-scrollbar bg-white">
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[600px]">
+                            <thead>
+                                <tr className="text-left border-b border-slate-100">
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Especialidad</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Clasificación</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ejecutivo</th>
+                                    <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Notas</th>
+                                    <th className="pb-4"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {stageDetails.map((item, idx) => (
+                                    <tr key={idx} className="group hover:bg-slate-50 transition-colors">
+                                        <td className="py-4 text-xs font-bold text-slate-400">{item.date}</td>
+                                        <td className="py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-[10px]">{item.doctor.charAt(0)}</div>
+                                                <span className="text-xs font-black text-slate-800 uppercase group-hover:text-blue-600">{item.doctor}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 text-xs font-medium text-slate-500 uppercase">{item.specialty || '-'}</td>
+                                        <td className="py-4">
+                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${
+                                                item.classification === 'A' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                item.classification === 'B' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                item.classification === 'C' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
+                                                'bg-slate-50 text-slate-400 border-slate-100'
+                                            }`}>
+                                                {item.classification || 'C'}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 text-xs font-medium text-slate-500 uppercase">{item.executive}</td>
+                                        <td className="py-4 text-xs text-slate-400 italic max-w-xs truncate">{item.notes}</td>
+                                        <td className="py-4 text-right">
+                                            <button onClick={() => navigate(`/doctors/${item.docId}`)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors">
+                                                <ChevronRight className="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-        )}
+        </div>
+      )}
     </div>
   );
 };
 
-export default ProceduresManager;
+export default Dashboard;

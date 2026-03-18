@@ -1,744 +1,508 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Doctor, Procedure, User } from '../types';
-import { ChevronLeft, ChevronRight, Plus, Check, Search, Activity, X, Trash2, DollarSign, User as UserIcon, Building2, Clock, CreditCard, LayoutList, Calendar as CalendarIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+// Explicit imports from react-router-dom
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Doctor, Visit, ScheduleSlot, User } from '../types';
+import { Save, ArrowLeft, FileText, Calendar, UserCheck, ClipboardList, CheckCircle, MapPin, Trash2, Mail, Phone, Edit3, CreditCard, UserPlus, ExternalLink, Loader2, Building2 } from 'lucide-react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 // Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
 import { es } from 'date-fns/locale';
 
 registerLocale('es', es);
 
-interface ProceduresManagerProps {
-  procedures: Procedure[];
+interface DoctorProfileProps {
   doctors: Doctor[];
-  onAddProcedure: (proc: Procedure) => void;
-  onUpdateProcedure: (proc: Procedure) => void;
-  onDeleteProcedure: (id: string) => void;
+  onUpdate: (doctor: Doctor) => void;
+  onDeleteVisit: (doctorId: string, visitId: string) => void;
   user: User;
 }
 
-type ViewMode = 'month' | 'week' | 'day';
+const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDeleteVisit, user }) => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const actionParam = searchParams.get('action');
+  const fromParam = searchParams.get('from');
 
-const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, doctors, onAddProcedure, onUpdateProcedure, onDeleteProcedure, user }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('month');
-  const [isListView, setIsListView] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProcedure, setEditingProcedure] = useState<Procedure | null>(null);
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [formData, setFormData] = useState<Partial<Doctor>>({});
   
-  const [formData, setFormData] = useState<Partial<Procedure>>({
-      date: new Date().toISOString().split('T')[0],
-      time: '',
-      hospital: '',
-      doctorId: '',
-      doctorName: '',
-      procedureType: '',
-      paymentType: 'DIRECTO',
-      cost: 0,
-      commission: 0,
-      technician: '',
-      notes: '',
-      status: 'scheduled'
+  const defaultDays = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'TODOS LOS DÍAS'];
+  const [scheduleData, setScheduleData] = useState<ScheduleSlot[]>([]);
+
+  const [visitType, setVisitType] = useState<'plan' | 'report'>('report');
+  const [newVisit, setNewVisit] = useState<Partial<Visit>>({
+    date: new Date().toISOString().split('T')[0],
+    time: '09:00',
+    note: '',
+    objective: '',
+    followUp: '',
+    outcome: 'SEGUIMIENTO'
   });
-  
-  const [selectedTime, setSelectedTime] = useState<Date | null>(null);
-  const [displayCost, setDisplayCost] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredDoctors = useMemo(() => {
-      if (!searchTerm) return [];
-      return doctors.filter(d => {
-          const isNotArchived = d.status !== 'archived';
-          const matchesSearch = d.name.toLowerCase().includes(searchTerm.toLowerCase());
-          const matchesProfile = user.role === 'admin' || d.executive === user.name;
-          return isNotArchived && matchesSearch && matchesProfile;
-      });
-  }, [doctors, searchTerm, user]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'visits'>('profile');
 
-  useEffect(() => {
-      if (formData.cost) {
-          let execPercentage = 0.03; // Flat 3% for Procedures (Executive)
-          
-          const comm = formData.cost * execPercentage; 
-          setFormData(prev => ({ ...prev, commission: comm }));
-      } else {
-          setFormData(prev => ({ ...prev, commission: 0 }));
-      }
-  }, [formData.cost, formData.doctorId, doctors]);
+  const executives = ['LUIS', 'ORALIA', 'TALINA', 'LIZ', 'SIN ASIGNAR'];
 
-  useEffect(() => {
-      if (formData.time) {
-          const [hours, minutes] = formData.time.split(':').map(Number);
-          const date = new Date();
-          date.setHours(hours);
-          date.setMinutes(minutes);
-          setSelectedTime(date);
-      } else {
-          setSelectedTime(null);
-      }
-  }, [isModalOpen, editingProcedure]);
-
-  // --- HELPERS ---
-  const formatCurrency = (amount: number) => {
-      return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
-  };
-
-  const parseCurrencyInput = (val: string) => {
-      const cleanVal = val.replace(/[^0-9.]/g, '');
-      const num = parseFloat(cleanVal);
-      return isNaN(num) ? 0 : num;
-  };
-
-  const handleCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const rawValue = e.target.value;
-      const numericValue = parseCurrencyInput(rawValue);
-      setFormData(prev => ({...prev, cost: numericValue}));
-      setDisplayCost(rawValue); 
-  };
-
-  const handleCostBlur = () => {
-      if (formData.cost) {
-          setDisplayCost(new Intl.NumberFormat('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(formData.cost));
-      } else {
-          setDisplayCost('');
-      }
-  };
-
-  const getProcedureExecutive = (doctorId: string) => {
-      const doc = doctors.find(d => d.id === doctorId);
-      return doc ? doc.executive : 'Desconocido';
+  const timeSlots = [];
+  for (let i = 9; i <= 20; i++) {
+      timeSlots.push(`${i.toString().padStart(2, '0')}:00`);
+      if (i !== 20) timeSlots.push(`${i.toString().padStart(2, '0')}:30`);
   }
 
-  const getDaysForView = (): (Date | null)[] => {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-
-      if (viewMode === 'month') {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          const firstDayOfMonth = new Date(year, month, 1).getDay(); 
-          const days: (Date | null)[] = [];
-          for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
-          for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
-          return days;
-      } else if (viewMode === 'week') {
-          const startOfWeek = new Date(currentDate);
-          startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
-          const days: Date[] = [];
-          for (let i = 0; i < 7; i++) {
-              const d = new Date(startOfWeek);
-              d.setDate(startOfWeek.getDate() + i);
-              days.push(d);
-          }
-          return days;
-      } else { 
-          return [new Date(currentDate)];
-      }
-  };
-
-  const calendarDays = getDaysForView();
-
-  const visibleProcedures = useMemo(() => {
-      if (user.role === 'admin') {
-          return procedures;
-      }
-      return procedures.filter(proc => {
-          const doc = doctors.find(d => d.id === proc.doctorId);
-          return doc && doc.executive === user.name;
-      });
-  }, [procedures, doctors, user]);
-
-  const listProcedures = useMemo(() => {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-
-      return visibleProcedures.filter(p => {
-          if (viewMode === 'month') {
-              return p.date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`);
-          } else if (viewMode === 'week') {
-              const startOfWeek = new Date(currentDate);
-              startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
-              startOfWeek.setHours(0,0,0,0);
-              
-              const endOfWeek = new Date(startOfWeek);
-              endOfWeek.setDate(startOfWeek.getDate() + 6);
-              endOfWeek.setHours(23,59,59,999);
-              
-              const procDate = new Date(p.date + 'T12:00:00');
-              return procDate >= startOfWeek && procDate <= endOfWeek;
-          } else {
-              return p.date === currentDate.toISOString().split('T')[0];
-          }
-      }).sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
-  }, [visibleProcedures, currentDate, viewMode]);
-
-  const getProceduresForDay = (day: Date) => {
-      const dateStr = day.toISOString().split('T')[0];
-      return visibleProcedures.filter(p => p.date === dateStr);
-  };
-
-  const handleDragStart = (e: React.DragEvent, proc: Procedure) => {
-      e.dataTransfer.setData("text/plain", JSON.stringify(proc));
-      e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = (e: React.DragEvent, targetDate: Date) => {
-      e.preventDefault();
-      try {
-          const data = e.dataTransfer.getData("text/plain");
-          if (!data) return;
-          const proc = JSON.parse(data) as Procedure;
-          const newDateStr = targetDate.toISOString().split('T')[0];
-          
-          if (proc.date !== newDateStr) {
-              onUpdateProcedure({ ...proc, date: newDateStr });
-          }
-      } catch (error) { console.error("Drop error:", error); }
-  };
-
-  const prevPeriod = () => {
-      const newDate = new Date(currentDate);
-      if (viewMode === 'month') newDate.setMonth(newDate.getMonth() - 1);
-      else if (viewMode === 'week') newDate.setDate(newDate.getDate() - 7);
-      else newDate.setDate(newDate.getDate() - 1);
-      setCurrentDate(newDate);
-  };
-
-  const nextPeriod = () => {
-      const newDate = new Date(currentDate);
-      if (viewMode === 'month') newDate.setMonth(newDate.getMonth() + 1);
-      else if (viewMode === 'week') newDate.setDate(newDate.getDate() + 7);
-      else newDate.setDate(newDate.getDate() + 1);
-      setCurrentDate(newDate);
-  };
-
-  const handleSave = () => {
-      if (!formData.doctorId || !formData.procedureType) {
-          alert("Seleccione un médico y el tipo de procedimiento.");
+  useEffect(() => {
+    const found = doctors.find(d => d.id === id);
+    if (found) {
+      if (user.role === 'executive' && found.executive !== user.name) {
+          alert("No tienes permiso para ver este perfil.");
+          navigate('/doctors');
           return;
       }
-
-      if (editingProcedure) {
-          onUpdateProcedure({ ...editingProcedure, ...formData } as Procedure);
+      setDoctor(found);
+      if (!isEditing) setFormData(found);
+      
+      let initialSchedule: ScheduleSlot[] = [];
+      if (found.schedule && found.schedule.length > 0) {
+          initialSchedule = defaultDays.map(day => {
+              const existing = found.schedule.find(s => s.day === day);
+              return existing || { day, time: '', active: false };
+          });
       } else {
-          onAddProcedure({ 
-              ...formData, 
-              id: `proc-${Date.now()}`,
-              status: 'scheduled' 
-          } as Procedure);
+          initialSchedule = defaultDays.map(day => ({ day, time: '', active: false }));
       }
-      closeModal();
-  };
-
-  const handleDelete = () => {
-      if (editingProcedure && confirm("¿Está seguro de eliminar este procedimiento agendado permanentemente?")) {
-          onDeleteProcedure(editingProcedure.id);
-          closeModal();
+      setScheduleData(initialSchedule);
+      
+      if (actionParam === 'plan') {
+          setActiveTab('visits');
+          setVisitType('plan');
       }
+    } else { navigate('/doctors'); }
+  }, [id, doctors, navigate, actionParam, user, isEditing]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    const val = name === 'email' ? value : value.toUpperCase();
+    setFormData(prev => ({ ...prev, [name]: val }));
   };
 
-  const closeModal = () => {
-      setIsModalOpen(false);
-      setEditingProcedure(null);
-      setFormData({
-        date: new Date().toISOString().split('T')[0],
-        time: '',
-        hospital: '',
-        doctorId: '',
-        doctorName: '',
-        procedureType: '',
-        paymentType: 'DIRECTO',
-        cost: 0,
-        commission: 0,
-        technician: '',
-        notes: '',
-        status: 'scheduled'
-      });
-      setSelectedTime(null);
-      setDisplayCost('');
-      setSearchTerm('');
-  };
-
-  const openModal = (date?: Date, proc?: Procedure) => {
-      if (proc) {
-          setEditingProcedure(proc);
-          setFormData(proc);
-          setDisplayCost(proc.cost ? new Intl.NumberFormat('es-MX', { minimumFractionDigits: 2 }).format(proc.cost) : '');
-          setSearchTerm(proc.doctorName);
-      } else {
-          if (date) {
-              setFormData(prev => ({ ...prev, date: date.toISOString().split('T')[0] }));
-          } else {
-              setFormData(prev => ({ ...prev, date: currentDate.toISOString().split('T')[0] }));
-          }
-          setDisplayCost('');
-      }
-      setIsModalOpen(true);
-  };
-
-  const getHeaderTitle = () => {
-      if (viewMode === 'day') return currentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-      return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-  }
-
-  const handleTimeChange = (date: Date | null) => {
-      setSelectedTime(date);
+  const handleDateChange = (date: Date | null, field: string) => {
       if (date) {
-          const hours = String(date.getHours()).padStart(2, '0');
-          const minutes = String(date.getMinutes()).padStart(2, '0');
-          setFormData(prev => ({ ...prev, time: `${hours}:${minutes}` }));
-      } else {
-          setFormData(prev => ({ ...prev, time: '' }));
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+        setFormData(prev => ({ ...prev, [field]: dateStr }));
+      }
+  };
+
+  const handleScheduleChange = (index: number, field: keyof ScheduleSlot, value: any) => {
+      const newSchedule = [...scheduleData];
+      newSchedule[index] = { ...newSchedule[index], [field]: value };
+      setScheduleData(newSchedule);
+  };
+
+  const saveProfile = () => {
+    if (doctor && formData) {
+      const updatedDoctor = { ...doctor, ...formData, schedule: scheduleData } as Doctor;
+      onUpdate(updatedDoctor);
+      setDoctor(updatedDoctor);
+      setIsEditing(false);
+      alert("Ficha actualizada correctamente.");
+    }
+  };
+
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  const handleGetLocation = (silent = false) => {
+    if (!navigator.geolocation) {
+      if (!silent) alert("Tu navegador no soporta geolocalización.");
+      return;
+    }
+
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setNewVisit(prev => ({
+          ...prev,
+          checkIn: {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            timestamp: new Date().toISOString(),
+            accuracy: position.coords.accuracy
+          }
+        }));
+        setIsGettingLocation(false);
+        if (!silent) alert("Ubicación registrada correctamente.");
+      },
+      (error) => {
+        console.error("Error obteniendo ubicación:", error);
+        setIsGettingLocation(false);
+        if (!silent) {
+            let msg = "No se pudo obtener la ubicación.";
+            if (error.code === 1) msg = "Permiso de ubicación denegado.";
+            else if (error.code === 2) msg = "Ubicación no disponible.";
+            else if (error.code === 3) msg = "Tiempo de espera agotado.";
+            alert(msg);
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  // Activar automáticamente la función de registrar ubicación al seleccionar "Reportar Visita"
+  useEffect(() => {
+    if (visitType === 'report' && !newVisit.checkIn) {
+        handleGetLocation(true);
+    }
+  }, [visitType]);
+
+  const handleAddInteraction = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!doctor || !newVisit.date) return;
+    let visit: Visit;
+    if (visitType === 'plan') {
+        if (!newVisit.objective) { alert("Error: El campo 'Objetivo' es obligatorio."); return; }
+        visit = { id: Date.now().toString(), date: newVisit.date, time: newVisit.time, note: 'VISITA PLANEADA', objective: newVisit.objective.toUpperCase(), outcome: 'PLANEADA', status: 'planned' };
+    } else {
+        if (!newVisit.note || !newVisit.objective || !newVisit.followUp) { alert("Error: Todos los campos son obligatorios."); return; }
+        
+        // Validación de tiempo: No sea mayor a 24 horas una vez realizada la visita
+        const visitDateTime = new Date(`${newVisit.date}T${newVisit.time || '00:00'}`);
+        const now = new Date();
+        const diffInHours = (now.getTime() - visitDateTime.getTime()) / (1000 * 60 * 60);
+
+        if (user.role !== 'admin' && user.role !== 'admin_restricted') {
+            if (diffInHours > 24) {
+                alert("⚠️ RESTRICCIÓN: Han pasado más de 24 horas desde la fecha/hora de la visita. El reporte ha quedado restringido.");
+                return;
+            }
+
+            if (diffInHours < -2) { // Pequeño margen para zonas horarias o errores de reloj, pero bloquea futuro lejano
+                alert("⚠️ RESTRICCIÓN: No puedes reportar visitas futuras.");
+                return;
+            }
+        }
+
+        // Validación de Check-in para visitas reportadas
+        if (user.role !== 'admin' && user.role !== 'admin_restricted' && !newVisit.checkIn) {
+            alert("⚠️ RESTRICCIÓN: Es obligatorio registrar la ubicación (Check-in) para poder finalizar el reporte de la visita.");
+            return;
+        }
+
+        visit = { 
+            id: Date.now().toString(), 
+            date: newVisit.date, 
+            time: newVisit.time, 
+            note: newVisit.note.toUpperCase(), 
+            objective: newVisit.objective.toUpperCase(), 
+            followUp: newVisit.followUp.toUpperCase(), 
+            outcome: newVisit.outcome as any, 
+            status: 'completed',
+            checkIn: newVisit.checkIn
+        };
+    }
+    const currentVisits = doctor.visits || [];
+    const updatedVisits = [visit, ...currentVisits];
+    const updatedDoctor = { ...doctor, visits: updatedVisits };
+    onUpdate(updatedDoctor);
+    setDoctor(updatedDoctor);
+    setNewVisit({ date: new Date().toISOString().split('T')[0], time: '09:00', note: '', objective: '', followUp: '', outcome: 'SEGUIMIENTO' });
+    alert(visitType === 'plan' ? "Visita programada." : "Reporte guardado.");
+  };
+
+  const confirmDelete = (visitId: string) => {
+      if (window.confirm("¿Está seguro de eliminar este registro?")) { onDeleteVisit(doctor?.id || '', visitId); }
+  };
+
+  const parseDateString = (dateStr: string) => {
+      if (!dateStr) return null;
+      const [year, month, day] = dateStr.split('-').map(Number);
+      return new Date(year, month - 1, day);
+  };
+
+  const formatDateToString = (date: Date | null) => {
+      if (!date) return '';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+  };
+
+  if (!doctor) return null;
+  const isMedico = !doctor.category || doctor.category === 'MEDICO';
+  const isAdminCat = doctor.category === 'ADMINISTRATIVO';
+  const isHospital = doctor.category === 'HOSPITAL';
+
+  // Helper para mostrar etiqueta de clasificación
+  const getClassificationLabel = (code?: string) => {
+      switch(code) {
+          case 'A': return 'TOP PRODUCTIVO (A)';
+          case 'B': return 'POTENCIAL ALTO (B)';
+          case 'C': return 'OCASIONAL (C)';
+          case 'D': return 'NO ESTRATÉGICO (D)';
+          default: return 'NO DEFINIDO';
       }
   };
 
   return (
-    <div className="space-y-6 pb-10">
-        <div className="flex flex-col md:flex-row justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-lg gap-4">
-            <div>
-                <h1 className="text-2xl font-black text-slate-800">Procedimientos</h1>
-                <p className="text-sm text-slate-500 font-medium">
-                    {user.role === 'admin' ? 'Vista Global de Procedimientos' : 'Mis Procedimientos Asignados'}
-                </p>
-            </div>
-            
-            <div className="flex gap-3 items-center">
-                <div className="bg-slate-100/50 p-1 rounded-xl flex shadow-inner border border-slate-200/50">
-                   <button onClick={() => setViewMode('month')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'month' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Mes</button>
-                   <button onClick={() => setViewMode('week')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'week' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Semana</button>
-                   <button onClick={() => setViewMode('day')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${viewMode === 'day' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Día</button>
-                </div>
+    <div className="max-w-6xl mx-auto space-y-6 pb-10">
+      <button type="button" onClick={() => fromParam === 'calendar' ? navigate('/calendar') : navigate('/doctors')} className="flex items-center text-sm font-bold text-slate-600 hover:text-blue-700 transition-colors bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-300">
+        <ArrowLeft className="h-4 w-4 mr-2" /> {fromParam === 'calendar' ? 'Volver al Calendario' : 'Volver al Directorio'}
+      </button>
 
-                <button 
-                    onClick={() => setIsListView(!isListView)} 
-                    className={`p-2.5 rounded-xl transition-all ${isListView ? 'bg-indigo-100 text-indigo-600' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'}`}
-                    title={isListView ? "Ver Calendario" : "Ver Lista"}
-                >
-                    {isListView ? <CalendarIcon className="w-5 h-5" /> : <LayoutList className="w-5 h-5" />}
-                </button>
-
-                <button onClick={() => openModal()} className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg active:scale-95 transition-all flex items-center">
-                    <Plus className="w-5 h-5 mr-2" /> Agendar
-                </button>
-            </div>
+      <div className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-500/5 border border-slate-300 overflow-hidden relative">
+        <div className="h-4 bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-700"></div>
+        <div className="p-6 md:p-8 md:flex md:items-center md:justify-between">
+          <div className="flex-1 min-w-0">
+             <div className="flex items-center flex-wrap gap-3">
+                 <h2 className="text-2xl md:text-3xl lg:text-4xl font-black leading-7 text-slate-900 uppercase tracking-tight">{doctor.name}</h2>
+                {doctor.isInsuranceDoctor && isMedico && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-lg text-[10px] md:text-xs font-black bg-gradient-to-r from-yellow-50 to-amber-50 text-amber-700 border border-amber-100 uppercase tracking-wide shadow-sm"><CheckCircle className="w-3 h-3 mr-1" />Médico Aseguradora</span>
+                )}
+                {isAdminCat && <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase border border-purple-100">Administrativo</span>}
+                {isHospital && <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase border border-emerald-100">Hospital</span>}
+             </div>
+            <p className="mt-4 text-xs md:text-sm text-slate-500 flex flex-wrap items-center font-medium gap-2">
+                {(isMedico || isAdminCat) && (<span className="font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg uppercase tracking-wide shadow-sm border border-blue-100">{doctor.specialty || 'GENERAL'}</span>)}
+                {doctor.hospital && (<span className="font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg uppercase tracking-wide shadow-sm border border-emerald-100 flex items-center"><Building2 className="w-3.5 h-3.5 mr-1.5" />{doctor.hospital}</span>)}
+                <span className="text-slate-600 flex items-center uppercase"><MapPin className="w-4 h-4 mr-1 text-slate-400" /> {doctor.address}</span>
+            </p>
+          </div>
+          <div className="mt-6 md:mt-0 md:ml-6 flex flex-col items-start md:items-end">
+                 <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Ejecutivo Asignado</span>
+                 <span className="text-sm md:text-base font-black text-slate-900 bg-slate-100 px-4 py-2 rounded-xl mt-2 border border-slate-300 shadow-inner uppercase tracking-wide">{doctor.executive}</span>
+          </div>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden min-h-[600px] flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/30">
-                <button onClick={prevPeriod} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><ChevronLeft className="w-6 h-6 text-slate-600" /></button>
-                <h2 className="text-xl font-black text-slate-800 capitalize tracking-tight">
-                    {getHeaderTitle()}
-                </h2>
-                <button onClick={nextPeriod} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><ChevronRight className="w-6 h-6 text-slate-600" /></button>
-            </div>
+        <div className="border-t border-slate-200 bg-slate-100 px-4 md:px-8 overflow-x-auto no-scrollbar">
+            <nav className="-mb-px flex space-x-8 whitespace-nowrap">
+                <button onClick={() => setActiveTab('profile')} className={`py-4 px-1 border-b-4 font-bold text-xs md:text-sm transition-all duration-300 ${activeTab === 'profile' ? 'border-blue-700 text-blue-800' : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400'}`}><UserCheck className="inline-block w-4 h-4 mr-2" />Ficha</button>
+                <button onClick={() => setActiveTab('visits')} className={`py-4 px-1 border-b-4 font-bold text-xs md:text-sm transition-all duration-300 ${activeTab === 'visits' ? 'border-blue-700 text-blue-800' : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400'}`}><ClipboardList className="inline-block w-4 h-4 mr-2" />Gestión de Visitas</button>
+            </nav>
+        </div>
+      </div>
 
-            {isListView ? (
-                <div className="flex-1 overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="text-left border-b border-slate-100 bg-slate-50/50">
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Procedimiento</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hospital</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Costo</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
-                                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {listProcedures.map(proc => (
-                                <tr key={proc.id} className="group hover:bg-slate-50/50 transition-colors">
-                                    <td className="p-4">
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-slate-700">{proc.date}</span>
-                                            <span className="text-[10px] text-slate-400 font-medium">{proc.time || '--:--'}</span>
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px]">{proc.doctorName.charAt(0)}</div>
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-black text-slate-800 uppercase">{proc.doctorName}</span>
-                                                {user.role === 'admin' && <span className="text-[9px] text-slate-400 uppercase">{getProcedureExecutive(proc.doctorId)}</span>}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="text-xs font-medium text-slate-600 uppercase">{proc.procedureType}</span>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="text-xs font-medium text-slate-500 uppercase">{proc.hospital || '-'}</span>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className="text-xs font-bold text-slate-700">{formatCurrency(proc.cost || 0)}</span>
-                                    </td>
-                                    <td className="p-4">
-                                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
-                                            proc.status === 'performed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                            'bg-orange-50 text-orange-600 border-orange-100'
-                                        }`}>
-                                            {proc.status === 'performed' ? 'REALIZADO' : 'PROGRAMADO'}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <button 
-                                                onClick={() => openModal(undefined, proc)}
-                                                className="p-2 text-slate-300 hover:text-indigo-600 transition-colors bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md"
-                                                title="Editar"
-                                            >
-                                                <Activity className="w-4 h-4" />
-                                            </button>
-                                            <button 
-                                                onClick={() => {
-                                                    if (confirm("¿Está seguro de eliminar este procedimiento permanentemente?")) {
-                                                        onDeleteProcedure(proc.id);
-                                                    }
-                                                }}
-                                                className="p-2 text-slate-300 hover:text-red-600 transition-colors bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md"
-                                                title="Eliminar"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {listProcedures.length === 0 && (
-                                <tr>
-                                    <td colSpan={7} className="py-20 text-center text-slate-400 text-xs font-medium uppercase tracking-widest">
-                                        No hay procedimientos registrados en este periodo
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+      <div className="bg-white rounded-[2.5rem] shadow-lg border border-slate-300 p-8 min-h-[500px]">
+          {activeTab === 'profile' && (
+            <div className="space-y-10 animate-fadeIn">
+                <div className="flex justify-between items-center pb-4 border-b border-slate-200 sticky top-0 bg-white z-20">
+                     <h3 className="text-xl font-bold text-slate-900 flex items-center"><FileText className="w-5 h-5 mr-2 text-blue-600"/>Información Completa</h3>
+                     {!isEditing ? (
+                         doctor.status !== 'archived' && (
+                             <button type="button" onClick={() => setIsEditing(true)} className="text-sm font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 py-2.5 px-5 rounded-xl transition-all shadow-sm flex items-center"><Edit3 className="w-4 h-4 mr-2"/>Editar Ficha</button>
+                         )
+                     ) : (
+                         <div className="flex space-x-3">
+                            <button type="button" onClick={() => setIsEditing(false)} className="text-sm font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 py-2.5 px-5 rounded-xl transition-colors">Cancelar</button>
+                            <button type="button" onClick={saveProfile} className="flex items-center text-sm font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-2.5 px-5 rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-95"><Save className="w-4 h-4 mr-2" />Guardar Cambios</button>
+                         </div>
+                     )}
                 </div>
-            ) : (
-                <div className="overflow-x-auto">
-                    <div className={`${viewMode !== 'day' ? 'min-w-[800px]' : 'w-full'}`}>
-                        {viewMode !== 'day' && (
-                            <div className="grid grid-cols-7 bg-slate-50 border-b border-slate-100">
-                                {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
-                                    <div key={d} className="py-3 text-center text-xs font-extrabold text-slate-400 uppercase tracking-widest">{d}</div>
-                                ))}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-3">
+                        <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">Control de Cartera y Contacto</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                             <div className="lg:col-span-1">
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2 flex items-center">
+                                    <UserPlus className="w-3 h-3 mr-1 text-blue-600" /> Ejecutivo Asignado
+                                </label>
+                                {isEditing && user.role === 'admin' ? (
+                                    <select name="executive" value={formData.executive || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-bold uppercase shadow-sm">
+                                        {executives.map(e => <option key={e} value={e}>{e}</option>)}
+                                    </select>
+                                ) : (
+                                    <p className="text-black font-black text-base uppercase bg-slate-100 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                        {doctor.executive}
+                                        {user.role === 'admin' && !isEditing && <span className="text-[8px] font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-blue-200">EDITABLE POR ADMIN</span>}
+                                    </p>
+                                )}
                             </div>
-                        )}
-
-                        <div className={`flex-1 ${viewMode === 'day' ? 'p-4' : 'grid grid-cols-7 auto-rows-fr'}`}>
-                            {calendarDays.map((day, idx) => {
-                                if (viewMode !== 'day' && !day) return <div key={`empty-${idx}`} className="bg-slate-50/20 min-h-[120px] border-b border-r border-slate-100"></div>;
-                                
-                                if (!day) return null; 
-
-                                const dayProcedures = getProceduresForDay(day);
-                                const isToday = new Date().toDateString() === day.toDateString();
-
-                                return (
-                                    <div key={idx} 
-                                         onDragOver={handleDragOver}
-                                         onDrop={(e) => handleDrop(e, day)}
-                                         onClick={() => openModal(day)}
-                                         className={`${viewMode === 'day' ? 'h-full border rounded-2xl bg-slate-50/30 p-4' : 'min-h-[120px] p-2 border-b border-r border-slate-100'} hover:bg-blue-50/20 transition-colors cursor-pointer relative group ${isToday && viewMode !== 'day' ? 'bg-blue-50/30' : ''}`}
-                                    >
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-700'}`}>
-                                                {day.getDate()}
-                                            </span>
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Plus className="w-4 h-4 text-indigo-400" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            {dayProcedures.map(proc => (
-                                                <div 
-                                                    key={proc.id}
-                                                    draggable
-                                                    onDragStart={(e) => handleDragStart(e, proc)}
-                                                    onClick={(e) => { e.stopPropagation(); openModal(undefined, proc); }}
-                                                    className={`p-2 rounded-lg text-[10px] font-bold border shadow-sm cursor-grab active:cursor-grabbing transition-transform hover:scale-[1.02] flex flex-col gap-0.5 ${
-                                                        proc.status === 'scheduled' 
-                                                        ? 'bg-gradient-to-r from-red-50 to-white border-red-100 text-red-800' 
-                                                        : 'bg-gradient-to-r from-green-50 to-white border-green-100 text-green-800'
-                                                    }`}
-                                                >
-                                                    <div className="flex justify-between items-start">
-                                                        <span className="truncate uppercase flex-1">{proc.doctorName}</span>
-                                                        {proc.time && <span className="text-[8px] bg-white/50 px-1 rounded ml-1">{proc.time}</span>}
-                                                    </div>
-                                                    {proc.hospital && <span className="text-[8px] opacity-70 truncate">{proc.hospital}</span>}
-                                                    {proc.cost && proc.cost > 0 && (
-                                                        <span className="text-[9px] font-black opacity-70">
-                                                            {formatCurrency(proc.cost)}
-                                                        </span>
-                                                    )}
-                                                    {user.role === 'admin' && (
-                                                        <div className="mt-1 border-t border-white/20 pt-0.5">
-                                                            <span className="text-[8px] opacity-80 uppercase">{getProcedureExecutive(proc.doctorId)}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            {viewMode === 'day' && dayProcedures.length === 0 && (
-                                                <div className="flex items-center justify-center h-40 text-slate-400 text-sm font-medium">
-                                                    No hay procedimientos para este día.
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-
-        {/* MODAL - Updated Layout for Full Visibility */}
-        {isModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-3xl shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden animate-fadeIn scale-100 transform transition-all flex flex-col max-h-[90vh]">
-                    {/* Header - Fixed */}
-                    <div className={`p-6 border-b border-slate-100 flex justify-between items-center flex-shrink-0 bg-gradient-to-r ${formData.status === 'scheduled' ? 'from-slate-50 to-white' : 'from-green-50 to-white'}`}>
-                        <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-xl ${formData.status === 'scheduled' ? 'bg-indigo-100 text-indigo-600' : 'bg-green-100 text-green-600'}`}>
-                                <Activity className="w-5 h-5" />
+                            <div className="lg:col-span-2">
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Nombre</label>
+                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="name" value={formData.name || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-bold text-base uppercase bg-slate-100 p-3 rounded-xl border border-slate-200">{doctor.name}</p>)}
+                            </div>
+                            <div className="lg:col-span-3">
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Dirección</label>
+                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="address" value={formData.address || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-medium uppercase bg-slate-100 p-3 rounded-xl border border-slate-200">{doctor.address}</p>)}
                             </div>
                             <div>
-                                <h3 className="text-xl font-black text-slate-800">
-                                    {editingProcedure ? 'Editar Procedimiento' : 'Agendar Procedimiento'}
-                                </h3>
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                    {formData.status === 'scheduled' ? 'Programación' : 'Realizado'}
-                                </p>
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Fecha de Nacimiento</label>
+                                {isEditing ? (<DatePicker selected={parseDateString(formData.birthDate || '')} onChange={(date) => handleDateChange(date, 'birthDate')} dateFormat="dd/MM/yyyy" locale="es" className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" placeholderText="DD/MM/AAAA" showYearDropdown scrollableYearDropdown yearDropdownItemNumber={100} />) : (<p className="text-black font-medium uppercase bg-slate-100 p-3 rounded-xl border border-slate-200 flex items-center"><Calendar className="w-3 h-3 mr-2 text-slate-500"/>{doctor.birthDate ? parseDateString(doctor.birthDate)?.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : 'NO REGISTRADA'}</p>)}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Cédula Profesional</label>
+                                {isEditing ? (<input type="text" name="cedula" value={formData.cedula || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="#######" />) : (<p className="text-black font-medium uppercase bg-slate-100 p-3 rounded-xl border border-slate-200 flex items-center"><CreditCard className="w-3 h-3 mr-2 text-slate-500"/>{doctor.cedula || 'NO REGISTRADA'}</p>)}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Teléfono</label>
+                                {isEditing ? (<input type="text" name="phone" value={formData.phone || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" placeholder="### ### ####" />) : (<p className="text-black font-medium bg-slate-100 p-3 rounded-xl border border-slate-200 flex items-center"><Phone className="w-3 h-3 mr-2 text-slate-500"/> {doctor.phone || 'NO REGISTRADO'}</p>)}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Correo Electrónico</label>
+                                {isEditing ? (<input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" />) : (<p className="text-black font-medium bg-slate-100 p-3 rounded-xl border border-slate-200 flex items-center lowercase"><Mail className="w-3 h-3 mr-2 text-slate-500"/> {doctor.email || 'NO REGISTRADO'}</p>)}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Hospital / Ubicación</label>
+                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="hospital" value={formData.hospital || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-medium uppercase bg-slate-100 p-3 rounded-xl border border-slate-200">{doctor.hospital || 'NO REGISTRADO'}</p>)}
+                            </div>
+                            {!isHospital && (<><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Piso</label>{isEditing ? (<input type="text" name="floor" value={formData.floor || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="EJ: 3" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.floor || 'N/A'}</p>)}</div><div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Oficina</label>{isEditing ? (<input type="text" name="officeNumber" value={formData.officeNumber || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="EJ: 305" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.officeNumber || 'N/A'}</p>)}</div></div></>)}
+                            {isMedico && isEditing && (
+                                <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200 mt-2"><span className="text-xs font-extrabold text-slate-500 uppercase">¿Es Médico de Aseguradora?</span><label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" className="sr-only peer" checked={formData.isInsuranceDoctor || false} onChange={(e) => setFormData({...formData, isInsuranceDoctor: e.target.checked})} /><div className="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div></label></div>
+                            )}
+                        </div>
+                    </div>
+                    {isMedico && (
+                        <div className="lg:col-span-3">
+                            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2 mt-4">Perfil Profesional</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Especialidad</label>{isEditing ? (<input spellCheck={true} lang="es" type="text" name="specialty" value={formData.specialty || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.specialty || 'GENERAL'}</p>)}</div>
+                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Subespecialidad</label>{isEditing ? (<input spellCheck={true} lang="es" type="text" name="subSpecialty" value={formData.subSpecialty || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="EJ: ONCOLOGÍA" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.subSpecialty || 'N/A'}</p>)}</div>
+                                <div>
+                                    <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Categoría (Clasificación)</label>
+                                    {isEditing ? (
+                                        <select name="classification" value={formData.classification || 'C'} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm">
+                                            <option value="A">TOP PRODUCTIVO (A)</option>
+                                            <option value="B">POTENCIAL ALTO (B)</option>
+                                            <option value="C">OCASIONAL (C)</option>
+                                            <option value="D">NO ESTRATÉGICO (D)</option>
+                                        </select>
+                                    ) : (
+                                        <p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">
+                                            {getClassificationLabel(doctor.classification)}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                        <button onClick={closeModal} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors text-slate-500"><X className="w-5 h-5" /></button>
+                    )}
+                    {isMedico && (
+                        <div className="lg:col-span-3">
+                            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2 mt-4">Perfilamiento Psigráfico</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Estilo Social</label>{isEditing ? (<select name="socialStyle" value={formData.socialStyle || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm"><option value="">SELECCIONAR</option><option value="ANALÍTICO">ANALÍTICO</option><option value="EMPRENDEDOR">EMPRENDEDOR</option><option value="AFABLE">AFABLE</option><option value="EXPRESIVO">EXPRESIVO</option></select>) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.socialStyle || 'NO DEFINIDO'}</p>)}</div>
+                                <div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Segmento Actitudinal</label>{isEditing ? (<select name="attitudinalSegment" value={formData.attitudinalSegment || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm"><option value="">SELECCIONAR</option><option value="RELACIÓN">RELACIÓN</option><option value="PACIENTE">PACIENTE</option><option value="INNOVACIÓN">INNOVACIÓN</option><option value="EXPERIENCIA">EXPERIENCIA</option></select>) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.attitudinalSegment || 'NO DEFINIDO'}</p>)}</div>
+                            </div>
+                        </div>
+                    )}
+                    <div className="lg:col-span-3">
+                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2 mt-4">Horarios de Atención</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {scheduleData.map((slot, idx) => (<div key={slot.day} className={`p-3 rounded-xl border transition-all ${slot.active ? 'bg-white border-blue-200 shadow-sm' : 'bg-slate-50 border-slate-100 opacity-75'}`}><div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-slate-600 uppercase">{slot.day}</span>{isEditing && (<input type="checkbox" checked={slot.active} onChange={(e) => handleScheduleChange(idx, 'active', e.target.checked)} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"/>)}</div>{isEditing ? (<input type="text" value={slot.time} disabled={!slot.active} onChange={(e) => handleScheduleChange(idx, 'time', e.target.value.toUpperCase())} className="w-full text-xs p-1.5 border border-slate-200 rounded bg-white text-slate-900 uppercase focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100" placeholder="EJ: 9:00 - 14:00"/>) : (<p className="text-xs font-bold text-slate-800 uppercase">{slot.active ? (slot.time || 'DISPONIBLE') : 'NO DISPONIBLE'}</p>)}</div>))}
+                        </div>
                     </div>
-                    
-                    {/* Body - Scrollable */}
-                    <div className="p-6 md:p-8 space-y-6 overflow-y-auto flex-1">
-                        {editingProcedure && (
-                            <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-inner">
-                                <span className="text-xs font-black text-slate-500 uppercase tracking-wide">Estado Actual:</span>
-                                <button 
-                                    onClick={() => setFormData(prev => ({...prev, status: prev.status === 'scheduled' ? 'performed' : 'scheduled'}))}
-                                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all shadow-sm ${
-                                        formData.status === 'scheduled' 
-                                        ? 'bg-white border border-red-200 text-red-600 hover:bg-red-50' 
-                                        : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-green-500/30'
-                                    }`}
-                                >
-                                    {formData.status === 'scheduled' ? 'PENDIENTE' : 'REALIZADO'}
+                    <div className="lg:col-span-3">
+                        <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Notas Importantes</label>
+                        {isEditing ? (<textarea spellCheck={true} lang="es" name="importantNotes" rows={4} value={formData.importantNotes || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="OBSERVACIONES..." />) : (<div className="bg-yellow-50 border border-yellow-100 p-4 rounded-xl text-yellow-800 text-sm font-medium leading-relaxed uppercase shadow-sm">{doctor.importantNotes || 'SIN NOTAS ADICIONALES.'}</div>)}
+                    </div>
+                </div>
+            </div>
+          )}
+
+          {activeTab === 'visits' && (
+            <div className="space-y-8 animate-fadeIn">
+               <div className="bg-slate-100 rounded-3xl border border-slate-300 overflow-hidden">
+                   <div className="flex border-b border-slate-300 bg-white p-2 gap-2"><button onClick={() => setVisitType('report')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${visitType === 'report' ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-inner' : 'text-slate-500 hover:bg-slate-50'}`}>Reportar Visita</button><button onClick={() => setVisitType('plan')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${visitType === 'plan' ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-inner' : 'text-slate-500 hover:bg-slate-50'}`}>Planear Siguiente</button></div>
+                    <div className="p-8">
+                        <form onSubmit={handleAddInteraction} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Fecha</label>
+                                    <DatePicker selected={parseDateString(newVisit.date || '')} onChange={(date) => setNewVisit({...newVisit, date: formatDateToString(date)})} dateFormat="dd/MM/yyyy" locale="es" showMonthDropdown showYearDropdown dropdownMode="select" className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm" required />
+                                </div>
+                                {visitType === 'plan' && (
+                                    <div>
+                                        <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Hora</label>
+                                        <select value={newVisit.time} onChange={(e) => setNewVisit({...newVisit, time: e.target.value})} className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm">
+                                            <option value="">SIN HORA</option>
+                                            {timeSlots.map(time => <option key={time} value={time}>{time}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                {visitType === 'report' && (
+                                    <div>
+                                        <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Resultado</label>
+                                        <select value={newVisit.outcome || 'SEGUIMIENTO'} onChange={(e) => setNewVisit({...newVisit, outcome: e.target.value as any})} className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm">
+                                            <option value="SEGUIMIENTO">SEGUIMIENTO</option>
+                                            <option value="COTIZACIÓN">COTIZACIÓN</option>
+                                            <option value="INTERESADO">INTERESADO</option>
+                                            <option value="PROGRAMAR PROCEDIMIENTO">PROGRAMAR PROCEDIMIENTO</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Objetivo de la Visita</label>
+                                <textarea spellCheck={true} lang="es" value={newVisit.objective || ''} onChange={(e) => setNewVisit({...newVisit, objective: e.target.value.toUpperCase()})} placeholder="DESCRIBA EL PROPÓSITO DE LA VISITA..." rows={2} className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
+                            </div>
+                            {visitType === 'report' && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Reporte / Resultado</label>
+                                        <textarea spellCheck={true} lang="es" value={newVisit.note || ''} onChange={(e) => setNewVisit({...newVisit, note: e.target.value.toUpperCase()})} placeholder="DETALLES RELEVANTES DE LA INTERACCIÓN..." rows={3} className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Seguimiento / Próximo Paso</label>
+                                        <textarea spellCheck={true} lang="es" value={newVisit.followUp || ''} onChange={(e) => setNewVisit({...newVisit, followUp: e.target.value.toUpperCase()})} placeholder="COMPROMISOS O ACCIONES A SEGUIR..." rows={2} className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
+                                    </div>
+                                    <div className="flex items-center gap-4 pt-2">
+                                        <button type="button" onClick={() => handleGetLocation()} disabled={isGettingLocation || !!newVisit.checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${newVisit.checkIn ? 'bg-green-100 text-green-800 border border-green-300 cursor-default' : 'bg-slate-200 text-slate-700 hover:bg-slate-300 border border-slate-300'}`}>
+                                            {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : newVisit.checkIn ? <CheckCircle className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                                            {isGettingLocation ? 'Obteniendo...' : newVisit.checkIn ? 'Ubicación Registrada' : 'Registrar Ubicación (Check-in)'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                            <div className="flex justify-end pt-2">
+                                <button type="submit" className={`px-8 py-3 rounded-xl text-white font-bold shadow-lg transition-all active:scale-95 ${visitType === 'plan' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/30' : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-green-500/30'}`}>
+                                    {visitType === 'plan' ? 'Agendar en Calendario' : 'Guardar Reporte'}
                                 </button>
                             </div>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Fecha</label>
-                                <input 
-                                    type="date" 
-                                    value={formData.date}
-                                    onChange={e => setFormData({...formData, date: e.target.value})}
-                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm text-slate-900 bg-white"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Hora (AM/PM)</label>
-                                <div className="relative">
-                                    <Clock className="absolute left-3 top-3 w-4 h-4 text-slate-400 z-10" />
-                                    <DatePicker
-                                        selected={selectedTime}
-                                        onChange={handleTimeChange}
-                                        showTimeSelect
-                                        showTimeSelectOnly
-                                        timeIntervals={15}
-                                        timeCaption="Hora"
-                                        dateFormat="h:mm aa"
-                                        placeholderText="--:-- --"
-                                        className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm text-slate-900 bg-white"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase mb-2">Ejecutivo que Agenda</label>
-                            <div className="relative">
-                                <UserIcon className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                <input 
-                                    type="text" 
-                                    value={user.name} 
-                                    disabled
-                                    className="w-full pl-9 bg-slate-100 border border-slate-200 text-slate-500 rounded-xl p-3 text-sm font-bold outline-none cursor-not-allowed uppercase"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase mb-2">Hospital / Clínica</label>
-                            <div className="relative">
-                                <Building2 className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                <input 
-                                    type="text" 
-                                    value={formData.hospital || ''}
-                                    onChange={e => setFormData({...formData, hospital: e.target.value.toUpperCase()})}
-                                    className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 uppercase text-slate-900 bg-white"
-                                    placeholder="NOMBRE DEL HOSPITAL..."
-                                />
-                            </div>
-                        </div>
-
-                        {/* Payment Type Selection */}
-                        <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase mb-2">Método de Pago</label>
-                            <div className="relative">
-                                <CreditCard className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                <select 
-                                    value={formData.paymentType || 'DIRECTO'}
-                                    onChange={e => setFormData({...formData, paymentType: e.target.value as any})}
-                                    className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm appearance-none cursor-pointer uppercase text-slate-900 bg-white"
-                                >
-                                    <option value="DIRECTO">DIRECTO</option>
-                                    <option value="ASEGURADORA">ASEGURADORA</option>
-                                </select>
-                                <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-slate-500">
-                                    <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Costo (MXN)</label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                                    <input 
-                                        type="text"
-                                        value={displayCost}
-                                        onChange={handleCostChange}
-                                        onBlur={handleCostBlur}
-                                        className="w-full pl-9 border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 text-slate-900 bg-white"
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">
-                                    Comisión (3%)
-                                </label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-3 w-4 h-4 text-emerald-500" />
-                                    <input 
-                                        type="text"
-                                        readOnly
-                                        value={formData.commission ? new Intl.NumberFormat('es-MX', { minimumFractionDigits: 2 }).format(formData.commission) : '0.00'}
-                                        className="w-full pl-9 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl p-3 text-sm font-bold outline-none cursor-default"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase mb-2">Médico Responsable</label>
-                            <div className="relative group">
-                               <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                               <input 
-                                   type="text" 
-                                   placeholder="BUSCAR POR NOMBRE..." 
-                                   value={searchTerm}
-                                   onChange={e => { setSearchTerm(e.target.value.toUpperCase()); setFormData(prev => ({...prev, doctorId: ''})) }}
-                                   className="w-full pl-10 border border-slate-200 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 text-slate-900 bg-white"
-                               />
-                            </div>
-                            {searchTerm && !formData.doctorId && (
-                                <div className="mt-2 max-h-40 overflow-y-auto border border-slate-100 rounded-xl bg-white shadow-lg w-full z-20">
-                                    {filteredDoctors.map(doc => (
-                                        <div 
-                                            key={doc.id} 
-                                            onClick={() => { setFormData(prev => ({...prev, doctorId: doc.id, doctorName: doc.name})); setSearchTerm(doc.name); }}
-                                            className="p-3 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer uppercase border-b last:border-0 border-slate-50 transition-colors"
-                                        >
-                                            {doc.name}
-                                        </div>
-                                    ))}
-                                    {filteredDoctors.length === 0 && <div className="p-4 text-xs text-slate-400 text-center font-medium">No se encontraron resultados</div>}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Tipo de Procedimiento</label>
-                                <input 
-                                    type="text" 
-                                    value={formData.procedureType}
-                                    onChange={e => setFormData({...formData, procedureType: e.target.value.toUpperCase()})}
-                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm placeholder-slate-300 text-slate-900 bg-white"
-                                    placeholder="EJ: ENDOSCOPIA"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-2">Nombre del Técnico</label>
-                                <select 
-                                    value={formData.technician || ''}
-                                    onChange={e => setFormData({...formData, technician: e.target.value})}
-                                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm uppercase text-slate-900 bg-white appearance-none cursor-pointer"
-                                >
-                                    <option value="">SELECCIONAR TÉCNICO...</option>
-                                    <option value="ALAN GARCÍA">ALAN GARCÍA</option>
-                                    <option value="ANGEL GUERRERO">ANGEL GUERRERO</option>
-                                    <option value="GABRIEL LÓPEZ">GABRIEL LÓPEZ</option>
-                                    <option value="RODRIGO GUTIÉRREZ">RODRIGO GUTIÉRREZ</option>
-                                    <option value="KEVIN VILLEDA">KEVIN VILLEDA</option>
-                                    <option value="MAURICIO HERRERA">MAURICIO HERRERA</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase mb-2">Notas Adicionales</label>
-                            <textarea 
-                                rows={3}
-                                value={formData.notes}
-                                onChange={e => setFormData({...formData, notes: e.target.value.toUpperCase()})}
-                                className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium uppercase focus:ring-2 focus:ring-indigo-500 outline-none resize-none shadow-sm placeholder-slate-300 text-slate-900 bg-white"
-                                placeholder="DETALLES IMPORTANTES..."
-                            />
-                        </div>
+                        </form>
                     </div>
+               </div>
 
-                    {/* Footer - Fixed */}
-                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center flex-shrink-0">
-                        {editingProcedure ? (
-                            <button 
-                                onClick={handleDelete} 
-                                className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-xl transition-colors"
-                                title="Eliminar registro"
-                            >
-                                <Trash2 className="w-5 h-5"/>
-                            </button>
-                        ) : <div></div>}
-                        
-                        <div className="flex gap-3">
-                            <button onClick={closeModal} className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition-colors text-sm">Cancelar</button>
-                            <button onClick={handleSave} className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 text-sm flex items-center">
-                                <Check className="w-4 h-4 mr-2" />
-                                Guardar
-                            </button>
-                        </div>
-                    </div>
-                </div>
+               <div className="mt-10">
+                   <h4 className="text-xl font-black text-slate-900 mb-6 pl-3 border-l-4 border-blue-600">Historial de Visitas</h4>
+                   {doctor.visits.filter(v => v.status === 'completed' || !v.status).length > 0 ? (
+                       <ul className="space-y-6 relative before:absolute before:inset-0 before:ml-8 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-slate-300 before:to-transparent">
+                           {doctor.visits.filter(v => v.status === 'completed' || !v.status).map((visit) => (
+                               <li key={visit.id} className="relative pl-16 group"><div className="absolute left-4 top-5 w-8 h-8 rounded-full bg-white border-4 border-blue-600 shadow-md flex items-center justify-center z-10"><div className="w-2.5 h-2.5 bg-blue-500 rounded-full"></div></div>
+                                   <div className="bg-white border border-slate-300 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 relative pr-12"><button type="button" onClick={(e) => { e.stopPropagation(); confirmDelete(visit.id); }} className="absolute top-4 right-4 p-2 bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-700 rounded-xl transition-all shadow-sm z-10 cursor-pointer" title="Eliminar este reporte"><Trash2 className="h-4 w-4" /></button>
+                                       <div className="flex flex-col md:flex-row justify-between items-start mb-4 gap-2"><div className="flex items-center"><div><span className="block text-lg font-bold text-slate-900">{visit.date}</span>{visit.time && <span className="text-sm text-blue-700 font-bold bg-blue-100 px-2 py-0.5 rounded-lg mr-2">{visit.time}</span>}<span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Visita Completada</span></div></div><span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide shadow-sm ${visit.outcome === 'INTERESADO' ? 'bg-green-200 text-green-800' : visit.outcome === 'COTIZACIÓN' ? 'bg-blue-200 text-blue-800' : visit.outcome === 'CITA' ? 'bg-pink-200 text-pink-800' : 'bg-slate-200 text-slate-800'}`}>{visit.outcome}</span></div>
+                                       <div className="space-y-3">
+                                           {visit.objective && (<div className="text-sm flex items-start"><span className="font-bold text-slate-800 mr-2 min-w-[80px]">Objetivo:</span><span className="text-slate-700 bg-slate-100 px-2 rounded uppercase">{visit.objective}</span></div>)}
+                                           <div className="text-sm text-slate-800 bg-slate-100 p-4 rounded-xl border border-slate-200 italic leading-relaxed uppercase">"{visit.note}"</div>
+                                           {visit.followUp && (<div className="text-sm pt-1 flex items-start"><span className="font-bold text-blue-700 mr-2 min-w-[80px]">Seguimiento:</span><span className="text-slate-700 font-medium uppercase">{visit.followUp}</span></div>)}
+                                           {visit.checkIn && (
+                                                <div className="text-xs pt-2 border-t border-slate-200 mt-2 flex items-center text-slate-600">
+                                                    <MapPin className="w-3 h-3 mr-1 text-green-600" />
+                                                    <span className="font-bold mr-1">Ubicación Registrada:</span>
+                                                    <a 
+                                                        href={`https://www.google.com/maps?q=${visit.checkIn.lat},${visit.checkIn.lng}`} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="text-blue-600 hover:underline flex items-center"
+                                                    >
+                                                        Ver en Mapa <ExternalLink className="w-3 h-3 ml-1" />
+                                                    </a>
+                                                    <span className="ml-2 text-slate-500">({new Date(visit.checkIn.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
+                                                </div>
+                                           )}
+                                       </div>
+                                   </div>
+                               </li>
+                           ))}
+                       </ul>
+                   ) : (<div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300"><FileText className="h-12 w-12 mx-auto text-slate-200 mb-4" /><p className="text-slate-600 font-bold text-lg">No hay visitas reportadas aún.</p><p className="text-slate-500 text-sm">Registra tu primera interacción arriba.</p></div>)}
+               </div>
             </div>
-        )}
+          )}
+        </div>
     </div>
   );
 };
 
-export default ProceduresManager;
+export default DoctorProfile;

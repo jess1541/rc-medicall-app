@@ -596,71 +596,71 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
   };
 
   return (
-    <div className="space-y-4 md:space-y-6 pb-10 relative animate-fadeIn">
+    <div className="space-y-6 md:space-y-8 pb-10 relative animate-fadeIn">
 
-       {/* TOOLBAR */}
-       <div className="flex flex-col xl:flex-row justify-between items-center bg-white/80 backdrop-blur-xl p-4 md:p-6 rounded-[2rem] border border-white/50 shadow-lg shadow-blue-500/5 gap-4 md:gap-6">
-           <div className="text-center xl:text-left w-full xl:w-auto">
-               <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center justify-center xl:justify-start gap-2">
-                   <CalendarClock className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
-                   Calendario
-               </h1>
-               <p className="text-[10px] md:text-xs text-slate-500 font-black uppercase tracking-widest mt-1">Gestión de rutas y tiempos.</p>
-           </div>
-           
-           <div className="flex flex-col md:flex-row gap-3 items-center w-full xl:w-auto">
-               <div className="flex bg-slate-100 p-1 rounded-2xl w-full md:w-auto">
-                   {(['month', 'week', 'day'] as ViewMode[]).map(mode => (
-                       <button
-                           key={mode}
-                           onClick={() => setViewMode(mode)}
-                           className={`flex-1 md:flex-none px-4 md:px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
-                       >
-                           {mode === 'month' ? 'Mes' : (mode === 'week' ? 'Semana' : 'Día')}
-                       </button>
-                   ))}
-               </div>
+        {/* TOOLBAR */}
+        <div className="flex flex-col xl:flex-row justify-between items-center bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-300 shadow-xl gap-6">
+            <div className="text-center xl:text-left w-full xl:w-auto">
+                <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight flex items-center justify-center xl:justify-start gap-3">
+                    <CalendarClock className="w-8 h-8 md:w-10 md:h-10 text-blue-700" />
+                    CALENDARIO <span className="text-blue-700">EJECUTIVO</span>
+                </h1>
+                <p className="text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest mt-2">Gestión de rutas y tiempos operativos.</p>
+            </div>
+            
+            <div className="flex flex-col md:flex-row gap-4 items-center w-full xl:w-auto">
+                <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full md:w-auto border border-slate-200">
+                    {(['month', 'week', 'day'] as ViewMode[]).map(mode => (
+                        <button
+                            key={mode}
+                            onClick={() => setViewMode(mode)}
+                            className={`flex-1 md:flex-none px-6 md:px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'}`}
+                        >
+                            {mode === 'month' ? 'Mes' : (mode === 'week' ? 'Semana' : 'Día')}
+                        </button>
+                    ))}
+                </div>
 
-               <div className="flex gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
+               <div className="flex gap-3 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
                    <button 
                        onClick={() => handleDayClick(currentDate, false)}
-                       className="flex-1 md:flex-none bg-slate-900 text-white px-4 md:px-6 py-3 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center whitespace-nowrap"
+                       className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white px-6 md:px-8 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-95 flex items-center justify-center whitespace-nowrap"
                    >
-                       <Plus className="w-4 h-4 mr-2" />
+                       <Plus className="w-5 h-5 mr-2" />
                        Visita
                    </button>
                    <button 
                        onClick={() => handleDayClick(currentDate, true)}
-                       className="flex-1 md:flex-none bg-pink-500 text-white px-4 md:px-6 py-3 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl shadow-pink-500/20 transition-all active:scale-95 flex items-center justify-center whitespace-nowrap"
+                       className="flex-1 md:flex-none bg-pink-600 hover:bg-pink-500 text-white px-6 md:px-8 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-pink-500/20 transition-all active:scale-95 flex items-center justify-center whitespace-nowrap"
                    >
-                       <Lock className="w-3 h-3 mr-2" />
+                       <Lock className="w-4 h-4 mr-2" />
                        Cita
                    </button>
                    <button 
                        onClick={handleOpenTimeOffModal}
-                       className="flex-1 md:flex-none bg-orange-500 text-white px-4 md:px-6 py-3 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 transition-all active:scale-95 flex items-center justify-center whitespace-nowrap"
+                       className="flex-1 md:flex-none bg-slate-50 hover:bg-slate-100 text-slate-600 px-6 md:px-8 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm transition-all border border-slate-200 active:scale-95 flex items-center justify-center whitespace-nowrap"
                    >
-                       <Coffee className="w-3 h-3 mr-2" />
+                       <Coffee className="w-4 h-4 mr-2" />
                        Ausencia
                    </button>
                    <div 
                         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
                         onDrop={handleTrashDrop}
-                        className={`w-12 md:w-14 rounded-2xl flex items-center justify-center transition-all border-2 border-dashed cursor-pointer flex-shrink-0 ${isDragging ? 'bg-red-50 border-red-400 text-red-500 scale-110 shadow-lg shadow-red-200' : 'bg-slate-50 border-slate-200 text-slate-300 hover:border-red-300 hover:text-red-300'}`}
+                        className={`w-14 md:w-16 rounded-2xl flex items-center justify-center transition-all border-2 border-dashed flex-shrink-0 ${isDragging ? 'bg-red-50 text-red-600 border-red-500 scale-110 shadow-lg shadow-red-500/20' : 'bg-slate-50 border-slate-200 text-slate-400 hover:border-red-500/50 hover:text-red-600'}`}
                         title="Arrastra aquí para eliminar"
                    >
-                       <Trash2 className="h-5 w-5 pointer-events-none" />
+                       <Trash2 className="h-6 w-6 pointer-events-none" />
                    </div>
                </div>
            </div>
        </div>
 
        {/* CALENDAR HEADER CONTROLS */}
-       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 md:p-6 rounded-[2rem] shadow-lg border border-slate-100 gap-4">
+       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 md:p-8 rounded-[2.5rem] shadow-lg border border-slate-300 gap-6">
            <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-               <button onClick={prevPeriod} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors text-slate-400 hover:text-blue-600"><ChevronLeft className="w-6 h-6" /></button>
-               <h2 className="text-lg md:text-2xl font-black text-slate-800 uppercase tracking-tight text-center flex-1 md:flex-none">{getHeaderTitle()}</h2>
-               <button onClick={nextPeriod} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors text-slate-400 hover:text-blue-600"><ChevronRight className="w-6 h-6" /></button>
+               <button onClick={prevPeriod} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors text-slate-500 hover:text-blue-700"><ChevronLeft className="w-6 h-6" /></button>
+               <h2 className="text-lg md:text-2xl font-black text-slate-900 uppercase tracking-tight text-center flex-1 md:flex-none">{getHeaderTitle()}</h2>
+               <button onClick={nextPeriod} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors text-slate-500 hover:text-blue-700"><ChevronRight className="w-6 h-6" /></button>
            </div>
            
            <div className="flex items-center gap-3 w-full md:w-auto">
@@ -668,14 +668,14 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                    <select 
                        value={selectedExecutive} 
                        onChange={(e) => setSelectedExecutive(e.target.value)}
-                       className="w-full md:w-64 appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-xs font-black uppercase tracking-wide rounded-2xl py-3 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                       className="w-full md:w-64 appearance-none bg-slate-100 border border-slate-300 text-slate-800 text-xs font-black uppercase tracking-wide rounded-2xl py-3 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                        disabled={user.role === 'executive'}
                    >
-                       {executives.map(e => <option key={e} value={e}>{e}</option>)}
+                       {executives.map(e => <option key={e} value={e} className="bg-white text-slate-900">{e}</option>)}
                    </select>
-                   <UserIcon className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
+                   <UserIcon className="absolute right-3 top-3 w-4 h-4 text-slate-500 pointer-events-none" />
                </div>
-               <button onClick={() => setCurrentDate(new Date())} className="px-4 py-3 bg-blue-50 text-blue-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-colors whitespace-nowrap">
+               <button onClick={() => setCurrentDate(new Date())} className="px-4 py-3 bg-blue-100 text-blue-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-200 transition-colors whitespace-nowrap border border-blue-200">
                    Hoy
                </button>
            </div>
@@ -692,15 +692,15 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
 
        {/* CALENDAR VIEW */}
-       <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-white/50 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col h-[65vh] md:h-[75vh] min-h-[500px]">
+       <div className="bg-white rounded-[2.5rem] border border-slate-300 shadow-xl overflow-hidden flex flex-col h-[65vh] md:h-[75vh] min-h-[500px]">
 
 
-           <div className="flex-1 overflow-auto bg-slate-50/30">
+           <div className="flex-1 overflow-auto bg-transparent">
                <div className={`h-full flex flex-col ${viewMode !== 'day' ? 'min-w-[800px]' : 'min-w-full'}`}>
                    {viewMode !== 'day' && (
-                       <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
+                       <div className="grid grid-cols-7 border-b border-slate-300 bg-slate-200 flex-shrink-0">
                            {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
-                               <div key={d} className="py-2 text-center text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">{d}</div>
+                               <div key={d} className="py-3 text-center text-[10px] font-black text-slate-700 uppercase tracking-widest">{d}</div>
                            ))}
                        </div>
                    )}
@@ -714,14 +714,14 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
                            if (viewMode === 'day' && day) {
                                return (
-                                   <div key={idx} className="flex-1 bg-white p-4 md:p-8 animate-fadeIn flex">
-                                       <div className="w-24 flex-shrink-0 border-r border-slate-100 pr-4 pt-2">
+                                   <div key={idx} className="flex-1 bg-transparent p-4 md:p-8 animate-fadeIn flex">
+                                       <div className="w-24 flex-shrink-0 border-r border-slate-300 pr-4 pt-2">
                                            {visitTimeSlots.map(time => (
-                                               <div key={time} className="h-24 text-xs font-bold text-slate-400 flex items-start justify-between group relative">
+                                               <div key={time} className="h-24 text-xs font-bold text-slate-700 flex items-start justify-between group relative">
                                                    <span className="-mt-3 bg-white pr-2 z-10">{time}</span>
                                                    <button 
                                                         onClick={(e) => { e.stopPropagation(); handleTimeSlotClick(time); }}
-                                                        className="absolute right-0 top-0 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-full p-1.5 transition-all transform active:scale-95 z-20 md:opacity-0 md:group-hover:opacity-100"
+                                                        className="absolute right-0 top-0 bg-blue-100 text-blue-700 hover:bg-blue-700 hover:text-white rounded-full p-1.5 transition-all transform active:scale-95 z-20 md:opacity-0 md:group-hover:opacity-100 border border-blue-200"
                                                         title="Planear Visita aquí"
                                                    >
                                                        <Plus className="h-3 w-3" />
@@ -734,7 +734,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                             {visitTimeSlots.map((time, tIdx) => (
                                                  <div 
                                                     key={`line-${time}`} 
-                                                    className="absolute w-full border-t border-slate-100"
+                                                    className="absolute w-full border-t border-slate-300"
                                                     style={{ top: `${tIdx * 6}rem` }}
                                                  ></div>
                                             ))}
@@ -747,7 +747,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                                         onClick={() => handleTimeSlotClick(time)}
                                                         onDragOver={handleDragOver}
                                                         onDrop={(e) => handleDrop(e, day, time)}
-                                                        className="absolute w-full hover:bg-blue-50/30 transition-colors z-0 cursor-pointer"
+                                                        className="absolute w-full hover:bg-slate-100 transition-colors z-0 cursor-pointer rounded-xl"
                                                         style={{ top: `${tIdx * 6}rem`, height: '6rem' }}
                                                     >
                                                         {slotEvents.map((evt, i) => renderEventChip(evt, i, true))}
@@ -766,18 +766,18 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                    onDragOver={handleDragOver}
                                    onDrop={(e) => handleDrop(e, day)}
                                    onClick={() => handleDayClick(day)}
-                                   className={`min-h-[120px] bg-white p-2 border border-slate-100 hover:bg-blue-50/20 transition-colors cursor-pointer relative group flex flex-col gap-1 ${isToday ? 'ring-1 ring-inset ring-blue-200 bg-blue-50/10' : ''}`}
+                                   className={`min-h-[140px] bg-white p-3 border border-slate-300 hover:bg-slate-50 transition-all cursor-pointer relative group flex flex-col gap-2 ${isToday ? 'bg-blue-50 ring-1 ring-inset ring-blue-500/30' : ''}`}
                                >
                                    <div className="flex justify-between items-start">
-                                        <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500'}`}>
+                                        <span className={`text-xs font-black w-7 h-7 flex items-center justify-center rounded-full transition-all ${isToday ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-600 group-hover:text-slate-900'}`}>
                                             {day.getDate()}
                                         </span>
-                                        <button className="opacity-0 group-hover:opacity-100 bg-slate-100 p-1 rounded-full text-slate-400 hover:text-blue-500 transition-all">
-                                            <Plus className="h-3 w-3" />
+                                        <button className="opacity-0 group-hover:opacity-100 bg-slate-100 p-1.5 rounded-xl text-slate-600 hover:text-blue-600 transition-all border border-slate-300">
+                                            <Plus className="h-3.5 w-3.5" />
                                         </button>
                                    </div>
                                    
-                                   <div className="flex-1 w-full overflow-y-auto max-h-[120px] no-scrollbar space-y-1">
+                                   <div className="flex-1 w-full overflow-y-auto max-h-[140px] no-scrollbar space-y-1.5">
                                        {events.map((evt, i) => renderEventChip(evt, i))}
                                    </div>
                                </div>
@@ -790,93 +790,97 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
        {/* 1. Plan Visit Modal */}
        {isModalOpen && (
-           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-               <div className="bg-white rounded-3xl shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                   <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                       <h3 className="text-lg font-black text-slate-800 flex items-center">
-                           {isAppointmentMode ? <Clock className="w-5 h-5 mr-2 text-pink-500" /> : <Calendar className="w-5 h-5 mr-2 text-blue-500" />}
-                           {isAppointmentMode ? (editingAppointment ? 'Editar Cita' : 'Programar Cita') : 'Planear Visita'}
+           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+               <div className="bg-white rounded-[2.5rem] border border-slate-300 shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                   <div className="p-8 border-b border-white/10 flex justify-between items-center bg-white/5">
+                       <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
+                           {isAppointmentMode ? <Clock className="w-6 h-6 text-pink-600" /> : <Calendar className="w-6 h-6 text-blue-500" />}
+                           {isAppointmentMode ? (editingAppointment ? 'EDITAR CITA' : 'PROGRAMAR CITA') : 'PLANEAR VISITA'}
                        </h3>
-                       <button onClick={() => setIsModalOpen(false)}><X className="w-6 h-6 text-slate-400 hover:text-slate-600" /></button>
+                       <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-xl transition-all text-slate-500 hover:text-slate-900">
+                           <X className="w-6 h-6" />
+                       </button>
                    </div>
-                   <div className="p-6 space-y-4 overflow-y-auto">
+                   <div className="p-8 space-y-6 overflow-y-auto">
                         {isAppointmentMode && (
-                           <div className="bg-pink-50 p-3 rounded-xl border border-pink-100 flex items-center text-pink-700 text-xs font-bold">
-                               <Lock className="w-4 h-4 mr-2" />
+                           <div className="bg-pink-50 p-4 rounded-2xl border border-pink-200 flex items-center text-pink-800 text-xs font-bold">
+                               <Lock className="w-4 h-4 mr-3" />
                                {editingAppointment ? 'Modo Edición - Cambio de Contacto' : 'Cita Bloqueada - Prioridad Alta'}
                            </div>
                         )}
 
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Contacto</label>
+                        <div className="space-y-2">
+                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Contacto</label>
                             <div className="relative">
-                                <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600" />
                                 <input 
                                     type="text" 
                                     placeholder="BUSCAR MÉDICO..." 
                                     value={searchDoctorTerm} 
                                     onChange={(e) => setSearchDoctorTerm(e.target.value.toUpperCase())}
-                                    className="w-full pl-10 border border-slate-200 bg-slate-50 rounded-xl p-3 text-sm font-bold uppercase focus:ring-2 focus:ring-blue-500 outline-none text-black shadow-sm"
+                                    className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                 />
                             </div>
                             {searchDoctorTerm && (
-                                <div className="mt-2 max-h-40 overflow-y-auto border border-slate-100 rounded-xl bg-white shadow-lg">
+                                <div className="mt-2 max-h-48 overflow-y-auto border border-white/10 rounded-2xl bg-slate-900/90 backdrop-blur-xl shadow-2xl">
                                     {filteredDoctorsForModal.map(doc => (
                                         <div 
                                             key={doc.id} 
                                             onClick={() => { setSelectedDoctorId(doc.id); setSearchDoctorTerm(doc.name); }}
-                                            className={`p-3 text-xs font-bold border-b last:border-0 cursor-pointer ${selectedDoctorId === doc.id ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                                            className={`p-4 text-xs font-bold border-b border-white/5 last:border-0 cursor-pointer transition-colors ${selectedDoctorId === doc.id ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
                                         >
-                                            <div className="uppercase">{doc.name}</div>
-                                            <div className="text-[10px] text-slate-400 font-normal flex items-center mt-1">
-                                                <Building className="w-3 h-3 mr-1" /> {doc.hospital || doc.address}
+                                            <div className="uppercase tracking-wide">{doc.name}</div>
+                                            <div className="text-[10px] text-slate-500 font-medium flex items-center mt-1.5">
+                                                <Building className="w-3 h-3 mr-1.5" /> {doc.hospital || doc.address}
                                             </div>
                                         </div>
                                     ))}
-                                    {filteredDoctorsForModal.length === 0 && <div className="p-4 text-xs text-slate-400 text-center">No encontrado</div>}
+                                    {filteredDoctorsForModal.length === 0 && <div className="p-6 text-xs text-slate-500 text-center font-bold">No se encontraron resultados</div>}
                                 </div>
                             )}
                         </div>
                         
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Fecha</label>
-                            <DatePicker
-                                selected={planDate}
-                                onChange={(date) => date && setPlanDate(date)}
-                                disabled={!!editingAppointment}
-                                dateFormat="dd/MM/yyyy"
-                                locale="es"
-                                className={`w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none text-black shadow-sm ${!!editingAppointment ? 'bg-slate-100 cursor-not-allowed text-slate-500' : 'bg-white'}`}
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div className="space-y-2">
+                               <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Fecha</label>
+                               <DatePicker
+                                   selected={planDate}
+                                   onChange={(date) => date && setPlanDate(date)}
+                                   disabled={!!editingAppointment}
+                                   dateFormat="dd/MM/yyyy"
+                                   locale="es"
+                                   className={`w-full bg-white border border-slate-300 rounded-2xl p-4 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all ${!!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
+                               />
+                           </div>
+
+                           <div className="space-y-2">
+                               <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Hora</label>
+                               <select 
+                                   value={appointmentTime} 
+                                   onChange={(e) => setAppointmentTime(e.target.value)}
+                                   disabled={!!editingAppointment}
+                                   className={`w-full bg-white border border-slate-300 rounded-2xl p-4 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none ${!!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
+                               >
+                                   {(isAppointmentMode ? appointmentTimeSlots : visitTimeSlots).map(t => <option key={t} value={t} className="bg-slate-900 text-white">{t}</option>)}
+                               </select>
+                           </div>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Hora</label>
-                            <select 
-                                value={appointmentTime} 
-                                onChange={(e) => setAppointmentTime(e.target.value)}
-                                disabled={!!editingAppointment}
-                                className={`w-full border border-slate-200 bg-white rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none text-black shadow-sm ${!!editingAppointment ? 'bg-slate-100 cursor-not-allowed text-slate-500' : ''}`}
-                            >
-                                {(isAppointmentMode ? appointmentTimeSlots : visitTimeSlots).map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">{isAppointmentMode ? 'Objetivo Cita' : 'Objetivo SMART'}</label>
+                        <div className="space-y-2">
+                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-1">{isAppointmentMode ? 'Objetivo Cita' : 'Objetivo SMART'}</label>
                             <textarea 
-                                rows={2}
+                                rows={3}
                                 value={planObjective}
                                 onChange={(e) => setPlanObjective(e.target.value.toUpperCase())}
                                 disabled={isAppointmentMode || !!editingAppointment}
-                                className={`w-full border border-slate-200 rounded-xl p-3 text-sm uppercase font-medium focus:ring-2 focus:ring-blue-500 outline-none resize-none text-black shadow-sm ${isAppointmentMode || !!editingAppointment ? 'bg-slate-100 cursor-not-allowed text-slate-500' : 'bg-white'}`}
+                                className={`w-full bg-white border border-slate-300 rounded-2xl p-4 text-sm uppercase font-bold text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all ${isAppointmentMode || !!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
                                 placeholder={isAppointmentMode ? "MOTIVO DE LA CITA..." : "ESPECÍFICO, MEDIBLE, ALCANZABLE..."}
                             />
                         </div>
                    </div>
-                   <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-                       <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-                       <button onClick={savePlan} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">Guardar</button>
+                   <div className="p-8 border-t border-white/10 flex justify-end gap-4 bg-white/5">
+                       <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-sm font-black text-slate-400 hover:text-white hover:bg-white/5 rounded-2xl transition-all uppercase tracking-widest">Cancelar</button>
+                       <button onClick={savePlan} className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-95">Guardar Plan</button>
                    </div>
                </div>
            </div>
@@ -884,28 +888,28 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
        {/* 2. Report/Edit Modal */}
        {reportModalOpen && selectedVisitToReport && (
-           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-               <div className="bg-white rounded-3xl shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                   <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+               <div className="bg-white rounded-[2.5rem] border border-slate-300 shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                   <div className="p-8 border-b border-white/10 flex justify-between items-center bg-white/5">
                        <div>
-                           <div className="flex space-x-4 mb-2">
-                                <button onClick={() => setIsEditingPlan(false)} className={`text-sm font-black uppercase border-b-2 pb-1 transition-colors ${!isEditingPlan ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
-                                    Reportar
+                           <div className="flex space-x-6 mb-3">
+                                <button onClick={() => setIsEditingPlan(false)} className={`text-sm font-black uppercase border-b-2 pb-2 transition-all tracking-widest ${!isEditingPlan ? 'text-blue-500 border-blue-500' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
+                                     Reportar
                                 </button>
-                                <button onClick={() => setIsEditingPlan(true)} className={`text-sm font-black uppercase border-b-2 pb-1 transition-colors ${isEditingPlan ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
-                                    Reprogramar / Editar
+                                <button onClick={() => setIsEditingPlan(true)} className={`text-sm font-black uppercase border-b-2 pb-2 transition-all tracking-widest ${isEditingPlan ? 'text-blue-500 border-blue-500' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
+                                     Reprogramar
                                 </button>
                            </div>
-                           <h3 className="text-base font-bold text-slate-800 uppercase flex items-center">
+                           <h3 className="text-xl font-black text-white uppercase flex items-center gap-3">
                                {isEditingPlan ? 'Modificar Planificación' : 'Reportar Resultado'}
                            </h3>
                        </div>
-                       <div className="flex items-center gap-2">
-                            <button onClick={confirmDeleteVisit} className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors" title="Eliminar Visita">
-                                <Trash2 className="w-5 h-5" />
+                       <div className="flex items-center gap-3">
+                            <button onClick={confirmDeleteVisit} className="p-3 text-red-500 hover:bg-red-500/10 rounded-2xl transition-all" title="Eliminar Visita">
+                                <Trash2 className="w-6 h-6" />
                             </button>
-                            <button onClick={() => setReportModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
-                                <X className="w-6 h-6" />
+                            <button onClick={() => setReportModalOpen(false)} className="p-3 text-slate-500 hover:text-white hover:bg-white/10 rounded-2xl transition-all">
+                                <X className="w-7 h-7" />
                             </button>
                        </div>
                    </div>
@@ -914,14 +918,14 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                    {selectedVisitToReport && (() => {
                        const doc = doctors.find(d => d.id === selectedVisitToReport.docId);
                        return doc ? (
-                           <div className="px-6 py-4 bg-blue-50/50 border-b border-blue-100 flex items-center gap-3">
-                               <div className="p-2 bg-white rounded-xl shadow-sm text-blue-600 border border-blue-100">
-                                   <UserIcon className="w-5 h-5" />
+                           <div className="px-8 py-6 bg-blue-500/5 border-b border-white/10 flex items-center gap-4">
+                               <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-blue-400 shadow-xl">
+                                   <UserIcon className="w-6 h-6" />
                                </div>
                                <div>
-                                   <h4 className="text-sm font-black text-blue-900 uppercase leading-tight">{doc.name}</h4>
-                                   <p className="text-[10px] font-bold text-blue-600 uppercase flex items-center gap-1 mt-0.5">
-                                       <Stethoscope className="w-3 h-3" />
+                                   <h4 className="text-base font-black text-white uppercase leading-tight tracking-wide">{doc.name}</h4>
+                                   <p className="text-xs font-bold text-blue-400 uppercase flex items-center gap-2 mt-1">
+                                       <Stethoscope className="w-4 h-4" />
                                        {doc.specialty || 'GENERAL'}
                                    </p>
                                </div>
@@ -929,116 +933,112 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                        ) : null;
                    })()}
 
-                   <div className="p-6 space-y-5 overflow-y-auto">
+                   <div className="p-8 space-y-8 overflow-y-auto">
+                        {/* Common Fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Fecha</label>
+                                <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Hora</label>
+                                <select value={reportTime} onChange={(e) => setReportTime(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none">
+                                    {visitTimeSlots.map(t => <option key={t} value={t} className="bg-slate-900 text-white">{t}</option>)}
+                                </select>
+                            </div>
+                        </div>
 
+                        {isEditingPlan ? (
+                            <div className="space-y-2">
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Objetivo (Editar)</label>
+                                <textarea 
+                                    rows={3}
+                                    value={editObjective}
+                                    onChange={(e) => setEditObjective(e.target.value.toUpperCase())}
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none transition-all hover:bg-white/10"
+                                />
+                            </div>
+                        ) : (
+                            <>
+                                <div className="bg-white/5 p-5 rounded-2xl border border-white/10">
+                                    <span className="text-xs font-black text-slate-500 uppercase tracking-widest block mb-2">Objetivo Original</span>
+                                    <p className="text-sm font-bold text-slate-300 uppercase leading-relaxed">{editObjective}</p>
+                                </div>
 
-                       {/* Common Fields */}
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <div>
-                               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
-                               <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-white text-black shadow-sm" />
-                           </div>
-                           <div>
-                               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hora</label>
-                               <select value={reportTime} onChange={(e) => setReportTime(e.target.value)} className="w-full border border-slate-200 rounded-xl p-2.5 text-sm font-bold bg-white text-black shadow-sm">
-                                   {visitTimeSlots.map(t => <option key={t} value={t}>{t}</option>)}
-                               </select>
-                           </div>
-                       </div>
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Resultado</label>
+                                    <select value={reportOutcome} onChange={(e) => setReportOutcome(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none">
+                                        <option value="SEGUIMIENTO" className="bg-slate-900 text-white">SEGUIMIENTO</option>
+                                        <option value="COTIZACIÓN" className="bg-slate-900 text-white">COTIZACIÓN</option>
+                                        <option value="INTERESADO" className="bg-slate-900 text-white">INTERESADO</option>
+                                        <option value="PROGRAMAR PROCEDIMIENTO" className="bg-slate-900 text-white">PROGRAMAR PROCEDIMIENTO</option>
+                                    </select>
+                                </div>
 
-                       {isEditingPlan ? (
-                           <div>
-                               <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Objetivo (Editar)</label>
-                               <textarea 
-                                   rows={3}
-                                   value={editObjective}
-                                   onChange={(e) => setEditObjective(e.target.value.toUpperCase())}
-                                   className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase bg-white text-black shadow-sm"
-                               />
-                           </div>
-                       ) : (
-                           <>
-                               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                   <span className="text-xs font-black text-slate-400 uppercase block mb-1">Objetivo Original</span>
-                                   <p className="text-sm font-bold text-slate-700 uppercase">{editObjective}</p>
-                               </div>
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Reporte / Notas</label>
+                                    <textarea 
+                                        rows={3}
+                                        value={reportNote}
+                                        onChange={(e) => setReportNote(e.target.value.toUpperCase())}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none transition-all hover:bg-white/10"
+                                        placeholder="DETALLES DE LA VISITA..."
+                                    />
+                                </div>
 
-                               <div>
-                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Resultado</label>
-                                   <select value={reportOutcome} onChange={(e) => setReportOutcome(e.target.value)} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black shadow-sm">
-                                       <option value="SEGUIMIENTO">SEGUIMIENTO</option>
-                                       <option value="COTIZACIÓN">COTIZACIÓN</option>
-                                       <option value="INTERESADO">INTERESADO</option>
-                                       <option value="PROGRAMAR PROCEDIMIENTO">PROGRAMAR PROCEDIMIENTO</option>
-                                   </select>
-                               </div>
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Siguiente Paso</label>
+                                    <textarea 
+                                        rows={2}
+                                        value={reportFollowUp}
+                                        onChange={(e) => setReportFollowUp(e.target.value.toUpperCase())}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none transition-all hover:bg-white/10"
+                                        placeholder="COMPROMISOS..."
+                                    />
+                                </div>
 
-                               <div>
-                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Reporte / Notas</label>
-                                   <textarea 
-                                       rows={3}
-                                       value={reportNote}
-                                       onChange={(e) => setReportNote(e.target.value.toUpperCase())}
-                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none bg-white text-black shadow-sm"
-                                       placeholder="DETALLES DE LA VISITA..."
-                                   />
-                               </div>
-
-                               <div>
-                                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Siguiente Paso</label>
-                                   <textarea 
-                                       rows={2}
-                                       value={reportFollowUp}
-                                       onChange={(e) => setReportFollowUp(e.target.value.toUpperCase())}
-                                       className="w-full border border-slate-200 rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none bg-white text-black shadow-sm"
-                                       placeholder="COMPROMISOS..."
-                                   />
-                               </div>
-
-
-                               
-                               <div className="border-t border-slate-100 pt-4 bg-blue-50/50 p-4 rounded-xl">
-                                   <div className="mb-2">
-                                       <span className="text-sm font-black text-slate-800 uppercase flex items-center">
-                                            <Calendar className="w-4 h-4 mr-2 text-blue-600" />
-                                            Agendar Próxima Visita (Obligatorio)
-                                       </span>
-                                   </div>
-                                   
-                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                       <div>
-                                           <label className="block text-[10px] font-black text-blue-400 uppercase mb-1">Fecha</label>
-                                           <DatePicker 
-                                                selected={nextVisitDate} 
-                                                onChange={(date) => setNextVisitDate(date)} 
-                                                dateFormat="dd/MM/yyyy"
-                                                locale="es"
-                                                placeholderText="Seleccione fecha"
-                                                className="w-full text-xs font-bold p-2.5 rounded-xl border border-blue-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-black shadow-sm"
-                                           />
-                                       </div>
-                                       <div>
-                                           <label className="block text-[10px] font-black text-blue-400 uppercase mb-1">Hora</label>
-                                           <select 
-                                                value={nextVisitTime} 
-                                                onChange={(e) => setNextVisitTime(e.target.value)}
-                                                className="w-full text-xs font-bold p-2.5 rounded-xl border border-blue-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-black shadow-sm"
-                                           >
-                                               {visitTimeSlots.map(t => <option key={t} value={t}>{t}</option>)}
-                                           </select>
-                                       </div>
-                                   </div>
-                               </div>
-                           </>
-                       )}
+                                <div className="border-t border-white/10 pt-8 bg-blue-500/5 p-6 rounded-[2rem] border border-white/5">
+                                    <div className="mb-4">
+                                        <span className="text-sm font-black text-white uppercase flex items-center tracking-widest">
+                                             <Calendar className="w-5 h-5 mr-3 text-blue-500" />
+                                             Agendar Próxima Visita
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                        <div className="space-y-2">
+                                            <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Fecha</label>
+                                            <DatePicker 
+                                                 selected={nextVisitDate} 
+                                                 onChange={(date) => setNextVisitDate(date)} 
+                                                 dateFormat="dd/MM/yyyy"
+                                                 locale="es"
+                                                 placeholderText="SELECCIONE FECHA"
+                                                 className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xs font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all hover:bg-white/10"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Hora</label>
+                                            <select 
+                                                 value={nextVisitTime} 
+                                                 onChange={(e) => setNextVisitTime(e.target.value)}
+                                                 className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xs font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none"
+                                            >
+                                                {visitTimeSlots.map(t => <option key={t} value={t} className="bg-slate-900 text-white">{t}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                    </div>
 
-                   <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-                       <button onClick={() => setReportModalOpen(false)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
+                   <div className="p-8 border-t border-white/10 flex justify-end gap-4 bg-white/5">
+                       <button onClick={() => setReportModalOpen(false)} className="px-6 py-3 text-sm font-black text-slate-400 hover:text-white hover:bg-white/5 rounded-2xl transition-all uppercase tracking-widest">Cancelar</button>
                        {isEditingPlan ? (
-                           <button onClick={savePlanChanges} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">Guardar Cambios</button>
+                           <button onClick={savePlanChanges} className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-95">Guardar Cambios</button>
                        ) : (
-                           <button onClick={saveReport} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">Finalizar Reporte</button>
+                           <button onClick={saveReport} className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-green-500/20 transition-all active:scale-95">Finalizar Reporte</button>
                        )}
                    </div>
                </div>
@@ -1047,66 +1047,82 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
        {/* 3. Time Off Modal */}
        {isTimeOffModalOpen && (
-           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-               <div className="bg-white rounded-3xl shadow-2xl w-[95%] md:w-full md:max-w-md overflow-hidden flex flex-col">
-                   <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-orange-50">
-                       <h3 className="text-lg font-black text-orange-800 flex items-center">
-                           <Coffee className="w-5 h-5 mr-2" />
+           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+               <div className="bg-white rounded-[2.5rem] border border-slate-300 shadow-2xl w-[95%] md:w-full md:max-w-md overflow-hidden flex flex-col">
+                   <div className="p-8 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                       <h3 className="text-xl font-black text-white uppercase flex items-center gap-3">
+                           <Coffee className="w-6 h-6 text-orange-500" />
                            Registrar Ausencia
                        </h3>
-                       <button onClick={() => setIsTimeOffModalOpen(false)}><X className="w-6 h-6 text-orange-400 hover:text-orange-600" /></button>
+                       <button onClick={() => setIsTimeOffModalOpen(false)} className="p-3 text-slate-500 hover:text-white hover:bg-white/10 rounded-2xl transition-all">
+                           <X className="w-7 h-7" />
+                       </button>
                    </div>
-                   <div className="p-6 space-y-4">
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                           <div>
-                               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Desde</label>
+                   <div className="p-8 space-y-8">
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div className="space-y-2">
+                               <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Desde</label>
                                <DatePicker
                                    selected={parseDateString(newTimeOff.startDate || '')}
                                    onChange={(date) => setNewTimeOff({...newTimeOff, startDate: formatDateToString(date)})}
                                    dateFormat="dd/MM/yyyy"
                                    locale="es"
-                                   className="w-full border border-slate-200 rounded-xl p-2 text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-orange-500"
+                                   className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all hover:bg-white/10"
                                />
                            </div>
-                           <div>
-                               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hasta</label>
+                           <div className="space-y-2">
+                               <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Hasta</label>
                                <DatePicker
                                    selected={parseDateString(newTimeOff.endDate || '')}
                                    onChange={(date) => setNewTimeOff({...newTimeOff, endDate: formatDateToString(date)})}
                                    dateFormat="dd/MM/yyyy"
                                    locale="es"
-                                   className="w-full border border-slate-200 rounded-xl p-2 text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-orange-500"
+                                   className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all hover:bg-white/10"
                                />
                            </div>
                        </div>
                        
-                       <div>
-                           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Duración</label>
-                           <select value={newTimeOff.duration} onChange={(e) => setNewTimeOff({...newTimeOff, duration: e.target.value as any})} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white">
-                               <option value="TODO EL DÍA">TODO EL DÍA</option>
-                               <option value="2 A 4 HRS">2 A 4 HRS</option>
-                               <option value="6 A 8 HRS">6 A 8 HRS</option>
+                       <div className="space-y-2">
+                           <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Duración</label>
+                           <select 
+                               value={newTimeOff.duration} 
+                               onChange={(e) => setNewTimeOff({...newTimeOff, duration: e.target.value as any})} 
+                               className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all appearance-none hover:bg-white/10"
+                           >
+                               <option value="TODO EL DÍA" className="bg-slate-900 text-white">TODO EL DÍA</option>
+                               <option value="2 A 4 HRS" className="bg-slate-900 text-white">2 A 4 HRS</option>
+                               <option value="6 A 8 HRS" className="bg-slate-900 text-white">6 A 8 HRS</option>
                            </select>
                        </div>
 
-                       <div>
-                           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Motivo</label>
-                           <select value={newTimeOff.reason} onChange={(e) => setNewTimeOff({...newTimeOff, reason: e.target.value as any})} className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white">
-                               <option value="JUNTA">JUNTA</option>
-                               <option value="CAPACITACIÓN">CAPACITACIÓN</option>
-                               <option value="PERMISO">PERMISO</option>
-                               <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
+                       <div className="space-y-2">
+                           <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Motivo</label>
+                           <select 
+                               value={newTimeOff.reason} 
+                               onChange={(e) => setNewTimeOff({...newTimeOff, reason: e.target.value as any})} 
+                               className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all appearance-none hover:bg-white/10"
+                           >
+                               <option value="JUNTA" className="bg-slate-900 text-white">JUNTA</option>
+                               <option value="CAPACITACIÓN" className="bg-slate-900 text-white">CAPACITACIÓN</option>
+                               <option value="PERMISO" className="bg-slate-900 text-white">PERMISO</option>
+                               <option value="ADMINISTRATIVO" className="bg-slate-900 text-white">ADMINISTRATIVO</option>
                            </select>
                        </div>
 
-                       <div>
-                           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Notas</label>
-                           <textarea rows={2} value={newTimeOff.notes} onChange={(e) => setNewTimeOff({...newTimeOff, notes: e.target.value.toUpperCase()})} className="w-full border border-slate-200 rounded-xl p-3 text-sm uppercase outline-none resize-none bg-white" />
+                       <div className="space-y-2">
+                           <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Notas</label>
+                           <textarea 
+                               rows={3} 
+                               value={newTimeOff.notes} 
+                               onChange={(e) => setNewTimeOff({...newTimeOff, notes: e.target.value.toUpperCase()})} 
+                               className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-orange-500 outline-none uppercase resize-none transition-all hover:bg-white/10" 
+                               placeholder="DETALLES ADICIONALES..."
+                           />
                        </div>
                    </div>
-                   <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-                       <button onClick={() => setIsTimeOffModalOpen(false)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-xl transition-colors">Cancelar</button>
-                       <button onClick={handleSaveTimeOff} className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">Guardar Ausencia</button>
+                   <div className="p-8 border-t border-white/10 flex justify-end gap-4 bg-white/5">
+                       <button onClick={() => setIsTimeOffModalOpen(false)} className="px-6 py-3 text-sm font-black text-slate-400 hover:text-white hover:bg-white/5 rounded-2xl transition-all uppercase tracking-widest">Cancelar</button>
+                       <button onClick={handleSaveTimeOff} className="px-8 py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 transition-all active:scale-95">Guardar Ausencia</button>
                    </div>
                </div>
            </div>
@@ -1114,23 +1130,35 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
        {/* 4. Time Off Detail/Delete Modal */}
        {selectedTimeOff && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-3xl shadow-xl p-6 w-[95%] md:w-full max-w-sm">
-                    <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-lg font-black text-slate-800 uppercase">{selectedTimeOff.reason}</h3>
-                        <button onClick={() => setSelectedTimeOff(null)}><X className="w-5 h-5 text-slate-400" /></button>
+            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-[2.5rem] border border-slate-300 shadow-2xl p-10 w-[95%] md:w-full max-w-md">
+                    <div className="flex justify-between items-start mb-8">
+                        <h3 className="text-2xl font-black text-white uppercase tracking-tight">{selectedTimeOff.reason}</h3>
+                        <button onClick={() => setSelectedTimeOff(null)} className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all">
+                            <X className="w-6 h-6" />
+                        </button>
                     </div>
-                    <div className="space-y-2 mb-6 text-sm text-slate-600">
-                        <p><span className="font-bold">Periodo:</span> {selectedTimeOff.startDate} - {selectedTimeOff.endDate}</p>
-                        <p><span className="font-bold">Duración:</span> {selectedTimeOff.duration}</p>
-                        {selectedTimeOff.notes && <p className="italic bg-slate-50 p-2 rounded border border-slate-100">"{selectedTimeOff.notes}"</p>}
+                    <div className="space-y-4 mb-10">
+                        <div className="flex items-center gap-4 text-slate-300">
+                            <Calendar className="w-5 h-5 text-blue-500" />
+                            <span className="text-sm font-bold uppercase tracking-wide">{selectedTimeOff.startDate} - {selectedTimeOff.endDate}</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-slate-300">
+                            <Clock className="w-5 h-5 text-blue-500" />
+                            <span className="text-sm font-bold uppercase tracking-wide">{selectedTimeOff.duration}</span>
+                        </div>
+                        {selectedTimeOff.notes && (
+                            <div className="mt-6 p-5 bg-white/5 rounded-2xl border border-white/10">
+                                <p className="text-sm font-medium text-slate-400 italic leading-relaxed">"{selectedTimeOff.notes}"</p>
+                            </div>
+                        )}
                     </div>
                     <div className="flex justify-end">
                         <button 
                             onClick={() => handleDeleteTimeOff(selectedTimeOff.id)}
-                            className="flex items-center text-red-500 hover:text-red-700 font-bold text-sm px-4 py-2 hover:bg-red-50 rounded-xl transition-colors"
+                            className="flex items-center gap-3 text-red-500 hover:text-red-400 font-black text-xs uppercase tracking-widest px-6 py-3 hover:bg-red-500/10 rounded-2xl transition-all"
                         >
-                            <Trash2 className="w-4 h-4 mr-2" /> Eliminar Evento
+                            <Trash2 className="w-5 h-5" /> Eliminar Evento
                         </button>
                     </div>
                 </div>

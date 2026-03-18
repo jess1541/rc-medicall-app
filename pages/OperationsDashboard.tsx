@@ -182,25 +182,28 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
   return (
     <div className="space-y-6 pb-16 animate-fadeIn">
       {/* HERO SECTION */}
-      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-xl border border-slate-100">
-          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center md:text-left">
-            <div className="p-4 md:p-5 bg-indigo-600 rounded-[1.5rem] md:rounded-[2rem] text-white shadow-2xl shadow-indigo-200">
-                <Activity className="w-8 h-8 md:w-10 md:h-10" />
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white/5 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] shadow-2xl border border-white/10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl -z-10 opacity-60"></div>
+          
+          <div className="flex flex-col md:flex-row items-center gap-5 md:gap-8 text-center md:text-left z-10">
+            <div className="p-5 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-[1.5rem] text-white shadow-2xl shadow-indigo-500/30 ring-4 ring-white/5">
+                <Activity className="w-8 h-8" />
             </div>
             <div>
-                <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">
-                    Dashboard <span className="text-indigo-600">Operativos</span>
+                <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter leading-tight">
+                    Dashboard <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-300">Operativos</span>
                 </h1>
-                <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px] mt-1">
+                <p className="text-white/40 font-black uppercase tracking-[0.25em] text-[10px] mt-2 flex items-center gap-2 justify-center md:justify-start">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                     Resumen Mensual • {currentMonthName} {currentYear}
                 </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-4 w-full md:w-auto justify-center">
+          <div className="flex items-center gap-4 w-full md:w-auto justify-center z-10">
              <button 
                 onClick={handleExportExcel}
-                className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-200 transition-all flex items-center gap-2"
+                className="px-6 py-3 bg-emerald-500/80 hover:bg-emerald-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 active:scale-95 border border-white/10"
              >
                 <FileSpreadsheet className="w-4 h-4" /> Descargar Excel
              </button>
@@ -210,38 +213,57 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
       {/* METRICAS PRINCIPALES */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Card 1: Procedimientos */}
-        <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-lg border border-slate-100 relative overflow-hidden group">
-          <Stethoscope className="absolute -right-4 -bottom-4 w-24 h-24 md:w-32 md:h-32 text-slate-50 group-hover:text-indigo-50 transition-colors" />
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 relative z-10">Procedimientos (Mes)</p>
-          <div className="flex items-end gap-2 relative z-10">
-              <span className="text-4xl md:text-5xl font-black text-slate-900">{stats.totalProcedures}</span>
-              <span className="text-xs font-bold text-indigo-600 mb-2 uppercase">Registrados</span>
+        <div className="bg-white/5 backdrop-blur-lg p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-white/10 relative overflow-hidden group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/5 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+          <Stethoscope className="absolute -right-4 -bottom-4 w-24 h-24 text-white/5 group-hover:text-indigo-500/10 transition-colors duration-300" />
+          
+          <div className="relative z-10">
+              <div className="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center mb-4 group-hover:bg-indigo-500/20 transition-colors">
+                  <Stethoscope className="w-5 h-5 text-white/40 group-hover:text-indigo-400" />
+              </div>
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Procedimientos (Mes)</p>
+              <div className="flex items-baseline gap-2">
+                  <span className="text-4xl md:text-5xl font-black text-white tracking-tight">{stats.totalProcedures}</span>
+                  <span className="text-[10px] font-bold text-indigo-400 uppercase">Registrados</span>
+              </div>
           </div>
         </div>
 
         {/* Card 2: Venta Mensual */}
-        <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-lg border border-slate-100 group">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Venta Mensual</p>
-          <div className="flex items-center gap-3">
-              <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl"><DollarSign className="w-6 h-6" /></div>
-              <span className="text-2xl md:text-3xl font-black text-slate-900">${stats.totalSales.toLocaleString()}</span>
+        <div className="bg-white/5 backdrop-blur-lg p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-white/10 relative overflow-hidden group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-500/5 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+          
+          <div className="relative z-10">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition-colors">
+                  <DollarSign className="w-5 h-5 text-emerald-400" />
+              </div>
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Venta Mensual</p>
+              <div className="flex items-center gap-2">
+                  <span className="text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight">${stats.totalSales.toLocaleString()}</span>
+              </div>
+              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="text-[9px] font-black uppercase tracking-wide">Total Facturado</span>
+              </div>
           </div>
-          <p className="text-[9px] font-bold text-emerald-600 uppercase mt-4 flex items-center gap-1">
-              Total Facturado
-          </p>
         </div>
 
         {/* Card 3: Comisiones */}
-        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-xl shadow-purple-200 text-white relative overflow-hidden">
-          <DollarSign className="absolute -right-4 -bottom-4 w-24 h-24 md:w-32 md:h-32 text-white/10" />
-          <p className="text-[10px] font-black text-purple-100 uppercase tracking-widest mb-4 relative z-10">Comisiones (5%)</p>
-          <div className="flex items-end gap-2 relative z-10">
-              <span className="text-3xl md:text-4xl lg:text-4xl xl:text-5xl font-black text-white">
-                ${stats.totalCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-              <div className="mb-2">
-                  <p className="text-[10px] font-bold uppercase opacity-80">Estimado</p>
-                  <p className="text-[10px] font-bold uppercase">Mensual</p>
+        <div className="bg-gradient-to-br from-purple-600/80 to-fuchsia-700/80 backdrop-blur-lg p-6 md:p-8 rounded-[2.5rem] shadow-2xl shadow-purple-500/20 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 border border-white/10">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -mr-16 -mt-16"></div>
+          <DollarSign className="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 group-hover:scale-110 transition-transform duration-500" />
+          
+          <div className="relative z-10">
+              <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center mb-4 backdrop-blur-sm">
+                  <DollarSign className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-[10px] font-black text-purple-100 uppercase tracking-widest mb-1">Comisiones (5%)</p>
+              <div className="flex items-baseline gap-2">
+                  <span className="text-3xl md:text-4xl font-black text-white tracking-tight">
+                    ${stats.totalCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+              </div>
+              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10">
+                  <span className="text-[9px] font-black uppercase tracking-wide">Estimado Mensual</span>
               </div>
           </div>
         </div>
@@ -250,22 +272,22 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
       {/* COMISIONES POR TÉCNICO */}
       <div className="space-y-6">
           <div className="flex items-center gap-3 px-4">
-              <Users className="w-6 h-6 text-indigo-500" />
-              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Comisiones por Técnico (Gestión)</h3>
+              <Users className="w-6 h-6 text-indigo-400" />
+              <h3 className="text-xl font-black text-white uppercase tracking-tight">Comisiones por Técnico (Gestión)</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {stats.technicianStats.map((tech, idx) => (
-                  <div key={idx} className="bg-white p-6 rounded-[2rem] shadow-lg border border-slate-100 hover:shadow-xl transition-all group">
+                  <div key={idx} className="bg-white/5 backdrop-blur-xl p-6 rounded-[2rem] shadow-xl border border-white/10 hover:shadow-2xl transition-all group hover:-translate-y-1">
                       <div className="flex justify-between items-start mb-4">
-                          <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                          <div className="w-10 h-10 rounded-xl bg-white/5 text-white/40 flex items-center justify-center group-hover:bg-indigo-500/20 group-hover:text-indigo-400 transition-colors">
                               <UserIcon className="w-5 h-5" />
                           </div>
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{tech.count} Proc.</span>
+                          <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">{tech.count} Proc.</span>
                       </div>
-                      <h4 className="text-sm font-black text-slate-800 uppercase mb-1">{tech.name}</h4>
+                      <h4 className="text-sm font-black text-white/90 uppercase mb-1">{tech.name}</h4>
                       <div className="flex items-center gap-2">
-                          <span className="text-xl font-black text-indigo-600">${tech.commission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase">Comisión 5%</span>
+                          <span className="text-xl font-black text-indigo-400">${tech.commission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="text-[9px] font-bold text-white/30 uppercase">Comisión 5%</span>
                       </div>
                   </div>
               ))}
@@ -273,62 +295,63 @@ const OperationsDashboard: React.FC<OperationsDashboardProps> = ({ operations, p
       </div>
 
       {/* PROCEDIMIENTOS RECIENTES */}
-      <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
+      <div className="bg-white/5 backdrop-blur-xl p-8 rounded-[3rem] shadow-xl border border-white/10">
           <div className="flex justify-between items-center mb-8">
-              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
-                  <Activity className="w-6 h-6 text-indigo-500" /> Procedimientos Recientes
+              <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
+                  <Activity className="w-6 h-6 text-indigo-400" /> Procedimientos Recientes
               </h3>
+              <div className="px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full text-[9px] font-black uppercase tracking-widest border border-indigo-500/20">Últimos Registros</div>
           </div>
 
           <div className="overflow-x-auto">
               <table className="w-full">
                   <thead>
-                      <tr className="text-left border-b border-slate-50">
-                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
-                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
-                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Remisión</th>
-                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hospital</th>
-                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Procedimiento</th>
-                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Técnico</th>
-                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ejecutivo</th>
-                          <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Monto</th>
+                      <tr className="text-left border-b border-white/5">
+                          <th className="pb-4 text-[10px] font-black text-white/30 uppercase tracking-widest">Fecha</th>
+                          <th className="pb-4 text-[10px] font-black text-white/30 uppercase tracking-widest">Médico</th>
+                          <th className="pb-4 text-[10px] font-black text-white/30 uppercase tracking-widest">Remisión</th>
+                          <th className="pb-4 text-[10px] font-black text-white/30 uppercase tracking-widest">Hospital</th>
+                          <th className="pb-4 text-[10px] font-black text-white/30 uppercase tracking-widest">Procedimiento</th>
+                          <th className="pb-4 text-[10px] font-black text-white/30 uppercase tracking-widest">Técnico</th>
+                          <th className="pb-4 text-[10px] font-black text-white/30 uppercase tracking-widest">Ejecutivo</th>
+                          <th className="pb-4 text-[10px] font-black text-white/30 uppercase tracking-widest">Monto</th>
                       </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-white/5">
                       {recentProcedures.map((op, i) => (
-                          <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
+                          <tr key={i} className="group hover:bg-white/5 transition-colors">
                               <td className="py-5">
-                                  <span className="text-xs font-bold text-slate-500">{op.date}</span>
+                                  <span className="text-xs font-bold text-white/40">{op.date}</span>
                               </td>
                               <td className="py-5">
                                   <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px]">{op.doctorName.charAt(0)}</div>
-                                      <span className="text-xs font-black text-slate-800 uppercase">{op.doctorName}</span>
+                                      <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black text-[10px]">{op.doctorName.charAt(0)}</div>
+                                      <span className="text-xs font-black text-white/90 uppercase">{op.doctorName}</span>
                                   </div>
                               </td>
                               <td className="py-5">
-                                  <span className="text-xs font-medium text-slate-500 uppercase">{op.remissionNumber || '-'}</span>
+                                  <span className="text-xs font-medium text-white/50 uppercase">{op.remissionNumber || '-'}</span>
                               </td>
                               <td className="py-5">
-                                  <span className="text-xs font-medium text-slate-500 uppercase">{op.hospital || '-'}</span>
+                                  <span className="text-xs font-medium text-white/50 uppercase">{op.hospital || '-'}</span>
                               </td>
                               <td className="py-5">
-                                  <span className="text-xs font-medium text-slate-500 uppercase">{op.type}</span>
+                                  <span className="text-xs font-medium text-white/50 uppercase">{op.type}</span>
                               </td>
                               <td className="py-5">
-                                  <span className="text-xs font-medium text-slate-500 uppercase">{op.technician || '-'}</span>
+                                  <span className="text-xs font-medium text-white/50 uppercase">{op.technician || '-'}</span>
                               </td>
                               <td className="py-5">
-                                  <span className="text-xs font-medium text-slate-500 uppercase">{op.executive || '-'}</span>
+                                  <span className="text-xs font-medium text-white/50 uppercase">{op.executive || '-'}</span>
                               </td>
                               <td className="py-5">
-                                  <span className="text-xs font-bold text-slate-700">${(op.cost || 0).toLocaleString()}</span>
+                                  <span className="text-xs font-bold text-white/80">${(op.cost || 0).toLocaleString()}</span>
                               </td>
                           </tr>
                       ))}
                       {recentProcedures.length === 0 && (
                           <tr>
-                              <td colSpan={8} className="py-20 text-center text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                              <td colSpan={8} className="py-20 text-center text-[10px] font-black text-white/20 uppercase tracking-widest">
                                   No hay procedimientos registrados
                               </td>
                           </tr>

@@ -248,21 +248,21 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-10">
-      <button type="button" onClick={() => fromParam === 'calendar' ? navigate('/calendar') : navigate('/doctors')} className="flex items-center text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors bg-white/50 backdrop-blur px-4 py-2 rounded-xl shadow-sm border border-slate-200/60">
+      <button type="button" onClick={() => fromParam === 'calendar' ? navigate('/calendar') : navigate('/doctors')} className="flex items-center text-sm font-bold text-slate-600 hover:text-blue-700 transition-colors bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-300">
         <ArrowLeft className="h-4 w-4 mr-2" /> {fromParam === 'calendar' ? 'Volver al Calendario' : 'Volver al Directorio'}
       </button>
 
-      <div className="bg-white/80 backdrop-blur-md rounded-[2.5rem] shadow-xl shadow-blue-500/5 border border-white/60 overflow-hidden relative">
-        <div className="h-4 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600"></div>
+      <div className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-500/5 border border-slate-300 overflow-hidden relative">
+        <div className="h-4 bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-700"></div>
         <div className="p-6 md:p-8 md:flex md:items-center md:justify-between">
           <div className="flex-1 min-w-0">
              <div className="flex items-center flex-wrap gap-3">
-                 <h2 className="text-2xl md:text-3xl lg:text-4xl font-black leading-7 text-slate-800 uppercase tracking-tight">{doctor.name}</h2>
+                 <h2 className="text-2xl md:text-3xl lg:text-4xl font-black leading-7 text-slate-900 uppercase tracking-tight">{doctor.name}</h2>
                 {doctor.isInsuranceDoctor && isMedico && (
-                    <span className="inline-flex items-center px-3 py-1 rounded-lg text-[10px] md:text-xs font-black bg-gradient-to-r from-yellow-100 to-amber-100 text-amber-700 border border-amber-200 uppercase tracking-wide shadow-sm"><CheckCircle className="w-3 h-3 mr-1" />Médico Aseguradora</span>
+                    <span className="inline-flex items-center px-3 py-1 rounded-lg text-[10px] md:text-xs font-black bg-gradient-to-r from-yellow-50 to-amber-50 text-amber-700 border border-amber-100 uppercase tracking-wide shadow-sm"><CheckCircle className="w-3 h-3 mr-1" />Médico Aseguradora</span>
                 )}
-                {isAdminCat && <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase">Administrativo</span>}
-                {isHospital && <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase">Hospital</span>}
+                {isAdminCat && <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase border border-purple-100">Administrativo</span>}
+                {isHospital && <span className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-[10px] md:text-xs font-bold uppercase border border-emerald-100">Hospital</span>}
              </div>
             <p className="mt-4 text-xs md:text-sm text-slate-500 flex flex-wrap items-center font-medium gap-2">
                 {(isMedico || isAdminCat) && (<span className="font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg uppercase tracking-wide shadow-sm border border-blue-100">{doctor.specialty || 'GENERAL'}</span>)}
@@ -271,24 +271,24 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
             </p>
           </div>
           <div className="mt-6 md:mt-0 md:ml-6 flex flex-col items-start md:items-end">
-                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Ejecutivo Asignado</span>
-                 <span className="text-sm md:text-base font-black text-slate-800 bg-slate-100 px-4 py-2 rounded-xl mt-2 border border-slate-200 shadow-inner uppercase tracking-wide">{doctor.executive}</span>
+                 <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Ejecutivo Asignado</span>
+                 <span className="text-sm md:text-base font-black text-slate-900 bg-slate-100 px-4 py-2 rounded-xl mt-2 border border-slate-300 shadow-inner uppercase tracking-wide">{doctor.executive}</span>
           </div>
         </div>
 
-        <div className="border-t border-slate-100 bg-slate-50/50 px-4 md:px-8 overflow-x-auto no-scrollbar">
+        <div className="border-t border-slate-200 bg-slate-100 px-4 md:px-8 overflow-x-auto no-scrollbar">
             <nav className="-mb-px flex space-x-8 whitespace-nowrap">
-                <button onClick={() => setActiveTab('profile')} className={`py-4 px-1 border-b-4 font-bold text-xs md:text-sm transition-all duration-300 ${activeTab === 'profile' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'}`}><UserCheck className="inline-block w-4 h-4 mr-2" />Ficha</button>
-                <button onClick={() => setActiveTab('visits')} className={`py-4 px-1 border-b-4 font-bold text-xs md:text-sm transition-all duration-300 ${activeTab === 'visits' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-700 hover:border-slate-300'}`}><ClipboardList className="inline-block w-4 h-4 mr-2" />Gestión de Visitas</button>
+                <button onClick={() => setActiveTab('profile')} className={`py-4 px-1 border-b-4 font-bold text-xs md:text-sm transition-all duration-300 ${activeTab === 'profile' ? 'border-blue-700 text-blue-800' : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400'}`}><UserCheck className="inline-block w-4 h-4 mr-2" />Ficha</button>
+                <button onClick={() => setActiveTab('visits')} className={`py-4 px-1 border-b-4 font-bold text-xs md:text-sm transition-all duration-300 ${activeTab === 'visits' ? 'border-blue-700 text-blue-800' : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400'}`}><ClipboardList className="inline-block w-4 h-4 mr-2" />Gestión de Visitas</button>
             </nav>
         </div>
       </div>
 
-      <div className="bg-white/90 backdrop-blur-sm rounded-[2.5rem] shadow-sm border border-white/60 p-8 min-h-[500px]">
+      <div className="bg-white rounded-[2.5rem] shadow-lg border border-slate-300 p-8 min-h-[500px]">
           {activeTab === 'profile' && (
             <div className="space-y-10 animate-fadeIn">
-                <div className="flex justify-between items-center pb-4 border-b border-slate-100 sticky top-0 bg-white/95 z-20 backdrop-blur-sm">
-                     <h3 className="text-xl font-bold text-slate-800 flex items-center"><FileText className="w-5 h-5 mr-2 text-blue-500"/>Información Completa</h3>
+                <div className="flex justify-between items-center pb-4 border-b border-slate-200 sticky top-0 bg-white z-20">
+                     <h3 className="text-xl font-bold text-slate-900 flex items-center"><FileText className="w-5 h-5 mr-2 text-blue-600"/>Información Completa</h3>
                      {!isEditing ? (
                          doctor.status !== 'archived' && (
                              <button type="button" onClick={() => setIsEditing(true)} className="text-sm font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 py-2.5 px-5 rounded-xl transition-all shadow-sm flex items-center"><Edit3 className="w-4 h-4 mr-2"/>Editar Ficha</button>
@@ -303,50 +303,50 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-3">
-                        <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Control de Cartera y Contacto</h4>
+                        <h4 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2">Control de Cartera y Contacto</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                              <div className="lg:col-span-1">
-                                <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2 flex items-center">
-                                    <UserPlus className="w-3 h-3 mr-1 text-blue-500" /> Ejecutivo Asignado
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2 flex items-center">
+                                    <UserPlus className="w-3 h-3 mr-1 text-blue-600" /> Ejecutivo Asignado
                                 </label>
                                 {isEditing && user.role === 'admin' ? (
-                                    <select name="executive" value={formData.executive || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-bold uppercase shadow-sm">
+                                    <select name="executive" value={formData.executive || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-bold uppercase shadow-sm">
                                         {executives.map(e => <option key={e} value={e}>{e}</option>)}
                                     </select>
                                 ) : (
-                                    <p className="text-black font-black text-base uppercase bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between">
+                                    <p className="text-black font-black text-base uppercase bg-slate-100 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
                                         {doctor.executive}
-                                        {user.role === 'admin' && !isEditing && <span className="text-[8px] font-bold text-blue-400 bg-white px-2 py-0.5 rounded border border-blue-100">EDITABLE POR ADMIN</span>}
+                                        {user.role === 'admin' && !isEditing && <span className="text-[8px] font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-blue-200">EDITABLE POR ADMIN</span>}
                                     </p>
                                 )}
                             </div>
                             <div className="lg:col-span-2">
-                                <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Nombre</label>
-                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="name" value={formData.name || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-bold text-base uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.name}</p>)}
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Nombre</label>
+                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="name" value={formData.name || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-bold text-base uppercase bg-slate-100 p-3 rounded-xl border border-slate-200">{doctor.name}</p>)}
                             </div>
                             <div className="lg:col-span-3">
-                                <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Dirección</label>
-                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="address" value={formData.address || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.address}</p>)}
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Dirección</label>
+                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="address" value={formData.address || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-medium uppercase bg-slate-100 p-3 rounded-xl border border-slate-200">{doctor.address}</p>)}
                             </div>
                             <div>
-                                <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Fecha de Nacimiento</label>
-                                {isEditing ? (<DatePicker selected={parseDateString(formData.birthDate || '')} onChange={(date) => handleDateChange(date, 'birthDate')} dateFormat="dd/MM/yyyy" locale="es" className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" placeholderText="DD/MM/AAAA" showYearDropdown scrollableYearDropdown yearDropdownItemNumber={100} />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent flex items-center"><Calendar className="w-3 h-3 mr-2 text-slate-400"/>{doctor.birthDate ? parseDateString(doctor.birthDate)?.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : 'NO REGISTRADA'}</p>)}
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Fecha de Nacimiento</label>
+                                {isEditing ? (<DatePicker selected={parseDateString(formData.birthDate || '')} onChange={(date) => handleDateChange(date, 'birthDate')} dateFormat="dd/MM/yyyy" locale="es" className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" placeholderText="DD/MM/AAAA" showYearDropdown scrollableYearDropdown yearDropdownItemNumber={100} />) : (<p className="text-black font-medium uppercase bg-slate-100 p-3 rounded-xl border border-slate-200 flex items-center"><Calendar className="w-3 h-3 mr-2 text-slate-500"/>{doctor.birthDate ? parseDateString(doctor.birthDate)?.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : 'NO REGISTRADA'}</p>)}
                             </div>
                             <div>
-                                <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Cédula Profesional</label>
-                                {isEditing ? (<input type="text" name="cedula" value={formData.cedula || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="#######" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent flex items-center"><CreditCard className="w-3 h-3 mr-2 text-slate-400"/>{doctor.cedula || 'NO REGISTRADA'}</p>)}
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Cédula Profesional</label>
+                                {isEditing ? (<input type="text" name="cedula" value={formData.cedula || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="#######" />) : (<p className="text-black font-medium uppercase bg-slate-100 p-3 rounded-xl border border-slate-200 flex items-center"><CreditCard className="w-3 h-3 mr-2 text-slate-500"/>{doctor.cedula || 'NO REGISTRADA'}</p>)}
                             </div>
                             <div>
-                                <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Teléfono</label>
-                                {isEditing ? (<input type="text" name="phone" value={formData.phone || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" placeholder="### ### ####" />) : (<p className="text-black font-medium bg-slate-50 p-3 rounded-xl border border-transparent flex items-center"><Phone className="w-3 h-3 mr-2 text-slate-400"/> {doctor.phone || 'NO REGISTRADO'}</p>)}
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Teléfono</label>
+                                {isEditing ? (<input type="text" name="phone" value={formData.phone || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" placeholder="### ### ####" />) : (<p className="text-black font-medium bg-slate-100 p-3 rounded-xl border border-slate-200 flex items-center"><Phone className="w-3 h-3 mr-2 text-slate-500"/> {doctor.phone || 'NO REGISTRADO'}</p>)}
                             </div>
                             <div>
-                                <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Correo Electrónico</label>
-                                {isEditing ? (<input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" />) : (<p className="text-black font-medium bg-slate-50 p-3 rounded-xl border border-transparent flex items-center lowercase"><Mail className="w-3 h-3 mr-2 text-slate-400"/> {doctor.email || 'NO REGISTRADO'}</p>)}
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Correo Electrónico</label>
+                                {isEditing ? (<input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium shadow-sm" />) : (<p className="text-black font-medium bg-slate-100 p-3 rounded-xl border border-slate-200 flex items-center lowercase"><Mail className="w-3 h-3 mr-2 text-slate-500"/> {doctor.email || 'NO REGISTRADO'}</p>)}
                             </div>
                             <div>
-                                <label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Hospital / Ubicación</label>
-                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="hospital" value={formData.hospital || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.hospital || 'NO REGISTRADO'}</p>)}
+                                <label className="block text-xs font-extrabold text-slate-600 uppercase mb-2">Hospital / Ubicación</label>
+                                {isEditing ? (<input spellCheck={true} lang="es" type="text" name="hospital" value={formData.hospital || ''} onChange={handleInputChange} className="block w-full border border-slate-300 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" />) : (<p className="text-black font-medium uppercase bg-slate-100 p-3 rounded-xl border border-slate-200">{doctor.hospital || 'NO REGISTRADO'}</p>)}
                             </div>
                             {!isHospital && (<><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Piso</label>{isEditing ? (<input type="text" name="floor" value={formData.floor || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="EJ: 3" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.floor || 'N/A'}</p>)}</div><div><label className="block text-xs font-extrabold text-slate-500 uppercase mb-2">Oficina</label>{isEditing ? (<input type="text" name="officeNumber" value={formData.officeNumber || ''} onChange={handleInputChange} className="block w-full border border-slate-200 rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 bg-white font-medium uppercase shadow-sm" placeholder="EJ: 305" />) : (<p className="text-black font-medium uppercase bg-slate-50 p-3 rounded-xl border border-transparent">{doctor.officeNumber || 'N/A'}</p>)}</div></div></>)}
                             {isMedico && isEditing && (
@@ -403,19 +403,19 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
 
           {activeTab === 'visits' && (
             <div className="space-y-8 animate-fadeIn">
-               <div className="bg-slate-50/50 rounded-3xl border border-slate-200 overflow-hidden">
-                   <div className="flex border-b border-slate-200 bg-white p-2 gap-2"><button onClick={() => setVisitType('report')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${visitType === 'report' ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-inner' : 'text-slate-500 hover:bg-slate-50'}`}>Reportar Visita</button><button onClick={() => setVisitType('plan')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${visitType === 'plan' ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-inner' : 'text-slate-500 hover:bg-slate-50'}`}>Planear Siguiente</button></div>
+               <div className="bg-slate-100 rounded-3xl border border-slate-300 overflow-hidden">
+                   <div className="flex border-b border-slate-300 bg-white p-2 gap-2"><button onClick={() => setVisitType('report')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${visitType === 'report' ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-inner' : 'text-slate-500 hover:bg-slate-50'}`}>Reportar Visita</button><button onClick={() => setVisitType('plan')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${visitType === 'plan' ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 shadow-inner' : 'text-slate-500 hover:bg-slate-50'}`}>Planear Siguiente</button></div>
                     <div className="p-8">
                         <form onSubmit={handleAddInteraction} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Fecha</label>
-                                    <DatePicker selected={parseDateString(newVisit.date || '')} onChange={(date) => setNewVisit({...newVisit, date: formatDateToString(date)})} dateFormat="dd/MM/yyyy" locale="es" showMonthDropdown showYearDropdown dropdownMode="select" className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm" required />
+                                    <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Fecha</label>
+                                    <DatePicker selected={parseDateString(newVisit.date || '')} onChange={(date) => setNewVisit({...newVisit, date: formatDateToString(date)})} dateFormat="dd/MM/yyyy" locale="es" showMonthDropdown showYearDropdown dropdownMode="select" className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm" required />
                                 </div>
                                 {visitType === 'plan' && (
                                     <div>
-                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Hora</label>
-                                        <select value={newVisit.time} onChange={(e) => setNewVisit({...newVisit, time: e.target.value})} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm">
+                                        <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Hora</label>
+                                        <select value={newVisit.time} onChange={(e) => setNewVisit({...newVisit, time: e.target.value})} className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm">
                                             <option value="">SIN HORA</option>
                                             {timeSlots.map(time => <option key={time} value={time}>{time}</option>)}
                                         </select>
@@ -423,8 +423,8 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                                 )}
                                 {visitType === 'report' && (
                                     <div>
-                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Resultado</label>
-                                        <select value={newVisit.outcome || 'SEGUIMIENTO'} onChange={(e) => setNewVisit({...newVisit, outcome: e.target.value as any})} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm">
+                                        <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Resultado</label>
+                                        <select value={newVisit.outcome || 'SEGUIMIENTO'} onChange={(e) => setNewVisit({...newVisit, outcome: e.target.value as any})} className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 font-medium shadow-sm">
                                             <option value="SEGUIMIENTO">SEGUIMIENTO</option>
                                             <option value="COTIZACIÓN">COTIZACIÓN</option>
                                             <option value="INTERESADO">INTERESADO</option>
@@ -434,21 +434,21 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                                 )}
                             </div>
                             <div>
-                                <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Objetivo de la Visita</label>
-                                <textarea spellCheck={true} lang="es" value={newVisit.objective || ''} onChange={(e) => setNewVisit({...newVisit, objective: e.target.value.toUpperCase()})} placeholder="DESCRIBA EL PROPÓSITO DE LA VISITA..." rows={2} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
+                                <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Objetivo de la Visita</label>
+                                <textarea spellCheck={true} lang="es" value={newVisit.objective || ''} onChange={(e) => setNewVisit({...newVisit, objective: e.target.value.toUpperCase()})} placeholder="DESCRIBA EL PROPÓSITO DE LA VISITA..." rows={2} className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
                             </div>
                             {visitType === 'report' && (
                                 <>
                                     <div>
-                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Reporte / Resultado</label>
-                                        <textarea spellCheck={true} lang="es" value={newVisit.note || ''} onChange={(e) => setNewVisit({...newVisit, note: e.target.value.toUpperCase()})} placeholder="DETALLES RELEVANTES DE LA INTERACCIÓN..." rows={3} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
+                                        <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Reporte / Resultado</label>
+                                        <textarea spellCheck={true} lang="es" value={newVisit.note || ''} onChange={(e) => setNewVisit({...newVisit, note: e.target.value.toUpperCase()})} placeholder="DETALLES RELEVANTES DE LA INTERACCIÓN..." rows={3} className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-2">Seguimiento / Próximo Paso</label>
-                                        <textarea spellCheck={true} lang="es" value={newVisit.followUp || ''} onChange={(e) => setNewVisit({...newVisit, followUp: e.target.value.toUpperCase()})} placeholder="COMPROMISOS O ACCIONES A SEGUIR..." rows={2} className="block w-full border border-slate-200 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
+                                        <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-widest mb-2">Seguimiento / Próximo Paso</label>
+                                        <textarea spellCheck={true} lang="es" value={newVisit.followUp || ''} onChange={(e) => setNewVisit({...newVisit, followUp: e.target.value.toUpperCase()})} placeholder="COMPROMISOS O ACCIONES A SEGUIR..." rows={2} className="block w-full border border-slate-300 bg-white rounded-xl p-3 text-sm text-black focus:ring-2 focus:ring-blue-500 resize-none uppercase shadow-sm" />
                                     </div>
                                     <div className="flex items-center gap-4 pt-2">
-                                        <button type="button" onClick={() => handleGetLocation()} disabled={isGettingLocation || !!newVisit.checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${newVisit.checkIn ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
+                                        <button type="button" onClick={() => handleGetLocation()} disabled={isGettingLocation || !!newVisit.checkIn} className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${newVisit.checkIn ? 'bg-green-100 text-green-800 border border-green-300 cursor-default' : 'bg-slate-200 text-slate-700 hover:bg-slate-300 border border-slate-300'}`}>
                                             {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : newVisit.checkIn ? <CheckCircle className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
                                             {isGettingLocation ? 'Obteniendo...' : newVisit.checkIn ? 'Ubicación Registrada' : 'Registrar Ubicación (Check-in)'}
                                         </button>
@@ -465,30 +465,30 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                </div>
 
                <div className="mt-10">
-                   <h4 className="text-xl font-black text-slate-800 mb-6 pl-3 border-l-4 border-blue-500">Historial de Visitas</h4>
+                   <h4 className="text-xl font-black text-slate-900 mb-6 pl-3 border-l-4 border-blue-600">Historial de Visitas</h4>
                    {doctor.visits.filter(v => v.status === 'completed' || !v.status).length > 0 ? (
-                       <ul className="space-y-6 relative before:absolute before:inset-0 before:ml-8 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-slate-200 before:to-transparent">
+                       <ul className="space-y-6 relative before:absolute before:inset-0 before:ml-8 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-slate-300 before:to-transparent">
                            {doctor.visits.filter(v => v.status === 'completed' || !v.status).map((visit) => (
-                               <li key={visit.id} className="relative pl-16 group"><div className="absolute left-4 top-5 w-8 h-8 rounded-full bg-white border-4 border-blue-500 shadow-md flex items-center justify-center z-10"><div className="w-2.5 h-2.5 bg-blue-500 rounded-full"></div></div>
-                                   <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 relative pr-12"><button type="button" onClick={(e) => { e.stopPropagation(); confirmDelete(visit.id); }} className="absolute top-4 right-4 p-2 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all shadow-sm z-10 cursor-pointer" title="Eliminar este reporte"><Trash2 className="h-4 w-4" /></button>
-                                       <div className="flex flex-col md:flex-row justify-between items-start mb-4 gap-2"><div className="flex items-center"><div><span className="block text-lg font-bold text-slate-800">{visit.date}</span>{visit.time && <span className="text-sm text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-lg mr-2">{visit.time}</span>}<span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Visita Completada</span></div></div><span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide shadow-sm ${visit.outcome === 'INTERESADO' ? 'bg-green-100 text-green-700' : visit.outcome === 'COTIZACIÓN' ? 'bg-blue-100 text-blue-700' : visit.outcome === 'CITA' ? 'bg-pink-100 text-pink-700' : 'bg-slate-100 text-slate-700'}`}>{visit.outcome}</span></div>
+                               <li key={visit.id} className="relative pl-16 group"><div className="absolute left-4 top-5 w-8 h-8 rounded-full bg-white border-4 border-blue-600 shadow-md flex items-center justify-center z-10"><div className="w-2.5 h-2.5 bg-blue-500 rounded-full"></div></div>
+                                   <div className="bg-white border border-slate-300 rounded-3xl p-6 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 relative pr-12"><button type="button" onClick={(e) => { e.stopPropagation(); confirmDelete(visit.id); }} className="absolute top-4 right-4 p-2 bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-700 rounded-xl transition-all shadow-sm z-10 cursor-pointer" title="Eliminar este reporte"><Trash2 className="h-4 w-4" /></button>
+                                       <div className="flex flex-col md:flex-row justify-between items-start mb-4 gap-2"><div className="flex items-center"><div><span className="block text-lg font-bold text-slate-900">{visit.date}</span>{visit.time && <span className="text-sm text-blue-700 font-bold bg-blue-100 px-2 py-0.5 rounded-lg mr-2">{visit.time}</span>}<span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Visita Completada</span></div></div><span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide shadow-sm ${visit.outcome === 'INTERESADO' ? 'bg-green-200 text-green-800' : visit.outcome === 'COTIZACIÓN' ? 'bg-blue-200 text-blue-800' : visit.outcome === 'CITA' ? 'bg-pink-200 text-pink-800' : 'bg-slate-200 text-slate-800'}`}>{visit.outcome}</span></div>
                                        <div className="space-y-3">
-                                           {visit.objective && (<div className="text-sm flex items-start"><span className="font-bold text-slate-700 mr-2 min-w-[80px]">Objetivo:</span><span className="text-slate-600 bg-slate-50 px-2 rounded uppercase">{visit.objective}</span></div>)}
-                                           <div className="text-sm text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-100 italic leading-relaxed uppercase">"{visit.note}"</div>
-                                           {visit.followUp && (<div className="text-sm pt-1 flex items-start"><span className="font-bold text-blue-600 mr-2 min-w-[80px]">Seguimiento:</span><span className="text-slate-600 font-medium uppercase">{visit.followUp}</span></div>)}
+                                           {visit.objective && (<div className="text-sm flex items-start"><span className="font-bold text-slate-800 mr-2 min-w-[80px]">Objetivo:</span><span className="text-slate-700 bg-slate-100 px-2 rounded uppercase">{visit.objective}</span></div>)}
+                                           <div className="text-sm text-slate-800 bg-slate-100 p-4 rounded-xl border border-slate-200 italic leading-relaxed uppercase">"{visit.note}"</div>
+                                           {visit.followUp && (<div className="text-sm pt-1 flex items-start"><span className="font-bold text-blue-700 mr-2 min-w-[80px]">Seguimiento:</span><span className="text-slate-700 font-medium uppercase">{visit.followUp}</span></div>)}
                                            {visit.checkIn && (
-                                                <div className="text-xs pt-2 border-t border-slate-100 mt-2 flex items-center text-slate-500">
-                                                    <MapPin className="w-3 h-3 mr-1 text-green-500" />
+                                                <div className="text-xs pt-2 border-t border-slate-200 mt-2 flex items-center text-slate-600">
+                                                    <MapPin className="w-3 h-3 mr-1 text-green-600" />
                                                     <span className="font-bold mr-1">Ubicación Registrada:</span>
                                                     <a 
                                                         href={`https://www.google.com/maps?q=${visit.checkIn.lat},${visit.checkIn.lng}`} 
                                                         target="_blank" 
                                                         rel="noopener noreferrer"
-                                                        className="text-blue-500 hover:underline flex items-center"
+                                                        className="text-blue-600 hover:underline flex items-center"
                                                     >
                                                         Ver en Mapa <ExternalLink className="w-3 h-3 ml-1" />
                                                     </a>
-                                                    <span className="ml-2 text-slate-400">({new Date(visit.checkIn.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
+                                                    <span className="ml-2 text-slate-500">({new Date(visit.checkIn.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})</span>
                                                 </div>
                                            )}
                                        </div>
@@ -496,7 +496,7 @@ const DoctorProfile: React.FC<DoctorProfileProps> = ({ doctors, onUpdate, onDele
                                </li>
                            ))}
                        </ul>
-                   ) : (<div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200"><FileText className="h-12 w-12 mx-auto text-slate-300 mb-4" /><p className="text-slate-500 font-bold text-lg">No hay visitas reportadas aún.</p><p className="text-slate-400 text-sm">Registra tu primera interacción arriba.</p></div>)}
+                   ) : (<div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300"><FileText className="h-12 w-12 mx-auto text-slate-200 mb-4" /><p className="text-slate-600 font-bold text-lg">No hay visitas reportadas aún.</p><p className="text-slate-500 text-sm">Registra tu primera interacción arriba.</p></div>)}
                </div>
             </div>
           )}

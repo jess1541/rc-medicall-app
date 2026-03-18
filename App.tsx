@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import ParticleBackground from './components/ParticleBackground';
 import Dashboard from './pages/Dashboard';
 import DoctorList from './pages/DoctorList';
 import DoctorProfile from './pages/DoctorProfile';
@@ -10,6 +11,7 @@ import OperationsManager from './pages/OperationsManager';
 import OperationsDashboard from './pages/OperationsDashboard';
 import UserManagement from './pages/UserManagement';
 import Login from './components/Login';
+import Logo from './components/Logo';
 import { Doctor, User, Procedure, Operation, TimeOffEvent } from './types';
 import { Menu } from 'lucide-react';
 import { parseData } from './constants';
@@ -308,13 +310,16 @@ const App: React.FC = () => {
 
   return (
     <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <div className="flex flex-col h-[100dvh] bg-[#f8fafc] overflow-hidden">
+      <div className="flex flex-col h-[100dvh] bg-transparent text-slate-700 overflow-hidden font-sans selection:bg-blue-500/30">
+        <ParticleBackground />
+        
         {dbStatus === 'disconnected' && (
-          <div className="bg-red-600 text-white px-4 py-2 text-center text-[10px] font-bold animate-pulse z-[100] shadow-lg uppercase tracking-widest">
+          <div className="bg-red-500/10 backdrop-blur-md text-red-600 px-4 py-2 text-center text-[10px] font-bold animate-pulse z-[100] border-b border-red-500/20 uppercase tracking-widest">
             ⚠️ Error de Conexión MongoDB: Configura MONGO_URI en los ajustes del proyecto para persistir datos.
           </div>
         )}
-        <div className="flex flex-1 overflow-hidden">
+        
+        <div className="flex flex-1 overflow-hidden relative z-10">
           <Sidebar 
             user={user} 
             onLogout={handleLogout} 
@@ -326,85 +331,85 @@ const App: React.FC = () => {
             toggleCollapse={() => { setIsSidebarCollapsed(!isSidebarCollapsed); localStorage.setItem('sidebar_collapsed', String(!isSidebarCollapsed)); }}
           />
           
-          <div className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-72'}`}>
-          <div className="md:hidden p-4 bg-slate-900/95 backdrop-blur-xl text-white flex justify-between items-center sticky top-0 z-30 border-b border-slate-800/50 shadow-2xl">
-             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                    <span className="font-black text-white text-xs">RC</span>
-                </div>
-                <span className="font-black tracking-tighter text-lg">MediCall</span>
-             </div>
-             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 bg-slate-800 rounded-xl text-cyan-400 hover:bg-slate-700 transition-colors border border-slate-700 shadow-lg active:scale-95">
-                <Menu className="w-5 h-5" />
-             </button>
+          <div className={`flex-1 flex flex-col h-full relative transition-all duration-500 ease-in-out ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-72'}`}>
+            <div className="md:hidden p-4 bg-white/60 backdrop-blur-xl text-slate-800 flex justify-between items-center sticky top-0 z-30 border-b border-slate-200 shadow-sm">
+               <div className="flex items-center">
+                  <Logo className="h-10 w-auto" />
+               </div>
+               <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 bg-slate-100 rounded-xl text-blue-600 hover:bg-slate-200 transition-all border border-slate-200 shadow-sm active:scale-95">
+                  <Menu className="w-5 h-5" />
+               </button>
+            </div>
+            
+            <main className="flex-1 overflow-auto p-4 md:p-10 custom-scrollbar">
+              <div className="max-w-7xl mx-auto">
+                <Routes>
+                  <Route path="/" element={<Dashboard doctors={doctors} user={user} procedures={procedures} isOnline={isOnline} />} />
+                  <Route path="/doctors" element={
+                    <DoctorList 
+                        doctors={doctors} 
+                        user={user} 
+                        onAddDoctor={updateDoctor} 
+                        onBulkAddDoctors={handleBulkAddDoctors} 
+                        onDeleteDoctor={handleDeleteDoctor}
+                        onBulkDeleteDoctors={handleBulkDeleteDoctors}
+                        onClearCategory={handleClearCategory}
+                    />} 
+                  />
+                  <Route path="/doctors/:id" element={<DoctorProfile doctors={doctors} onUpdate={updateDoctor} onDeleteVisit={(did, vid) => {
+                     const doc = doctors.find(d => d.id === did);
+                     if (doc) updateDoctor({ ...doc, visits: doc.visits.filter(v => v.id !== vid) });
+                  }} user={user} />} />
+                  <Route path="/calendar" element={
+                    <ExecutiveCalendar 
+                      doctors={doctors} 
+                      timeOffEvents={timeOffEvents}
+                      onUpdateDoctor={updateDoctor}
+                      onSaveTimeOff={handleSaveTimeOff}
+                      onDeleteTimeOff={handleDeleteTimeOff}
+                      onDeleteVisit={(did, vid) => {
+                        const doc = doctors.find(d => d.id === did);
+                        if (doc) updateDoctor({ ...doc, visits: doc.visits.filter(v => v.id !== vid) });
+                      }} 
+                      user={user} 
+                    />
+                  } />
+                  <Route path="/procedures" element={
+                      <ProceduresManager 
+                        procedures={procedures} 
+                        doctors={doctors} 
+                        onAddProcedure={handleAddProcedure} 
+                        onUpdateProcedure={handleUpdateProcedure} 
+                        onDeleteProcedure={handleDeleteProcedure} 
+                        user={user} 
+                      />
+                  } />
+                  <Route path="/operations-dashboard" element={
+                      <OperationsDashboard 
+                        operations={operations} 
+                        procedures={procedures}
+                        doctors={doctors}
+                      />
+                  } />
+                  <Route path="/operations" element={
+                      <OperationsManager 
+                        operations={operations} 
+                        doctors={doctors} 
+                        onAddOperation={handleAddOperation} 
+                        onUpdateOperation={handleUpdateOperation} 
+                        onDeleteOperation={handleDeleteOperation} 
+                        user={user} 
+                      />
+                  } />
+                  <Route path="/users" element={<UserManagement user={user} />} />
+                  <Route path="/location-history" element={<LocationHistory doctors={doctors} />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </div>
+            </main>
           </div>
-          <main className="flex-1 overflow-auto p-4 md:p-8 custom-scrollbar bg-[#f8fafc]">
-            <Routes>
-              <Route path="/" element={<Dashboard doctors={doctors} user={user} procedures={procedures} isOnline={isOnline} />} />
-              <Route path="/doctors" element={
-                <DoctorList 
-                    doctors={doctors} 
-                    user={user} 
-                    onAddDoctor={updateDoctor} 
-                    onBulkAddDoctors={handleBulkAddDoctors} 
-                    onDeleteDoctor={handleDeleteDoctor}
-                    onBulkDeleteDoctors={handleBulkDeleteDoctors}
-                    onClearCategory={handleClearCategory}
-                />} 
-              />
-              <Route path="/doctors/:id" element={<DoctorProfile doctors={doctors} onUpdate={updateDoctor} onDeleteVisit={(did, vid) => {
-                 const doc = doctors.find(d => d.id === did);
-                 if (doc) updateDoctor({ ...doc, visits: doc.visits.filter(v => v.id !== vid) });
-              }} user={user} />} />
-              <Route path="/calendar" element={
-                <ExecutiveCalendar 
-                  doctors={doctors} 
-                  timeOffEvents={timeOffEvents}
-                  onUpdateDoctor={updateDoctor}
-                  onSaveTimeOff={handleSaveTimeOff}
-                  onDeleteTimeOff={handleDeleteTimeOff}
-                  onDeleteVisit={(did, vid) => {
-                    const doc = doctors.find(d => d.id === did);
-                    if (doc) updateDoctor({ ...doc, visits: doc.visits.filter(v => v.id !== vid) });
-                  }} 
-                  user={user} 
-                />
-              } />
-              <Route path="/procedures" element={
-                  <ProceduresManager 
-                    procedures={procedures} 
-                    doctors={doctors} 
-                    onAddProcedure={handleAddProcedure} 
-                    onUpdateProcedure={handleUpdateProcedure} 
-                    onDeleteProcedure={handleDeleteProcedure} 
-                    user={user} 
-                  />
-              } />
-              <Route path="/operations-dashboard" element={
-                  <OperationsDashboard 
-                    operations={operations} 
-                    procedures={procedures}
-                    doctors={doctors}
-                  />
-              } />
-              <Route path="/operations" element={
-                  <OperationsManager 
-                    operations={operations} 
-                    doctors={doctors} 
-                    onAddOperation={handleAddOperation} 
-                    onUpdateOperation={handleUpdateOperation} 
-                    onDeleteOperation={handleDeleteOperation} 
-                    user={user} 
-                  />
-              } />
-              <Route path="/users" element={<UserManagement user={user} />} />
-              <Route path="/location-history" element={<LocationHistory doctors={doctors} />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
         </div>
       </div>
-    </div>
     </HashRouter>
   );
 };

@@ -5,7 +5,7 @@ import {
   Users, TrendingUp, Filter, 
   Award, Activity, DollarSign, Calendar, 
   ArrowUpRight, Clock, MapPin, 
-  BarChart3, PieChart, Zap, ChevronRight, Stethoscope, Wallet,
+  BarChart3, PieChart, Zap, ChevronRight, Stethoscope,
   Download, FileSpreadsheet, X
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -257,18 +257,18 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
   return (
     <div className="space-y-6 pb-16 animate-fadeIn">
       {/* HERO SECTION */}
-      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-100/60 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-full blur-3xl -z-10 opacity-60"></div>
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-400 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 rounded-full blur-3xl -z-10 opacity-60"></div>
           
           <div className="flex flex-col md:flex-row items-center gap-5 md:gap-8 text-center md:text-left z-10">
-            <div className="p-5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-[1.5rem] text-white shadow-2xl shadow-blue-500/30 ring-4 ring-blue-50">
+            <div className="p-5 bg-gradient-to-br from-blue-600 to-blue-700 rounded-[1.5rem] text-white shadow-xl shadow-blue-500/20 ring-4 ring-white/50">
                 <Zap className="w-8 h-8" />
             </div>
             <div>
                 <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter leading-tight">
-                    Dashboard <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Estratégico</span>
+                    Dashboard <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-blue-500">Estratégico</span>
                 </h1>
-                <p className="text-slate-400 font-black uppercase tracking-[0.25em] text-[10px] mt-2 flex items-center gap-2 justify-center md:justify-start">
+                <p className="text-slate-700 font-black uppercase tracking-[0.25em] text-[10px] mt-2 flex items-center gap-2 justify-center md:justify-start">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                     {user.role === 'admin' ? `Control Global • ${filterExecutive || 'Todo el Equipo'}` : `Mis KPIs • ${user.name}`}
                 </p>
@@ -277,11 +277,11 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
           
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-center z-10">
             <div className={`px-5 py-2.5 rounded-2xl flex items-center gap-2.5 border font-black text-[10px] uppercase tracking-widest shadow-sm ${isOnline ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-rose-500'}`}></div>
+                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.2)]' : 'bg-rose-500'}`}></div>
                 {isOnline ? 'Sincronizado' : 'Modo Local'}
             </div>
             {user.role === 'admin' && filterExecutive && (
-                <button onClick={() => { setFilterExecutive(null); navigate('/'); }} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-all active:scale-95 border border-slate-200">
+                <button onClick={() => { setFilterExecutive(null); navigate('/'); }} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl transition-all active:scale-95 border border-slate-200">
                     <Filter className="w-4 h-4" />
                 </button>
             )}
@@ -291,15 +291,15 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       {/* METRICAS PRINCIPALES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Card 1: Cartera */}
-        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-100/60 relative overflow-hidden group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-50 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
-          <Users className="absolute -right-4 -bottom-4 w-24 h-24 text-slate-100 group-hover:text-blue-50 transition-colors duration-300" />
+        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-md border border-slate-300 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-100 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+          <Users className="absolute -right-4 -bottom-4 w-24 h-24 text-slate-200 group-hover:text-blue-500/5 transition-colors duration-300" />
           
           <div className="relative z-10">
-              <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center mb-4 group-hover:bg-blue-50 transition-colors">
-                  <Users className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
+              <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
+                  <Users className="w-5 h-5 text-slate-700 group-hover:text-blue-600" />
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cartera Total</p>
+              <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Cartera Total</p>
               <div className="flex items-baseline gap-2">
                   <span className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">{stats.totalDoctors}</span>
                   <span className="text-[10px] font-bold text-slate-400 uppercase">Contactos</span>
@@ -308,7 +308,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         </div>
 
         {/* Card 2: Efectividad */}
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 md:p-8 rounded-[2.5rem] shadow-2xl shadow-blue-500/20 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
+        <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-6 md:p-8 rounded-[2.5rem] shadow-xl shadow-blue-500/20 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300 border border-white/10">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -mr-16 -mt-16"></div>
           <TrendingUp className="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 group-hover:scale-110 transition-transform duration-500" />
           
@@ -327,18 +327,18 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         </div>
 
         {/* Card 3: Ventas */}
-        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-100/60 relative overflow-hidden group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-50 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-md border border-slate-300 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-100 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
           
           <div className="relative z-10">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center mb-4 group-hover:bg-emerald-100 transition-colors">
-                  <DollarSign className="w-5 h-5 text-emerald-500" />
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
+                  <DollarSign className="w-5 h-5 text-emerald-600" />
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ventas del Mes</p>
+              <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Ventas del Mes</p>
               <div className="flex items-center gap-2">
                   <span className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">${stats.totalRevenue.toLocaleString()}</span>
               </div>
-              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
+              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-200">
                   <ArrowUpRight className="w-3 h-3" />
                   <span className="text-[9px] font-black uppercase tracking-wide">Facturación</span>
               </div>
@@ -346,21 +346,20 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         </div>
 
         {/* Card 4: Comisiones */}
-        <div className="bg-gradient-to-br from-purple-600 to-fuchsia-700 p-6 md:p-8 rounded-[2.5rem] shadow-2xl shadow-purple-500/20 text-white relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -mr-16 -mt-16"></div>
-          <Wallet className="absolute -right-4 -bottom-4 w-24 h-24 text-white/10 group-hover:scale-110 transition-transform duration-500" />
+        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-md border border-slate-300 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-100 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
           
           <div className="relative z-10">
-              <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center mb-4 backdrop-blur-sm">
-                  <PieChart className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center mb-4 group-hover:bg-slate-200 transition-colors">
+                  <PieChart className="w-5 h-5 text-slate-700" />
               </div>
-              <p className="text-[10px] font-black text-purple-100 uppercase tracking-widest mb-1">Comisiones (3%)</p>
+              <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Comisiones (3%)</p>
               <div className="flex items-baseline gap-2">
-                  <span className="text-3xl md:text-4xl font-black text-white tracking-tight">
+                  <span className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
                     ${stats.totalCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
               </div>
-              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md border border-white/10">
+              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
                   <span className="text-[9px] font-black uppercase tracking-wide">Estimado Mensual</span>
               </div>
           </div>
@@ -368,39 +367,39 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       </div>
 
       {/* CENTRO DE REPORTES Y DESCARGAS */}
-      <div className="bg-slate-900 p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-10"><FileSpreadsheet className="w-40 h-40 text-white" /></div>
+      <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-lg border border-slate-400 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-5"><FileSpreadsheet className="w-40 h-40 text-slate-900" /></div>
           <div className="relative z-10">
-              <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-tight mb-6 flex items-center gap-3">
-                  <Download className="w-6 h-6 text-emerald-400" /> Centro de Reportes
+              <h3 className="text-lg md:text-xl font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-3">
+                  <Download className="w-6 h-6 text-blue-700" /> Centro de Reportes
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button 
                       onClick={handleExportVisits}
-                      className="bg-white/10 hover:bg-white/20 border border-white/10 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
+                      className="bg-slate-100 hover:bg-slate-200 border border-slate-200 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
                   >
                       <div className="flex items-center gap-4">
-                          <div className="p-3 bg-blue-500 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Users className="w-6 h-6" /></div>
+                          <div className="p-3 bg-blue-700 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Users className="w-6 h-6" /></div>
                           <div className="text-left">
-                              <p className="text-sm font-bold text-white uppercase">Reporte de Visitas</p>
-                              <p className="text-[10px] font-medium text-slate-400">Historial completo en Excel</p>
+                              <p className="text-sm font-bold text-slate-900 uppercase">Reporte de Visitas</p>
+                              <p className="text-[10px] font-medium text-slate-700">Historial completo en Excel</p>
                           </div>
                       </div>
-                      <Download className="w-5 h-5 text-slate-400 group-hover:text-white" />
+                      <Download className="w-5 h-5 text-slate-400 group-hover:text-blue-700" />
                   </button>
 
                   <button 
                       onClick={handleExportProcedures}
-                      className="bg-white/10 hover:bg-white/20 border border-white/10 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
+                      className="bg-slate-100 hover:bg-slate-200 border border-slate-200 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
                   >
                       <div className="flex items-center gap-4">
-                          <div className="p-3 bg-purple-500 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Activity className="w-6 h-6" /></div>
+                          <div className="p-3 bg-indigo-700 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Activity className="w-6 h-6" /></div>
                           <div className="text-left">
-                              <p className="text-sm font-bold text-white uppercase">Reporte de Procedimientos</p>
-                              <p className="text-[10px] font-medium text-slate-400">Detalle financiero y estado</p>
+                              <p className="text-sm font-bold text-slate-900 uppercase">Reporte de Procedimientos</p>
+                              <p className="text-[10px] font-medium text-slate-700">Detalle financiero y estado</p>
                           </div>
                       </div>
-                      <Download className="w-5 h-5 text-slate-400 group-hover:text-white" />
+                      <Download className="w-5 h-5 text-slate-400 group-hover:text-indigo-700" />
                   </button>
               </div>
           </div>
@@ -410,7 +409,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
           {/* COLUMNA IZQUIERDA: PIPELINE Y CARTERA */}
           <div className="lg:col-span-2 space-y-8">
               {/* PIPELINE COMERCIAL */}
-              <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
+              <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200">
                   <div className="flex justify-between items-center mb-8">
                       <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
                           <BarChart3 className="w-6 h-6 text-blue-600" /> Pipeline de Conversión
@@ -423,14 +422,14 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                           <div 
                             key={key} 
                             onClick={() => setSelectedStage(key)}
-                            className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                            className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:border-blue-500/30 hover:bg-blue-50 transition-all cursor-pointer group"
                           >
                               <div className="flex justify-between items-center mb-2">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-500">{key}</p>
-                                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all" />
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-blue-600">{key}</p>
+                                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all" />
                               </div>
                               <div className="flex justify-between items-end">
-                                  <span className="text-3xl font-black text-slate-800 group-hover:text-blue-700">{value}</span>
+                                  <span className="text-3xl font-black text-slate-900 group-hover:text-blue-600">{value}</span>
                                   <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                       <div 
                                         className="h-full bg-blue-600" 
@@ -444,10 +443,10 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
               </div>
 
               {/* DISTRIBUCIÓN DE CARTERA */}
-              <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100 relative overflow-hidden">
+              <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200 relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8 opacity-5"><Award className="w-40 h-40 text-slate-900" /></div>
                   <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8 relative z-10 flex items-center gap-3">
-                      <PieChart className="w-6 h-6 text-indigo-500" /> Análisis de Clasificación
+                      <PieChart className="w-6 h-6 text-indigo-600" /> Análisis de Clasificación
                   </h3>
                   
                   <div className="space-y-6 relative z-10">
@@ -459,8 +458,8 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                       ].map((item) => (
                         <div key={item.label}>
                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-black text-slate-500 uppercase">{item.label}</span>
-                                <span className="text-xs font-black text-slate-800">{item.count}</span>
+                                <span className="text-xs font-black text-slate-400 uppercase">{item.label}</span>
+                                <span className="text-xs font-black text-slate-900">{item.count}</span>
                             </div>
                             <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                                 <div 
@@ -477,7 +476,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
           {/* COLUMNA DERECHA: AGENDA Y ACTIVIDAD */}
           <div className="space-y-8">
               {/* PROXIMAS ACTIVIDADES */}
-              <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100 h-full">
+              <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200 h-full">
                   <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-3">
                       <Calendar className="w-5 h-5 text-blue-600" /> Próxima Agenda
                   </h3>
@@ -487,7 +486,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                           <div 
                             key={idx} 
                             onClick={() => navigate(`/doctors/${visit.docId}`)}
-                            className="p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-blue-200 cursor-pointer transition-all group"
+                            className="p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-blue-500/30 cursor-pointer transition-all group"
                           >
                               <div className="flex justify-between items-start mb-2">
                                   <span className="text-[9px] font-black bg-white px-2 py-1 rounded-lg text-blue-600 shadow-sm border border-slate-100 uppercase">{visit.date}</span>
@@ -497,7 +496,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                                   </div>
                               </div>
                               <p className="text-xs font-black text-slate-800 uppercase truncate group-hover:text-blue-600">{visit.docName}</p>
-                              <div className="flex items-center gap-1 mt-1 opacity-50">
+                              <div className="flex items-center gap-1 mt-1 opacity-60">
                                   <MapPin className="w-3 h-3" />
                                   <p className="text-[9px] font-bold uppercase truncate">{visit.hospital || 'Consultorio'}</p>
                               </div>
@@ -511,7 +510,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                       
                       <button 
                         onClick={() => navigate('/calendar')}
-                        className="w-full py-4 mt-2 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-blue-400 hover:text-blue-600 transition-all"
+                        className="w-full py-4 mt-2 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest hover:border-blue-500/40 hover:text-blue-600 transition-all"
                       >
                           Ver Calendario Completo
                       </button>
@@ -521,10 +520,10 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       </div>
 
       {/* ACTIVIDAD RECIENTE (CRM FEED) */}
-      <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
+      <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200">
           <div className="flex justify-between items-center mb-8">
               <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
-                  <Activity className="w-6 h-6 text-emerald-500" /> Actividad Reciente
+                  <Activity className="w-6 h-6 text-emerald-600" /> Actividad Reciente
               </h3>
               <div className="flex gap-2">
                   <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest">Feed Directo</div>
@@ -534,7 +533,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
           <div className="overflow-x-auto">
               <table className="w-full">
                   <thead>
-                      <tr className="text-left border-b border-slate-50">
+                      <tr className="text-left border-b border-slate-100">
                           <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
                           <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
                           <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Especialidad</th>
@@ -548,9 +547,9 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                       {stats.recentActivity.map((act, i) => (
-                          <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
+                          <tr key={i} className="group hover:bg-slate-50 transition-colors">
                               <td className="py-5">
-                                  <span className="text-xs font-bold text-slate-500">{act.date}</span>
+                                  <span className="text-xs font-bold text-slate-400">{act.date}</span>
                               </td>
                               <td className="py-5">
                                   <div className="flex items-center gap-3">
@@ -569,7 +568,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                                       act.classification === 'A' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                                       act.classification === 'B' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                                       act.classification === 'C' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
-                                      'bg-slate-50 text-slate-500 border-slate-100'
+                                      'bg-slate-50 text-slate-400 border-slate-100'
                                   }`}>
                                       {act.classification || 'C'}
                                   </span>
@@ -581,11 +580,11 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                                   <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
                                       act.outcome === 'INTERESADO' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                                       act.outcome === 'COTIZACIÓN' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                      'bg-slate-50 text-slate-500 border-slate-100'
+                                      'bg-slate-50 text-slate-400 border-slate-100'
                                   }`}>{act.outcome}</span>
                               </td>
                               <td className="py-5 max-w-xs">
-                                  <p className="text-xs text-slate-500 truncate italic">{act.note || 'Sin comentarios adicionales.'}</p>
+                                  <p className="text-xs text-slate-400 truncate italic">{act.note || 'Sin comentarios adicionales.'}</p>
                               </td>
                               <td className="py-5 text-right">
                                   <button onClick={() => navigate(`/doctors/${act.docId}`)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors">
@@ -607,20 +606,20 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       </div>
 
       {/* PROCEDIMIENTOS RECIENTES */}
-      <div className="bg-white p-8 rounded-[3rem] shadow-xl border border-slate-100">
+      <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200">
           <div className="flex justify-between items-center mb-8">
               <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
-                  <Stethoscope className="w-6 h-6 text-purple-500" /> Procedimientos Recientes
+                  <Stethoscope className="w-6 h-6 text-indigo-600" /> Procedimientos Recientes
               </h3>
               <div className="flex gap-2">
-                  <div className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-[9px] font-black uppercase tracking-widest">Últimos Registros</div>
+                  <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[9px] font-black uppercase tracking-widest">Últimos Registros</div>
               </div>
           </div>
 
           <div className="overflow-x-auto">
               <table className="w-full">
                   <thead>
-                      <tr className="text-left border-b border-slate-50">
+                      <tr className="text-left border-b border-slate-100">
                           <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha</th>
                           <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Médico</th>
                           <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Procedimiento</th>
@@ -633,13 +632,13 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                       {stats.recentProcedures.map((proc, i) => (
-                          <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
+                          <tr key={i} className="group hover:bg-slate-50 transition-colors">
                               <td className="py-5">
-                                  <span className="text-xs font-bold text-slate-500">{proc.date}</span>
+                                  <span className="text-xs font-bold text-slate-400">{proc.date}</span>
                               </td>
                               <td className="py-5">
                                   <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-black text-[10px]">{proc.doctorName.charAt(0)}</div>
+                                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px]">{proc.doctorName.charAt(0)}</div>
                                       <span className="text-xs font-black text-slate-800 uppercase">{proc.doctorName}</span>
                                   </div>
                               </td>
@@ -669,7 +668,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                                   </span>
                               </td>
                               <td className="py-5 text-right">
-                                  <button onClick={() => navigate(`/procedures`)} className="p-2 text-slate-300 hover:text-purple-600 transition-colors">
+                                  <button onClick={() => navigate(`/procedures`)} className="p-2 text-slate-300 hover:text-indigo-600 transition-colors">
                                       <ChevronRight className="w-5 h-5" />
                                   </button>
                               </td>
@@ -688,11 +687,11 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       </div>
       {/* MODAL DETALLE PIPELINE */}
       {selectedStage && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl w-full max-w-4xl overflow-hidden animate-fadeIn border border-white/20 flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-[2rem] md:rounded-[3rem] shadow-2xl w-full max-w-4xl overflow-hidden animate-fadeIn border border-slate-200 flex flex-col max-h-[85vh]">
                 <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <div>
-                        <h3 className="text-xl md:text-2xl font-black text-black uppercase tracking-tight flex items-center gap-3">
+                        <h3 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
                             <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                             Detalle: <span className="text-blue-600">{selectedStage}</span>
                         </h3>
@@ -700,12 +699,12 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                             {stageDetails.length} Registros encontrados
                         </p>
                     </div>
-                    <button onClick={() => setSelectedStage(null)} className="p-2 md:p-3 bg-white rounded-2xl text-slate-400 hover:text-red-500 transition-all shadow-sm">
+                    <button onClick={() => setSelectedStage(null)} className="p-2 md:p-3 bg-slate-100 rounded-2xl text-slate-400 hover:text-rose-500 transition-all shadow-sm border border-slate-200">
                         <X className="h-5 w-5 md:h-6 md:w-6" />
                     </button>
                 </div>
                 
-                <div className="p-4 md:p-8 overflow-y-auto custom-scrollbar">
+                <div className="p-4 md:p-8 overflow-y-auto custom-scrollbar bg-white">
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[600px]">
                             <thead>
@@ -721,12 +720,12 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {stageDetails.map((item, idx) => (
-                                    <tr key={idx} className="group hover:bg-slate-50/50 transition-colors">
-                                        <td className="py-4 text-xs font-bold text-slate-500">{item.date}</td>
+                                    <tr key={idx} className="group hover:bg-slate-50 transition-colors">
+                                        <td className="py-4 text-xs font-bold text-slate-400">{item.date}</td>
                                         <td className="py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-black text-[10px]">{item.doctor.charAt(0)}</div>
-                                                <span className="text-xs font-black text-slate-800 uppercase">{item.doctor}</span>
+                                                <span className="text-xs font-black text-slate-800 uppercase group-hover:text-blue-600">{item.doctor}</span>
                                             </div>
                                         </td>
                                         <td className="py-4 text-xs font-medium text-slate-500 uppercase">{item.specialty || '-'}</td>
@@ -735,13 +734,13 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                                                 item.classification === 'A' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                                                 item.classification === 'B' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                                                 item.classification === 'C' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
-                                                'bg-slate-50 text-slate-500 border-slate-100'
+                                                'bg-slate-50 text-slate-400 border-slate-100'
                                             }`}>
                                                 {item.classification || 'C'}
                                             </span>
                                         </td>
                                         <td className="py-4 text-xs font-medium text-slate-500 uppercase">{item.executive}</td>
-                                        <td className="py-4 text-xs text-slate-500 italic max-w-xs truncate">{item.notes}</td>
+                                        <td className="py-4 text-xs text-slate-400 italic max-w-xs truncate">{item.notes}</td>
                                         <td className="py-4 text-right">
                                             <button onClick={() => navigate(`/doctors/${item.docId}`)} className="p-2 text-slate-300 hover:text-blue-600 transition-colors">
                                                 <ChevronRight className="w-4 h-4" />

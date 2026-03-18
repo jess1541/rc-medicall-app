@@ -454,7 +454,7 @@ const ProceduresManager: React.FC<ProceduresManagerProps> = ({ procedures, docto
                                                 <Plus className="w-4 h-4 text-indigo-400" />
                                             </div>
                                         </div>
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 overflow-y-auto max-h-[100px] no-scrollbar">
                                             {dayProcedures.map(proc => (
                                                 <div 
                                                     key={proc.id}

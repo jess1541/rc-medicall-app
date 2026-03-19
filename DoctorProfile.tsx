@@ -257,7 +257,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
   return (
     <div className="space-y-6 pb-16 animate-fadeIn">
       {/* HERO SECTION */}
-      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-400 relative overflow-hidden">
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-6 bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-200 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 rounded-full blur-3xl -z-10 opacity-60"></div>
           
           <div className="flex flex-col md:flex-row items-center gap-5 md:gap-8 text-center md:text-left z-10">
@@ -266,9 +266,9 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
             </div>
             <div>
                 <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter leading-tight">
-                    Dashboard <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-blue-500">Estratégico</span>
+                    Dashboard <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-400">Estratégico</span>
                 </h1>
-                <p className="text-slate-700 font-black uppercase tracking-[0.25em] text-[10px] mt-2 flex items-center gap-2 justify-center md:justify-start">
+                <p className="text-slate-400 font-black uppercase tracking-[0.25em] text-[10px] mt-2 flex items-center gap-2 justify-center md:justify-start">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                     {user.role === 'admin' ? `Control Global • ${filterExecutive || 'Todo el Equipo'}` : `Mis KPIs • ${user.name}`}
                 </p>
@@ -281,7 +281,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
                 {isOnline ? 'Sincronizado' : 'Modo Local'}
             </div>
             {user.role === 'admin' && filterExecutive && (
-                <button onClick={() => { setFilterExecutive(null); navigate('/'); }} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl transition-all active:scale-95 border border-slate-200">
+                <button onClick={() => { setFilterExecutive(null); navigate('/'); }} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-all active:scale-95 border border-slate-200">
                     <Filter className="w-4 h-4" />
                 </button>
             )}
@@ -291,18 +291,18 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       {/* METRICAS PRINCIPALES */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Card 1: Cartera */}
-        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-md border border-slate-300 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-100 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
-          <Users className="absolute -right-4 -bottom-4 w-24 h-24 text-slate-200 group-hover:text-blue-500/5 transition-colors duration-300" />
+        <div className="bg-blue-50 p-6 md:p-8 rounded-[2.5rem] shadow-md border border-blue-100 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-blue-100/50 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+          <Users className="absolute -right-4 -bottom-4 w-24 h-24 text-blue-200/20 group-hover:text-blue-500/10 transition-colors duration-300" />
           
           <div className="relative z-10">
-              <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
-                  <Users className="w-5 h-5 text-slate-700 group-hover:text-blue-600" />
+              <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center mb-4 shadow-sm group-hover:bg-blue-100 transition-colors">
+                  <Users className="w-5 h-5 text-blue-500" />
               </div>
-              <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Cartera Total</p>
+              <p className="text-[10px] font-black text-blue-600/60 uppercase tracking-widest mb-1">Cartera Total</p>
               <div className="flex items-baseline gap-2">
                   <span className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">{stats.totalDoctors}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Contactos</span>
+                  <span className="text-[10px] font-bold text-blue-400 uppercase">Contactos</span>
               </div>
           </div>
         </div>
@@ -327,14 +327,14 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         </div>
 
         {/* Card 3: Ventas */}
-        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-md border border-slate-300 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-100 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+        <div className="bg-emerald-50 p-6 md:p-8 rounded-[2.5rem] shadow-md border border-emerald-100 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-100/50 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
           
           <div className="relative z-10">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
-                  <DollarSign className="w-5 h-5 text-emerald-600" />
+              <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center mb-4 shadow-sm group-hover:bg-emerald-100 transition-colors">
+                  <DollarSign className="w-5 h-5 text-emerald-500" />
               </div>
-              <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Ventas del Mes</p>
+              <p className="text-[10px] font-black text-emerald-600/60 uppercase tracking-widest mb-1">Ventas del Mes</p>
               <div className="flex items-center gap-2">
                   <span className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">${stats.totalRevenue.toLocaleString()}</span>
               </div>
@@ -346,20 +346,20 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
         </div>
 
         {/* Card 4: Comisiones */}
-        <div className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-md border border-slate-300 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-100 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
+        <div className="bg-amber-50 p-6 md:p-8 rounded-[2.5rem] shadow-md border border-amber-100 relative overflow-hidden group hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-amber-100/50 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
           
           <div className="relative z-10">
-              <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center mb-4 group-hover:bg-slate-200 transition-colors">
-                  <PieChart className="w-5 h-5 text-slate-700" />
+              <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center mb-4 shadow-sm group-hover:bg-amber-100 transition-colors">
+                  <PieChart className="w-5 h-5 text-amber-600" />
               </div>
-              <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1">Comisiones (3%)</p>
+              <p className="text-[10px] font-black text-amber-600/60 uppercase tracking-widest mb-1">Comisiones (3%)</p>
               <div className="flex items-baseline gap-2">
                   <span className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
                     ${stats.totalCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
               </div>
-              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+              <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 border border-amber-200">
                   <span className="text-[9px] font-black uppercase tracking-wide">Estimado Mensual</span>
               </div>
           </div>
@@ -367,39 +367,39 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       </div>
 
       {/* CENTRO DE REPORTES Y DESCARGAS */}
-      <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-lg border border-slate-400 relative overflow-hidden">
+      <div className="bg-white p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-lg border border-slate-200 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-5"><FileSpreadsheet className="w-40 h-40 text-slate-900" /></div>
           <div className="relative z-10">
               <h3 className="text-lg md:text-xl font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-3">
-                  <Download className="w-6 h-6 text-blue-700" /> Centro de Reportes
+                  <Download className="w-6 h-6 text-blue-600" /> Centro de Reportes
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button 
                       onClick={handleExportVisits}
-                      className="bg-slate-100 hover:bg-slate-200 border border-slate-200 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
+                      className="bg-slate-50 hover:bg-slate-100 border border-slate-200 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
                   >
                       <div className="flex items-center gap-4">
-                          <div className="p-3 bg-blue-700 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Users className="w-6 h-6" /></div>
+                          <div className="p-3 bg-blue-600 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Users className="w-6 h-6" /></div>
                           <div className="text-left">
-                              <p className="text-sm font-bold text-slate-900 uppercase">Reporte de Visitas</p>
-                              <p className="text-[10px] font-medium text-slate-700">Historial completo en Excel</p>
+                              <p className="text-sm font-bold text-slate-800 uppercase">Reporte de Visitas</p>
+                              <p className="text-[10px] font-medium text-slate-400">Historial completo en Excel</p>
                           </div>
                       </div>
-                      <Download className="w-5 h-5 text-slate-400 group-hover:text-blue-700" />
+                      <Download className="w-5 h-5 text-slate-300 group-hover:text-blue-600" />
                   </button>
 
                   <button 
                       onClick={handleExportProcedures}
-                      className="bg-slate-100 hover:bg-slate-200 border border-slate-200 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
+                      className="bg-slate-50 hover:bg-slate-100 border border-slate-200 p-4 md:p-6 rounded-2xl flex items-center justify-between group transition-all"
                   >
                       <div className="flex items-center gap-4">
-                          <div className="p-3 bg-indigo-700 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Activity className="w-6 h-6" /></div>
+                          <div className="p-3 bg-indigo-600 rounded-xl text-white shadow-lg group-hover:scale-110 transition-transform"><Activity className="w-6 h-6" /></div>
                           <div className="text-left">
-                              <p className="text-sm font-bold text-slate-900 uppercase">Reporte de Procedimientos</p>
-                              <p className="text-[10px] font-medium text-slate-700">Detalle financiero y estado</p>
+                              <p className="text-sm font-bold text-slate-800 uppercase">Reporte de Procedimientos</p>
+                              <p className="text-[10px] font-medium text-slate-400">Detalle financiero y estado</p>
                           </div>
                       </div>
-                      <Download className="w-5 h-5 text-slate-400 group-hover:text-indigo-700" />
+                      <Download className="w-5 h-5 text-slate-300 group-hover:text-indigo-600" />
                   </button>
               </div>
           </div>
@@ -409,7 +409,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
           {/* COLUMNA IZQUIERDA: PIPELINE Y CARTERA */}
           <div className="lg:col-span-2 space-y-8">
               {/* PIPELINE COMERCIAL */}
-              <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200">
+              <div className="bg-white p-8 rounded-[3rem] shadow-lg border border-slate-200">
                   <div className="flex justify-between items-center mb-8">
                       <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
                           <BarChart3 className="w-6 h-6 text-blue-600" /> Pipeline de Conversión
@@ -443,7 +443,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
               </div>
 
               {/* DISTRIBUCIÓN DE CARTERA */}
-              <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200 relative overflow-hidden">
+              <div className="bg-white p-8 rounded-[3rem] shadow-lg border border-slate-200 relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8 opacity-5"><Award className="w-40 h-40 text-slate-900" /></div>
                   <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8 relative z-10 flex items-center gap-3">
                       <PieChart className="w-6 h-6 text-indigo-600" /> Análisis de Clasificación
@@ -476,7 +476,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
           {/* COLUMNA DERECHA: AGENDA Y ACTIVIDAD */}
           <div className="space-y-8">
               {/* PROXIMAS ACTIVIDADES */}
-              <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200 h-full">
+              <div className="bg-white p-8 rounded-[3rem] shadow-lg border border-slate-200 h-full">
                   <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-6 flex items-center gap-3">
                       <Calendar className="w-5 h-5 text-blue-600" /> Próxima Agenda
                   </h3>
@@ -520,7 +520,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       </div>
 
       {/* ACTIVIDAD RECIENTE (CRM FEED) */}
-      <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200">
+      <div className="bg-white p-8 rounded-[3rem] shadow-lg border border-slate-200">
           <div className="flex justify-between items-center mb-8">
               <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
                   <Activity className="w-6 h-6 text-emerald-600" /> Actividad Reciente
@@ -606,7 +606,7 @@ const Dashboard: React.FC<DashboardProps> = ({ doctors, user, procedures, isOnli
       </div>
 
       {/* PROCEDIMIENTOS RECIENTES */}
-      <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-lg border border-slate-200">
+      <div className="bg-white p-8 rounded-[3rem] shadow-lg border border-slate-200">
           <div className="flex justify-between items-center mb-8">
               <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
                   <Stethoscope className="w-6 h-6 text-indigo-600" /> Procedimientos Recientes

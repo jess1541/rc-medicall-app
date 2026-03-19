@@ -10,7 +10,7 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
-        background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+        background: #f1f5f9;
         color: #1e293b;
         overflow-x: hidden;
         min-height: 100dvh;

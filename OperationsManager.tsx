@@ -541,7 +541,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
       const isAppointment = !isTimeOff && isCita(evt.data.visit);
       
       const chipClasses = isSlot 
-        ? `absolute left-0 right-0 mx-2 p-2 rounded shadow-sm cursor-pointer transition-colors z-10 border-l-4 ${
+        ? `relative w-full p-2 rounded shadow-sm cursor-pointer transition-colors z-10 border-l-4 mb-1 ${
             isAppointment 
             ? 'bg-pink-100 border-pink-500 hover:bg-pink-200 cursor-default' 
             : (isCompleted 
@@ -598,28 +598,28 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
   return (
     <div className="space-y-6 md:space-y-8 pb-10 relative animate-fadeIn">
 
-        {/* TOOLBAR */}
-        <div className="flex flex-col xl:flex-row justify-between items-center bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-300 shadow-xl gap-6">
-            <div className="text-center xl:text-left w-full xl:w-auto">
-                <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight flex items-center justify-center xl:justify-start gap-3">
-                    <CalendarClock className="w-8 h-8 md:w-10 md:h-10 text-blue-700" />
-                    CALENDARIO <span className="text-blue-700">EJECUTIVO</span>
-                </h1>
-                <p className="text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest mt-2">Gestión de rutas y tiempos operativos.</p>
-            </div>
-            
-            <div className="flex flex-col md:flex-row gap-4 items-center w-full xl:w-auto">
-                <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full md:w-auto border border-slate-200">
-                    {(['month', 'week', 'day'] as ViewMode[]).map(mode => (
-                        <button
-                            key={mode}
-                            onClick={() => setViewMode(mode)}
-                            className={`flex-1 md:flex-none px-6 md:px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'}`}
-                        >
-                            {mode === 'month' ? 'Mes' : (mode === 'week' ? 'Semana' : 'Día')}
-                        </button>
-                    ))}
-                </div>
+       {/* TOOLBAR */}
+       <div className="flex flex-col xl:flex-row justify-between items-center bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-200 shadow-xl gap-6">
+           <div className="text-center xl:text-left w-full xl:w-auto">
+               <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight flex items-center justify-center xl:justify-start gap-3">
+                   <CalendarClock className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
+                   CALENDARIO <span className="text-blue-600">EJECUTIVO</span>
+               </h1>
+               <p className="text-xs md:text-sm text-slate-400 font-bold uppercase tracking-widest mt-2">Gestión de rutas y tiempos operativos.</p>
+           </div>
+           
+           <div className="flex flex-col md:flex-row gap-4 items-center w-full xl:w-auto">
+               <div className="flex bg-slate-50 p-1.5 rounded-2xl w-full md:w-auto border border-slate-100">
+                   {(['month', 'week', 'day'] as ViewMode[]).map(mode => (
+                       <button
+                           key={mode}
+                           onClick={() => setViewMode(mode)}
+                           className={`flex-1 md:flex-none px-6 md:px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                       >
+                           {mode === 'month' ? 'Mes' : (mode === 'week' ? 'Semana' : 'Día')}
+                       </button>
+                   ))}
+               </div>
 
                <div className="flex gap-3 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
                    <button 
@@ -656,11 +656,11 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
        </div>
 
        {/* CALENDAR HEADER CONTROLS */}
-       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 md:p-8 rounded-[2.5rem] shadow-lg border border-slate-300 gap-6">
+       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 md:p-8 rounded-[2.5rem] shadow-lg border border-slate-200 gap-6">
            <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-               <button onClick={prevPeriod} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors text-slate-500 hover:text-blue-700"><ChevronLeft className="w-6 h-6" /></button>
+               <button onClick={prevPeriod} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors text-slate-400 hover:text-blue-600"><ChevronLeft className="w-6 h-6" /></button>
                <h2 className="text-lg md:text-2xl font-black text-slate-900 uppercase tracking-tight text-center flex-1 md:flex-none">{getHeaderTitle()}</h2>
-               <button onClick={nextPeriod} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors text-slate-500 hover:text-blue-700"><ChevronRight className="w-6 h-6" /></button>
+               <button onClick={nextPeriod} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors text-slate-400 hover:text-blue-600"><ChevronRight className="w-6 h-6" /></button>
            </div>
            
            <div className="flex items-center gap-3 w-full md:w-auto">
@@ -668,14 +668,14 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                    <select 
                        value={selectedExecutive} 
                        onChange={(e) => setSelectedExecutive(e.target.value)}
-                       className="w-full md:w-64 appearance-none bg-slate-100 border border-slate-300 text-slate-800 text-xs font-black uppercase tracking-wide rounded-2xl py-3 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                       className="w-full md:w-64 appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-xs font-black uppercase tracking-wide rounded-2xl py-3 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                        disabled={user.role === 'executive'}
                    >
                        {executives.map(e => <option key={e} value={e} className="bg-white text-slate-900">{e}</option>)}
                    </select>
-                   <UserIcon className="absolute right-3 top-3 w-4 h-4 text-slate-500 pointer-events-none" />
+                   <UserIcon className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
                </div>
-               <button onClick={() => setCurrentDate(new Date())} className="px-4 py-3 bg-blue-100 text-blue-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-200 transition-colors whitespace-nowrap border border-blue-200">
+               <button onClick={() => setCurrentDate(new Date())} className="px-4 py-3 bg-blue-50 text-blue-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-colors whitespace-nowrap border border-blue-100">
                    Hoy
                </button>
            </div>
@@ -692,15 +692,15 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
 
        {/* CALENDAR VIEW */}
-       <div className="bg-white rounded-[2.5rem] border border-slate-300 shadow-xl overflow-hidden flex flex-col h-[65vh] md:h-[75vh] min-h-[500px]">
+       <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden flex flex-col h-[65vh] md:h-[75vh] min-h-[500px]">
 
 
            <div className="flex-1 overflow-auto bg-transparent">
                <div className={`h-full flex flex-col ${viewMode !== 'day' ? 'min-w-[800px]' : 'min-w-full'}`}>
                    {viewMode !== 'day' && (
-                       <div className="grid grid-cols-7 border-b border-slate-300 bg-slate-200 flex-shrink-0">
+                       <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
                            {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
-                               <div key={d} className="py-3 text-center text-[10px] font-black text-slate-700 uppercase tracking-widest">{d}</div>
+                               <div key={d} className="py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">{d}</div>
                            ))}
                        </div>
                    )}
@@ -715,13 +715,13 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                            if (viewMode === 'day' && day) {
                                return (
                                    <div key={idx} className="flex-1 bg-transparent p-4 md:p-8 animate-fadeIn flex">
-                                       <div className="w-24 flex-shrink-0 border-r border-slate-300 pr-4 pt-2">
+                                       <div className="w-24 flex-shrink-0 border-r border-slate-100 pr-4 pt-2">
                                            {visitTimeSlots.map(time => (
-                                               <div key={time} className="h-24 text-xs font-bold text-slate-700 flex items-start justify-between group relative">
+                                               <div key={time} className="h-24 text-xs font-bold text-slate-400 flex items-start justify-between group relative">
                                                    <span className="-mt-3 bg-white pr-2 z-10">{time}</span>
                                                    <button 
                                                         onClick={(e) => { e.stopPropagation(); handleTimeSlotClick(time); }}
-                                                        className="absolute right-0 top-0 bg-blue-100 text-blue-700 hover:bg-blue-700 hover:text-white rounded-full p-1.5 transition-all transform active:scale-95 z-20 md:opacity-0 md:group-hover:opacity-100 border border-blue-200"
+                                                        className="absolute right-0 top-0 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-full p-1.5 transition-all transform active:scale-95 z-20 md:opacity-0 md:group-hover:opacity-100 border border-blue-100"
                                                         title="Planear Visita aquí"
                                                    >
                                                        <Plus className="h-3 w-3" />
@@ -734,7 +734,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                             {visitTimeSlots.map((time, tIdx) => (
                                                  <div 
                                                     key={`line-${time}`} 
-                                                    className="absolute w-full border-t border-slate-300"
+                                                    className="absolute w-full border-t border-slate-100"
                                                     style={{ top: `${tIdx * 6}rem` }}
                                                  ></div>
                                             ))}
@@ -747,7 +747,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                                         onClick={() => handleTimeSlotClick(time)}
                                                         onDragOver={handleDragOver}
                                                         onDrop={(e) => handleDrop(e, day, time)}
-                                                        className="absolute w-full hover:bg-slate-100 transition-colors z-0 cursor-pointer rounded-xl"
+                                                        className="absolute w-full hover:bg-slate-50/50 transition-colors z-0 cursor-pointer rounded-xl flex flex-col p-1 overflow-y-auto no-scrollbar"
                                                         style={{ top: `${tIdx * 6}rem`, height: '6rem' }}
                                                     >
                                                         {slotEvents.map((evt, i) => renderEventChip(evt, i, true))}
@@ -766,18 +766,18 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                                    onDragOver={handleDragOver}
                                    onDrop={(e) => handleDrop(e, day)}
                                    onClick={() => handleDayClick(day)}
-                                   className={`min-h-[140px] bg-white p-3 border border-slate-300 hover:bg-slate-50 transition-all cursor-pointer relative group flex flex-col gap-2 ${isToday ? 'bg-blue-50 ring-1 ring-inset ring-blue-500/30' : ''}`}
+                                   className={`min-h-[140px] bg-transparent p-3 border border-slate-100 hover:bg-slate-50/50 transition-all cursor-pointer relative group flex flex-col gap-2 ${isToday ? 'bg-blue-50 ring-1 ring-inset ring-blue-500/20' : ''}`}
                                >
                                    <div className="flex justify-between items-start">
-                                        <span className={`text-xs font-black w-7 h-7 flex items-center justify-center rounded-full transition-all ${isToday ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-600 group-hover:text-slate-900'}`}>
+                                        <span className={`text-xs font-black w-7 h-7 flex items-center justify-center rounded-full transition-all ${isToday ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-400 group-hover:text-slate-900'}`}>
                                             {day.getDate()}
                                         </span>
-                                        <button className="opacity-0 group-hover:opacity-100 bg-slate-100 p-1.5 rounded-xl text-slate-600 hover:text-blue-600 transition-all border border-slate-300">
+                                        <button className="opacity-0 group-hover:opacity-100 bg-slate-50 p-1.5 rounded-xl text-slate-400 hover:text-blue-600 transition-all border border-slate-200">
                                             <Plus className="h-3.5 w-3.5" />
                                         </button>
                                    </div>
                                    
-                                   <div className="flex-1 w-full space-y-1.5">
+                                   <div className="flex-1 w-full overflow-y-auto space-y-1.5">
                                        {events.map((evt, i) => renderEventChip(evt, i))}
                                    </div>
                                </div>
@@ -791,34 +791,34 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
        {/* 1. Plan Visit Modal */}
        {isModalOpen && (
            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-               <div className="bg-white rounded-[2.5rem] border border-slate-300 shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+               <div className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
                    <div className="p-8 border-b border-white/10 flex justify-between items-center bg-white/5">
-                       <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
-                           {isAppointmentMode ? <Clock className="w-6 h-6 text-pink-600" /> : <Calendar className="w-6 h-6 text-blue-500" />}
+                       <h3 className="text-xl font-black text-white flex items-center gap-3">
+                           {isAppointmentMode ? <Clock className="w-6 h-6 text-pink-500" /> : <Calendar className="w-6 h-6 text-blue-500" />}
                            {isAppointmentMode ? (editingAppointment ? 'EDITAR CITA' : 'PROGRAMAR CITA') : 'PLANEAR VISITA'}
                        </h3>
-                       <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-xl transition-all text-slate-500 hover:text-slate-900">
+                       <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all text-slate-400 hover:text-white">
                            <X className="w-6 h-6" />
                        </button>
                    </div>
                    <div className="p-8 space-y-6 overflow-y-auto">
                         {isAppointmentMode && (
-                           <div className="bg-pink-50 p-4 rounded-2xl border border-pink-200 flex items-center text-pink-800 text-xs font-bold">
+                           <div className="bg-pink-500/10 p-4 rounded-2xl border border-pink-500/20 flex items-center text-pink-400 text-xs font-bold">
                                <Lock className="w-4 h-4 mr-3" />
                                {editingAppointment ? 'Modo Edición - Cambio de Contacto' : 'Cita Bloqueada - Prioridad Alta'}
                            </div>
                         )}
 
                         <div className="space-y-2">
-                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Contacto</label>
+                            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Contacto</label>
                             <div className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                                 <input 
                                     type="text" 
                                     placeholder="BUSCAR MÉDICO..." 
                                     value={searchDoctorTerm} 
                                     onChange={(e) => setSearchDoctorTerm(e.target.value.toUpperCase())}
-                                    className="w-full pl-12 pr-4 py-4 bg-white border border-slate-300 rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                    className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold text-white placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                 />
                             </div>
                             {searchDoctorTerm && (
@@ -842,24 +842,24 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                            <div className="space-y-2">
-                               <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Fecha</label>
+                               <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Fecha</label>
                                <DatePicker
                                    selected={planDate}
                                    onChange={(date) => date && setPlanDate(date)}
                                    disabled={!!editingAppointment}
                                    dateFormat="dd/MM/yyyy"
                                    locale="es"
-                                   className={`w-full bg-white border border-slate-300 rounded-2xl p-4 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all ${!!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
+                                   className={`w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all ${!!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
                                />
                            </div>
 
                            <div className="space-y-2">
-                               <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Hora</label>
+                               <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Hora</label>
                                <select 
                                    value={appointmentTime} 
                                    onChange={(e) => setAppointmentTime(e.target.value)}
                                    disabled={!!editingAppointment}
-                                   className={`w-full bg-white border border-slate-300 rounded-2xl p-4 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none ${!!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
+                                   className={`w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none ${!!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
                                >
                                    {(isAppointmentMode ? appointmentTimeSlots : visitTimeSlots).map(t => <option key={t} value={t} className="bg-slate-900 text-white">{t}</option>)}
                                </select>
@@ -867,13 +867,13 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
                         </div>
 
                         <div className="space-y-2">
-                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest ml-1">{isAppointmentMode ? 'Objetivo Cita' : 'Objetivo SMART'}</label>
+                            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">{isAppointmentMode ? 'Objetivo Cita' : 'Objetivo SMART'}</label>
                             <textarea 
                                 rows={3}
                                 value={planObjective}
                                 onChange={(e) => setPlanObjective(e.target.value.toUpperCase())}
                                 disabled={isAppointmentMode || !!editingAppointment}
-                                className={`w-full bg-white border border-slate-300 rounded-2xl p-4 text-sm uppercase font-bold text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all ${isAppointmentMode || !!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
+                                className={`w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm uppercase font-bold text-white placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all ${isAppointmentMode || !!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
                                 placeholder={isAppointmentMode ? "MOTIVO DE LA CITA..." : "ESPECÍFICO, MEDIBLE, ALCANZABLE..."}
                             />
                         </div>
@@ -889,7 +889,7 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
        {/* 2. Report/Edit Modal */}
        {reportModalOpen && selectedVisitToReport && (
            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-               <div className="bg-white rounded-[2.5rem] border border-slate-300 shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+               <div className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
                    <div className="p-8 border-b border-white/10 flex justify-between items-center bg-white/5">
                        <div>
                            <div className="flex space-x-6 mb-3">
@@ -1048,8 +1048,8 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
        {/* 3. Time Off Modal */}
        {isTimeOffModalOpen && (
            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-               <div className="bg-white rounded-[2.5rem] border border-slate-300 shadow-2xl w-[95%] md:w-full md:max-w-md overflow-hidden flex flex-col">
-                   <div className="p-8 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+               <div className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl w-[95%] md:w-full md:max-w-md overflow-hidden flex flex-col">
+                   <div className="p-8 border-b border-white/10 flex justify-between items-center bg-white/5">
                        <h3 className="text-xl font-black text-white uppercase flex items-center gap-3">
                            <Coffee className="w-6 h-6 text-orange-500" />
                            Registrar Ausencia
@@ -1130,8 +1130,8 @@ const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffE
 
        {/* 4. Time Off Detail/Delete Modal */}
        {selectedTimeOff && (
-            <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-[2.5rem] border border-slate-300 shadow-2xl p-10 w-[95%] md:w-full max-w-md">
+            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+                <div className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl p-10 w-[95%] md:w-full max-w-md">
                     <div className="flex justify-between items-start mb-8">
                         <h3 className="text-2xl font-black text-white uppercase tracking-tight">{selectedTimeOff.reason}</h3>
                         <button onClick={() => setSelectedTimeOff(null)} className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all">

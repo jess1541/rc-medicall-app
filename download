@@ -272,7 +272,7 @@ const OperationsManager: React.FC<OperationsManagerProps> = ({ operations, docto
 
   return (
     <div className="space-y-6 pb-10">
-        <div className="flex flex-col md:flex-row justify-between items-center bg-white/80 backdrop-blur-xl p-4 rounded-3xl border border-white/50 shadow-lg gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-3xl border border-white/50 shadow-lg gap-4">
             <div>
                 <h1 className="text-2xl font-black text-slate-800">Operativos</h1>
                 <p className="text-sm text-slate-500 font-medium">
@@ -428,7 +428,7 @@ const OperationsManager: React.FC<OperationsManagerProps> = ({ operations, docto
                                                 <Plus className="w-4 h-4 text-indigo-400" />
                                             </div>
                                         </div>
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 overflow-y-auto">
                                             {dayOperations.map(op => (
                                                 <div 
                                                     key={op.id}

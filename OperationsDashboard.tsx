@@ -323,17 +323,17 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-400 relative overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-200 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-full blur-3xl -z-10 opacity-60"></div>
         
         <div className="relative z-10">
             <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                <div className="p-3 bg-blue-100 text-blue-700 rounded-2xl border border-blue-200">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100 backdrop-blur-md">
                     <Database className="w-6 h-6" />
                 </div>
-                Directorio <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-700">Central</span>
+                Directorio <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Central</span>
             </h1>
-            <p className="text-slate-700 font-bold uppercase tracking-widest text-[10px] ml-[4.5rem] mt-1">
+            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] ml-[4.5rem] mt-1">
                 {filteredItems.length} registros activos
             </p>
         </div>
@@ -375,7 +375,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
             )}
             <button 
                 onClick={handleImportClick}
-                className="flex items-center justify-center px-4 py-3 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-700 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-indigo-200"
+                className="flex items-center justify-center px-4 py-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-indigo-100"
             >
                 <Upload className="h-4 w-4 mr-2" />
                 Importar
@@ -383,7 +383,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
             
             <button 
                 onClick={handleExport}
-                className="flex items-center justify-center px-4 py-3 bg-emerald-100 text-emerald-700 rounded-xl hover:bg-emerald-700 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-emerald-200"
+                className="flex items-center justify-center px-4 py-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-emerald-100"
             >
                 <Download className="h-4 w-4 mr-2" />
                 Excel
@@ -399,14 +399,14 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
       </div>
 
       {/* FILTROS INTEGRADOS */}
-      <div className="bg-white p-4 md:p-6 rounded-[2.5rem] shadow-lg border border-slate-400 space-y-4 md:space-y-6">
+      <div className="bg-white p-4 md:p-6 rounded-[2.5rem] shadow-lg border border-slate-200 space-y-4 md:space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100 rounded-2xl w-full md:w-fit overflow-x-auto no-scrollbar border border-slate-200">
+            <div className="flex flex-wrap gap-2 p-1.5 bg-slate-50 rounded-2xl w-full md:w-fit overflow-x-auto no-scrollbar border border-slate-100">
                 {(['MEDICO', 'ADMINISTRATIVO', 'HOSPITAL'] as TabType[]).map(tab => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20 ring-1 ring-white/20' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200'}`}
+                        className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20 ring-1 ring-white/20' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
                     >
                         {tab === 'MEDICO' ? 'Médicos' : (tab === 'ADMINISTRATIVO' ? 'Admin' : 'Hospitales')}
                     </button>
@@ -416,9 +416,9 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
             {user.role === 'admin' && filteredItems.length > 0 && (
                 <button 
                     onClick={toggleSelectAll}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-800 rounded-xl hover:bg-slate-200 transition-all font-black text-[10px] uppercase tracking-widest border border-slate-200"
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-all font-black text-[10px] uppercase tracking-widest border border-slate-100"
                 >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedIds.length === filteredItems.length ? 'bg-blue-600 border-blue-500' : 'bg-white border-slate-400'}`}>
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedIds.length === filteredItems.length ? 'bg-blue-600 border-blue-500' : 'bg-white border-slate-200'}`}>
                         {selectedIds.length === filteredItems.length && <Plus className="w-3 h-3 text-white rotate-45" />}
                     </div>
                     {selectedIds.length === filteredItems.length ? 'Desmarcar Todo' : 'Seleccionar Todo'}
@@ -429,11 +429,11 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 relative group">
                 <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-slate-500 group-focus-within:text-blue-600 transition-colors" />
+                    <Search className="h-5 w-5 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
                 </div>
                 <input
                     type="text"
-                    className="block w-full pl-14 pr-4 py-4 border border-slate-400 rounded-2xl bg-slate-100 text-slate-900 font-bold placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm"
+                    className="block w-full pl-14 pr-4 py-4 border border-slate-200 rounded-2xl bg-slate-50 text-slate-900 font-bold placeholder-slate-300 focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm"
                     placeholder="BUSCAR POR NOMBRE, ESPECIALIDAD O DIRECCIÓN..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -441,10 +441,10 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
             </div>
             <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                    <Filter className="h-5 w-5 text-slate-500 group-focus-within:text-blue-600 transition-colors" />
+                    <Filter className="h-5 w-5 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
                 </div>
                 <select
-                    className="block w-full pl-14 pr-10 py-4 border border-slate-400 rounded-2xl bg-slate-100 text-slate-900 font-bold focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm appearance-none cursor-pointer"
+                    className="block w-full pl-14 pr-10 py-4 border border-slate-200 rounded-2xl bg-slate-50 text-slate-900 font-bold focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm appearance-none cursor-pointer"
                     value={selectedExecutive}
                     onChange={(e) => setSelectedExecutive(e.target.value)}
                     disabled={user.role === 'executive'}
@@ -452,7 +452,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                     {executivesList.map(exec => <option key={exec} value={exec} className="bg-white text-slate-900">{exec}</option>)}
                 </select>
                 <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                    <div className="h-1.5 w-1.5 rounded-full bg-slate-300"></div>
+                    <div className="h-1.5 w-1.5 rounded-full bg-slate-200"></div>
                 </div>
             </div>
         </div>
@@ -469,7 +469,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
               <div
                 key={item.id}
                 onClick={() => navigate(`/doctors/${item.id}`)}
-                className={`bg-white rounded-[2.5rem] shadow-lg border p-8 hover:shadow-blue-500/10 hover:-translate-y-2 transition-all cursor-pointer group flex flex-col h-full relative overflow-hidden ${selectedIds.includes(item.id) ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-400'}`}
+                className={`bg-white rounded-[2.5rem] shadow-lg border p-8 hover:shadow-blue-500/10 hover:-translate-y-2 transition-all cursor-pointer group flex flex-col h-full relative overflow-hidden ${selectedIds.includes(item.id) ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-100'}`}
               >
                 <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full opacity-5 group-hover:opacity-10 transition-opacity ${activeTab === 'MEDICO' ? 'bg-blue-600' : 'bg-emerald-600'}`}></div>
                 
@@ -478,7 +478,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                         {user.role === 'admin' && (
                             <div 
                                 onClick={(e) => toggleSelectId(e, item.id)}
-                                className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all z-20 ${selectedIds.includes(item.id) ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/30' : 'bg-slate-100 border-slate-400 hover:border-blue-500'}`}
+                                className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all z-20 ${selectedIds.includes(item.id) ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/30' : 'bg-slate-50 border-slate-200 hover:border-blue-400'}`}
                             >
                                 {selectedIds.includes(item.id) && <Plus className="w-4 h-4 text-white rotate-45" />}
                             </div>
@@ -490,8 +490,8 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                     
                     <div className="flex flex-col items-end gap-2">
                         <div className="flex gap-1">
-                            <span className="text-[9px] font-black bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-400">{item.category}</span>
-                            <span className="text-[9px] font-black bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-400">{item.executive}</span>
+                            <span className="text-[9px] font-black bg-slate-50 text-slate-400 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-100">{item.category}</span>
+                            <span className="text-[9px] font-black bg-slate-50 text-slate-400 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-100">{item.executive}</span>
                         </div>
                         {user.role === 'admin' && (
                             <button 
@@ -507,26 +507,26 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                 
                 <h3 className="text-base font-black text-slate-900 uppercase leading-tight group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">{item.name}</h3>
                 <div className="flex items-center gap-2 mb-4">
-                    <p className="text-[10px] text-slate-800 font-black uppercase tracking-wider">{item.specialty || 'GENERAL'}</p>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">{item.specialty || 'GENERAL'}</p>
                     <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
-                        item.classification === 'A' ? 'bg-emerald-200 text-emerald-800 border-emerald-300' :
-                        item.classification === 'B' ? 'bg-blue-200 text-blue-800 border-blue-300' :
-                        item.classification === 'C' ? 'bg-yellow-200 text-yellow-800 border-yellow-300' :
-                        'bg-slate-200 text-slate-900 border-slate-400'
+                        item.classification === 'A' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        item.classification === 'B' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        item.classification === 'C' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
+                        'bg-slate-50 text-slate-400 border-slate-100'
                     }`}>
                         {item.classification || 'C'}
                     </span>
                 </div>
 
                 {item.hospital && (
-                    <div className="flex items-center gap-2 mb-4 text-[10px] text-slate-800 font-bold uppercase tracking-tight">
+                    <div className="flex items-center gap-2 mb-4 text-[10px] text-slate-400 font-bold uppercase tracking-tight">
                         <Building2 className="w-3 h-3" />
                         <span className="truncate">{item.hospital}</span>
                     </div>
                 )}
                 
-                <div className="mt-auto flex items-start text-[11px] text-slate-900 font-bold uppercase border-t border-slate-400 pt-6">
-                    <MapPin className="h-4 w-4 mr-2 text-slate-700 flex-shrink-0" />
+                <div className="mt-auto flex items-start text-[11px] text-slate-600 font-bold uppercase border-t border-slate-100 pt-6">
+                    <MapPin className="h-4 w-4 mr-2 text-slate-300 flex-shrink-0" />
                     <span className="line-clamp-2 leading-relaxed">{item.address}</span>
                 </div>
                 
@@ -541,9 +541,9 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
       )}
 
       {filteredItems.length === 0 && !isFiltering && (
-          <div className="py-40 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-400">
-              <Database className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-800 font-black uppercase tracking-widest text-xs">No se encontraron registros</p>
+          <div className="py-40 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
+              <Database className="w-16 h-16 text-slate-100 mx-auto mb-4" />
+              <p className="text-slate-300 font-black uppercase tracking-widest text-xs">No se encontraron registros</p>
           </div>
       )}
 
@@ -551,33 +551,33 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
 
       {/* MODAL NUEVO REGISTRO */}
       {isAddModalOpen && (
-          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn border border-slate-400">
-                  <div className="p-10 border-b border-slate-200 flex justify-between items-center bg-slate-100">
+          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn border border-slate-200">
+                  <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                       <div>
                         <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Nuevo Registro</h3>
-                        <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest mt-1">Categoría: {activeTab}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Categoría: {activeTab}</p>
                       </div>
-                      <button onClick={() => setIsAddModalOpen(false)} className="p-3 bg-slate-200 rounded-2xl text-slate-500 hover:text-rose-500 transition-all border border-slate-300"><X className="h-6 w-6" /></button>
+                      <button onClick={() => setIsAddModalOpen(false)} className="p-3 bg-slate-100 rounded-2xl text-slate-400 hover:text-rose-500 transition-all border border-slate-200"><X className="h-6 w-6" /></button>
                   </div>
                   <form onSubmit={handleAddSubmit} className="p-10 space-y-6">
                       <div>
-                          <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-3 ml-1">Nombre Completo</label>
-                          <input type="text" required className="w-full border border-slate-300 bg-slate-100 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Nombre Completo</label>
+                          <input type="text" required className="w-full border border-slate-200 bg-slate-50 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                       </div>
                       <div>
-                          <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-3 ml-1">Especialidad</label>
-                          <input type="text" className="w-full border border-slate-300 bg-slate-100 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner" value={formData.specialty} onChange={e => setFormData({...formData, specialty: e.target.value})} />
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Especialidad</label>
+                          <input type="text" className="w-full border border-slate-200 bg-slate-50 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner" value={formData.specialty} onChange={e => setFormData({...formData, specialty: e.target.value})} />
                       </div>
                       <div>
-                          <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-3 ml-1">Dirección</label>
-                          <textarea required rows={3} className="w-full border border-slate-300 bg-slate-100 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner resize-none" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Dirección</label>
+                          <textarea required rows={3} className="w-full border border-slate-200 bg-slate-50 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner resize-none" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
                       </div>
                       {user.role === 'admin' && (
                           <div>
-                              <label className="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-3 ml-1">Ejecutivo Asignado</label>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Ejecutivo Asignado</label>
                               <select 
-                                  className="w-full border border-slate-300 bg-slate-100 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner appearance-none cursor-pointer"
+                                  className="w-full border border-slate-200 bg-slate-50 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner appearance-none cursor-pointer"
                                   value={formData.executive}
                                   onChange={e => setFormData({...formData, executive: e.target.value})}
                               >
@@ -590,7 +590,7 @@ const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAdd
                           </div>
                       )}
                       <div className="flex justify-end gap-4 mt-8">
-                          <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-8 py-4 font-black text-slate-700 hover:text-slate-900 transition-colors uppercase text-xs tracking-widest">Cancelar</button>
+                          <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-8 py-4 font-black text-slate-400 hover:text-slate-600 transition-colors uppercase text-xs tracking-widest">Cancelar</button>
                           <button type="submit" className="px-10 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/30 active:scale-95 transition-all border border-white/10">Guardar</button>
                       </div>
                   </form>

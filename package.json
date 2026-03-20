@@ -1,39 +1,417 @@
-{
-  "name": "rc-medicall-app",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "node server.js",
-    "start": "node server.js",
-    "build": "vite build",
-    "preview": "vite preview",
-    "lint": "tsc --noEmit"
-  },
-  "dependencies": {
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "react-router-dom": "^6.22.3",
-    "lucide-react": "0.344.0",
-    "date-fns": "^3.3.1",
-    "express": "^4.18.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "mongoose": "^8.2.1",
-    "xlsx": "^0.18.5",
-    "file-saver": "^2.0.5",
-    "react-datepicker": "^4.25.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.66",
-    "@types/react-dom": "^18.2.22",
-    "@vitejs/plugin-react": "^4.2.1",
-    "@types/file-saver": "^2.0.7",
-    "@types/react-datepicker": "^6.2.0",
-    "autoprefixer": "^10.4.18",
-    "postcss": "^8.4.35",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5.2.2",
-    "vite": "^5.1.4"
-  }
-}
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Sidebar from './components/Sidebar';
+import ParticleBackground from './components/ParticleBackground';
+import Dashboard from './pages/Dashboard';
+import DoctorList from './pages/DoctorList';
+import DoctorProfile from './pages/DoctorProfile';
+import ExecutiveCalendar from './pages/ExecutiveCalendar';
+import ProceduresManager from './pages/ProceduresManager';
+import OperationsManager from './pages/OperationsManager';
+import OperationsDashboard from './pages/OperationsDashboard';
+import UserManagement from './pages/UserManagement';
+import Login from './components/Login';
+import Logo from './components/Logo';
+import { Doctor, User, Procedure, Operation, TimeOffEvent } from './types';
+import { Menu } from 'lucide-react';
+import { parseData } from './constants';
+
+import LocationHistory from './pages/LocationHistory';
+
+// Ajuste de puerto a 8080 para coincidir con server.js
+const API_BASE_URL = '/api';
+const SYNC_INTERVAL = 30000;
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
+const App: React.FC = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [doctors, setDoctors] = useState<Doctor[]>(parseData()); // Carga inicial desde constantes
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [operations, setOperations] = useState<Operation[]>([]);
+  const [timeOffEvents, setTimeOffEvents] = useState<TimeOffEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
+  const [dbStatus, setDbStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  
+  const syncTimerRef = useRef<any>(null);
+  const inactivityTimerRef = useRef<any>(null);
+
+  const handleLogout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem('rc_user');
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+  }, []);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    if (user) {
+        inactivityTimerRef.current = setTimeout(() => {
+            handleLogout();
+            alert("Sesión cerrada por inactividad.");
+        }, INACTIVITY_TIMEOUT);
+    }
+  }, [user, handleLogout]);
+
+  const checkDbStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/status`);
+      if (res.ok) {
+        const data = await res.json();
+        setDbStatus(data.database);
+        setIsOnline(data.database === 'connected');
+      } else {
+        setDbStatus('disconnected');
+        setIsOnline(false);
+      }
+    } catch (error) {
+      setDbStatus('disconnected');
+      setIsOnline(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkDbStatus();
+    const interval = setInterval(checkDbStatus, 10000);
+    return () => clearInterval(interval);
+  }, [checkDbStatus]);
+
+  useEffect(() => {
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    const handleActivity = () => resetInactivityTimer();
+
+    if (user) {
+        resetInactivityTimer();
+        events.forEach(event => window.addEventListener(event, handleActivity));
+    }
+
+    return () => {
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+        events.forEach(event => window.removeEventListener(event, handleActivity));
+    };
+  }, [user, resetInactivityTimer]);
+
+  const seedDatabase = async (initialData: Doctor[]) => {
+    try {
+        await fetch(`${API_BASE_URL}/doctors/bulk`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(initialData)
+        });
+    } catch (error) {
+        console.warn("Seeding omitido: Servidor no disponible o DB ya poblada.");
+    }
+  };
+
+  const syncData = useCallback(async (silent = true) => {
+    if (!silent) setIsSyncing(true);
+    try {
+      const [docsRes, toffRes, procRes, opsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/doctors`, { cache: 'no-store' }),
+        fetch(`${API_BASE_URL}/timeoff`, { cache: 'no-store' }),
+        fetch(`${API_BASE_URL}/procedures`, { cache: 'no-store' }),
+        fetch(`${API_BASE_URL}/operations`, { cache: 'no-store' })
+      ]);
+
+      if (docsRes.ok && toffRes.ok && procRes.ok && opsRes.ok) {
+        let docsFromServer = await docsRes.json();
+        const toffs = await toffRes.json();
+        const procs = await procRes.json();
+        const ops = await opsRes.json();
+
+        // Si el servidor está vacío, intentamos poblarlo con nuestros datos locales
+        if (docsFromServer.length === 0) {
+            const localData = parseData();
+            await seedDatabase(localData);
+            // Mantenemos los datos locales en el estado
+        } else {
+            setDoctors(docsFromServer);
+        }
+        
+        setTimeOffEvents(toffs);
+        setProcedures(procs);
+        setOperations(ops);
+        setIsOnline(true);
+      }
+    } catch (error) {
+      console.log("Modo Offline: Usando base de datos interna.");
+      setIsOnline(false);
+    } finally {
+      if (!silent) setIsSyncing(false);
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('rc_user');
+    if (savedUser) setUser(JSON.parse(savedUser));
+    
+    // Ejecutar sincronización inicial
+    syncData(false);
+
+    syncTimerRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible') syncData(true);
+    }, SYNC_INTERVAL);
+
+    return () => clearInterval(syncTimerRef.current);
+  }, [syncData]);
+
+  const handleLogin = (loggedInUser: User) => {
+    setUser(loggedInUser);
+    localStorage.setItem('rc_user', JSON.stringify(loggedInUser));
+  };
+
+  const updateDoctor = async (updated: Doctor) => {
+    setDoctors(prev => {
+        const index = prev.findIndex(d => d.id === updated.id);
+        if (index !== -1) {
+            const newDocs = [...prev];
+            newDocs[index] = updated;
+            return newDocs;
+        }
+        return [...prev, updated];
+    });
+    
+    try {
+        await fetch(`${API_BASE_URL}/doctors`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updated)
+        });
+    } catch (e) { 
+        console.error("Error al persistir cambios en servidor, guardado localmente."); 
+    }
+  };
+
+  const handleDeleteDoctor = async (id: string) => {
+    setDoctors(prev => prev.filter(d => d.id !== id));
+    try {
+        await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' });
+    } catch (e) {
+        console.error("Error al eliminar doctor permanentemente", e);
+    }
+  };
+
+  const handleBulkDeleteDoctors = async (ids: string[]) => {
+    setDoctors(prev => prev.filter(d => !ids.includes(d.id)));
+    for (const id of ids) {
+        try {
+            await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' });
+        } catch (e) {}
+    }
+  };
+
+  const handleClearCategory = async (category: string) => {
+      if (!window.confirm(`⚠️ ADVERTENCIA DE SEGURIDAD ⚠️\n\nEstás a punto de ELIMINAR TODOS los registros de la categoría: ${category}.\n\nEsta acción borrará permanentemente todos los contactos y sus historiales de visitas asociados a esta categoría.\n\n¿Estás absolutamente seguro de continuar?`)) return;
+      
+      setDoctors(prev => prev.filter(d => d.category !== category));
+      try {
+          await fetch(`${API_BASE_URL}/doctors/clear/${category}`, { method: 'DELETE' });
+      } catch (e) {
+          console.error("Error al limpiar categoría", e);
+      }
+  };
+
+  const handleBulkAddDoctors = async (newDocs: Doctor[]) => {
+      setDoctors(prev => [...prev, ...newDocs]);
+      try {
+          await fetch(`${API_BASE_URL}/doctors/bulk`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newDocs)
+          });
+      } catch (e) { 
+          console.error("Error al importar masivamente", e); 
+      }
+  };
+
+  const handleSaveTimeOff = async (toff: TimeOffEvent) => {
+    setTimeOffEvents(prev => [...prev.filter(t => t.id !== toff.id), toff]);
+    try {
+        await fetch(`${API_BASE_URL}/timeoff`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(toff)
+        });
+    } catch (e) {}
+  };
+
+  const handleDeleteTimeOff = async (id: string) => {
+    setTimeOffEvents(prev => prev.filter(t => t.id !== id));
+    try {
+        await fetch(`${API_BASE_URL}/timeoff/${id}`, { method: 'DELETE' });
+    } catch (e) {}
+  };
+
+  // Manejadores de Procedimientos
+  const handleAddProcedure = async (proc: Procedure) => {
+      setProcedures(prev => [...prev, proc]);
+      try {
+          await fetch(`${API_BASE_URL}/procedures`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(proc)
+          });
+      } catch (e) { console.error(e); }
+  };
+
+  const handleUpdateProcedure = async (proc: Procedure) => {
+      setProcedures(prev => prev.map(p => p.id === proc.id ? proc : p));
+      try {
+          await fetch(`${API_BASE_URL}/procedures`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(proc)
+          });
+      } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteProcedure = async (id: string) => {
+      setProcedures(prev => prev.filter(p => p.id !== id));
+      try {
+          await fetch(`${API_BASE_URL}/procedures/${id}`, { method: 'DELETE' });
+      } catch (e) { console.error(e); }
+  };
+
+  // Manejadores de Operativos
+  const handleAddOperation = async (op: Operation) => {
+      setOperations(prev => [...prev, op]);
+      try {
+          await fetch(`${API_BASE_URL}/operations`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(op)
+          });
+      } catch (e) { console.error(e); }
+  };
+
+  const handleUpdateOperation = async (op: Operation) => {
+      setOperations(prev => prev.map(o => o.id === op.id ? op : o));
+      try {
+          await fetch(`${API_BASE_URL}/operations`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(op)
+          });
+      } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteOperation = async (id: string) => {
+      setOperations(prev => prev.filter(o => o.id !== id));
+      try {
+          await fetch(`${API_BASE_URL}/operations/${id}`, { method: 'DELETE' });
+      } catch (e) { console.error(e); }
+  };
+
+  if (loading && !user) return <div className="h-screen flex items-center justify-center bg-slate-950 text-white font-black animate-pulse uppercase tracking-[0.5em] text-[10px]">RC MediCall • Sincronizando Directorio...</div>;
+  if (!user) return <Login onLogin={handleLogin} />;
+
+  return (
+    <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <div className="flex flex-col h-[100dvh] bg-transparent text-slate-700 overflow-hidden font-sans selection:bg-blue-500/30">
+        <ParticleBackground />
+        
+        {dbStatus === 'disconnected' && (
+          <div className="bg-red-500/10 backdrop-blur-md text-red-600 px-4 py-2 text-center text-[10px] font-bold animate-pulse z-[100] border-b border-red-500/20 uppercase tracking-widest">
+            ⚠️ Error de Conexión MongoDB: Configura MONGO_URI en los ajustes del proyecto para persistir datos.
+          </div>
+        )}
+        
+        <div className="flex flex-1 overflow-hidden relative z-10">
+          <Sidebar 
+            user={user} 
+            onLogout={handleLogout} 
+            isMobileOpen={isMobileMenuOpen} 
+            closeMobileMenu={() => setIsMobileMenuOpen(false)} 
+            isCollapsed={isSidebarCollapsed}
+            isOnline={isOnline}
+            isSyncing={isSyncing}
+            toggleCollapse={() => { setIsSidebarCollapsed(!isSidebarCollapsed); localStorage.setItem('sidebar_collapsed', String(!isSidebarCollapsed)); }}
+          />
+          
+          <div className={`flex-1 flex flex-col h-full relative transition-all duration-500 ease-in-out ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-72'}`}>
+            <div className="md:hidden p-4 bg-white text-slate-800 flex justify-between items-center sticky top-0 z-30 border-b border-slate-200 shadow-sm">
+               <div className="flex items-center">
+                  <Logo className="h-10 w-auto" />
+               </div>
+               <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 bg-slate-100 rounded-xl text-blue-600 hover:bg-slate-200 transition-all border border-slate-200 shadow-sm active:scale-95">
+                  <Menu className="w-5 h-5" />
+               </button>
+            </div>
+            
+            <main className="flex-1 overflow-auto p-4 md:p-10 custom-scrollbar">
+              <div className="max-w-7xl mx-auto">
+                <Routes>
+                  <Route path="/" element={<Dashboard doctors={doctors} user={user} procedures={procedures} isOnline={isOnline} />} />
+                  <Route path="/doctors" element={
+                    <DoctorList 
+                        doctors={doctors} 
+                        user={user} 
+                        onAddDoctor={updateDoctor} 
+                        onBulkAddDoctors={handleBulkAddDoctors} 
+                        onDeleteDoctor={handleDeleteDoctor}
+                        onBulkDeleteDoctors={handleBulkDeleteDoctors}
+                        onClearCategory={handleClearCategory}
+                    />} 
+                  />
+                  <Route path="/doctors/:id" element={<DoctorProfile doctors={doctors} onUpdate={updateDoctor} onDeleteVisit={(did, vid) => {
+                     const doc = doctors.find(d => d.id === did);
+                     if (doc) updateDoctor({ ...doc, visits: doc.visits.filter(v => v.id !== vid) });
+                  }} user={user} />} />
+                  <Route path="/calendar" element={
+                    <ExecutiveCalendar 
+                      doctors={doctors} 
+                      timeOffEvents={timeOffEvents}
+                      onUpdateDoctor={updateDoctor}
+                      onSaveTimeOff={handleSaveTimeOff}
+                      onDeleteTimeOff={handleDeleteTimeOff}
+                      onDeleteVisit={(did, vid) => {
+                        const doc = doctors.find(d => d.id === did);
+                        if (doc) updateDoctor({ ...doc, visits: doc.visits.filter(v => v.id !== vid) });
+                      }} 
+                      user={user} 
+                    />
+                  } />
+                  <Route path="/procedures" element={
+                      <ProceduresManager 
+                        procedures={procedures} 
+                        doctors={doctors} 
+                        onAddProcedure={handleAddProcedure} 
+                        onUpdateProcedure={handleUpdateProcedure} 
+                        onDeleteProcedure={handleDeleteProcedure} 
+                        user={user} 
+                      />
+                  } />
+                  <Route path="/operations-dashboard" element={
+                      <OperationsDashboard 
+                        operations={operations} 
+                        procedures={procedures}
+                        doctors={doctors}
+                      />
+                  } />
+                  <Route path="/operations" element={
+                      <OperationsManager 
+                        operations={operations} 
+                        doctors={doctors} 
+                        onAddOperation={handleAddOperation} 
+                        onUpdateOperation={handleUpdateOperation} 
+                        onDeleteOperation={handleDeleteOperation} 
+                        user={user} 
+                      />
+                  } />
+                  <Route path="/users" element={<UserManagement user={user} />} />
+                  <Route path="/location-history" element={<LocationHistory doctors={doctors} />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+    </HashRouter>
+  );
+};
+
+export default App;

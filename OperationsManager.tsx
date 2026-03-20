@@ -1,1170 +1,604 @@
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Doctor, User, ScheduleSlot } from '../types';
+import { Search, MapPin, Stethoscope, Building2, Briefcase, Plus, X, ArrowRight, Loader2, Filter, Database, Download, Upload, Trash2, AlertTriangle } from 'lucide-react';
 
-import React, { useState, useMemo, useEffect } from 'react';
-// Explicit import from react-router-dom
-import { useLocation } from 'react-router-dom';
-import { Doctor, Visit, User, TimeOffEvent } from '../types';
-import { ChevronLeft, ChevronRight, Plus, Search, Calendar, X, Lock, Clock, Coffee, CalendarClock, CheckCircle2, User as UserIcon, Trash2, Building, Stethoscope } from 'lucide-react';
-import DatePicker, { registerLocale } from 'react-datepicker';
-// Fix: Use named import for the locale to avoid type mismatch with react-datepicker's registerLocale
-import { es } from 'date-fns/locale';
+type TabType = 'MEDICO' | 'ADMINISTRATIVO' | 'HOSPITAL';
 
-registerLocale('es', es);
-
-interface ExecutiveCalendarProps {
+interface DoctorListProps {
   doctors: Doctor[];
-  timeOffEvents: TimeOffEvent[];
-  onUpdateDoctor: (doctor: Doctor) => void;
-  onSaveTimeOff: (toff: TimeOffEvent) => void;
-  onDeleteTimeOff: (id: string) => void;
-  onDeleteVisit: (doctorId: string, visitId: string) => void;
+  onAddDoctor?: (doc: Doctor) => void;
+  onBulkAddDoctors?: (docs: Doctor[]) => void;
+  onDeleteDoctor?: (id: string) => void;
+  onBulkDeleteDoctors?: (ids: string[]) => void;
+  onClearCategory?: (category: string) => void;
   user: User;
 }
 
-type ViewMode = 'month' | 'week' | 'day';
-
-const ExecutiveCalendar: React.FC<ExecutiveCalendarProps> = ({ doctors, timeOffEvents, onUpdateDoctor, onSaveTimeOff, onDeleteTimeOff, onDeleteVisit, user }) => {
-  const location = useLocation();
-  const [selectedExecutive, setSelectedExecutive] = useState(user.role === 'executive' ? user.name : '');
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>('day');
-  const [isDragging, setIsDragging] = useState(false);
-
-  // Modal States
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAppointmentMode, setIsAppointmentMode] = useState(false); 
-  const [selectedDayForPlan, setSelectedDayForPlan] = useState<number | null>(null);
+const DoctorList: React.FC<DoctorListProps> = ({ doctors, onAddDoctor, onBulkAddDoctors, onDeleteDoctor, onBulkDeleteDoctors, onClearCategory, user }) => {
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedExecutive, setSelectedExecutive] = useState(user.role === 'executive' ? user.name : 'TODOS');
+  const [activeTab, setActiveTab] = useState<TabType>('MEDICO');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(20); 
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
-  // Nuevo estado para la fecha dentro del modal
-  const [planDate, setPlanDate] = useState<Date>(new Date());
+  const observerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [selectedDoctorId, setSelectedDoctorId] = useState('');
-  const [searchDoctorTerm, setSearchDoctorTerm] = useState('');
-  const [planObjective, setPlanObjective] = useState('');
-  const [appointmentTime, setAppointmentTime] = useState('09:00');
-
-  // Edit Appointment State (Stores the original state before editing)
-  const [editingAppointment, setEditingAppointment] = useState<{docId: string, visit: Visit} | null>(null);
-
-  const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [selectedVisitToReport, setSelectedVisitToReport] = useState<{docId: string, visit: Visit} | null>(null);
-  const [reportNote, setReportNote] = useState('');
-  const [reportOutcome, setReportOutcome] = useState('SEGUIMIENTO');
-  const [reportFollowUp, setReportFollowUp] = useState('');
-  const [reportDate, setReportDate] = useState('');
-  const [reportTime, setReportTime] = useState('');
-  const [isEditingPlan, setIsEditingPlan] = useState(false);
-  const [editObjective, setEditObjective] = useState('');
-  
-  // Next Visit Planning State
-  const [nextVisitDate, setNextVisitDate] = useState<Date | null>(null);
-  const [nextVisitTime, setNextVisitTime] = useState('09:00');
-
-  const [isTimeOffModalOpen, setIsTimeOffModalOpen] = useState(false);
-  const [newTimeOff, setNewTimeOff] = useState<Partial<TimeOffEvent>>({
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date().toISOString().split('T')[0],
-      duration: 'TODO EL DÍA',
-      reason: 'JUNTA',
-      notes: ''
+  const [formData, setFormData] = useState<Partial<Doctor>>({
+      name: '',
+      executive: user.role === 'executive' ? user.name : 'SIN ASIGNAR',
+      specialty: '',
+      address: '',
+      category: 'MEDICO'
   });
-  const [selectedTimeOff, setSelectedTimeOff] = useState<TimeOffEvent | null>(null);
 
-  // Updated Time Slots: 09:00 - 20:00 every 30 mins
-  const generateTimeSlots = () => {
-      const slots = [];
-      for (let hour = 9; hour <= 20; hour++) {
-          slots.push(`${hour.toString().padStart(2, '0')}:00`);
-          if (hour !== 20) {
-              slots.push(`${hour.toString().padStart(2, '0')}:30`);
-          }
-      }
-      return slots;
-  };
-  const visitTimeSlots = useMemo(() => generateTimeSlots(), []);
-  
-  // Restricted slots for Appointments (Citas)
-  const appointmentTimeSlots = ['09:00', '16:00'];
+  // Efecto de filtrado optimizado
+  useEffect(() => {
+    setIsFiltering(true);
+    setSelectedIds([]); // Reset selection on filter change
+    const timer = setTimeout(() => {
+        setIsFiltering(false);
+        setVisibleCount(20);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedExecutive, activeTab]);
 
-  const executives = useMemo(() => {
+  // Scroll infinito
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+        (entries) => {
+            if (entries[0].isIntersecting && !isFiltering) {
+                setVisibleCount(prev => prev + 20);
+            }
+        },
+        { threshold: 0.1 }
+    );
+    if (observerRef.current) observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  }, [isFiltering]);
+
+  const executivesList = useMemo(() => {
     const execs = new Set(doctors.map(d => d.executive));
-    return Array.from(execs).sort();
+    return ['TODOS', ...Array.from(execs).sort()];
   }, [doctors]);
 
-  useEffect(() => {
-      if (user.role === 'executive') {
-          setSelectedExecutive(user.name);
-      } else {
-          const params = new URLSearchParams(location.search);
-          const execParam = params.get('exec');
-          if (execParam) setSelectedExecutive(execParam);
-          else if (!selectedExecutive && executives.length > 0) setSelectedExecutive(executives[0]);
-      }
-  }, [location, executives, selectedExecutive, user]);
+  const filteredItems = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+    return doctors.filter(doc => {
+      // Filter by status: show only active doctors
+      const isArchived = doc.status === 'archived';
+      if (isArchived) return false;
+      if (doc.category !== activeTab) return false;
 
-  const myDoctors = useMemo(() => {
-      return doctors.filter(d => d.executive === selectedExecutive);
-  }, [doctors, selectedExecutive]);
-
-  const myTimeOffs = useMemo(() => {
-      return timeOffEvents.filter(t => t.executive === selectedExecutive);
-  }, [timeOffEvents, selectedExecutive]);
-
-  const filteredDoctorsForModal = useMemo(() => {
-      if (!searchDoctorTerm) return [];
-      return myDoctors.filter(d => d.name.toLowerCase().includes(searchDoctorTerm.toLowerCase()));
-  }, [myDoctors, searchDoctorTerm]);
-
-  const getDaysForView = (): (Date | null)[] => {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-
-      if (viewMode === 'month') {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          const firstDayOfMonth = new Date(year, month, 1).getDay(); 
-          const days: (Date | null)[] = [];
-          for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
-          for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
-          return days;
-      } else if (viewMode === 'week') {
-          const startOfWeek = new Date(currentDate);
-          startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
-          const days: Date[] = [];
-          for (let i = 0; i < 7; i++) {
-              const d = new Date(startOfWeek);
-              d.setDate(startOfWeek.getDate() + i);
-              days.push(d);
-          }
-          return days;
-      } else { 
-          return [new Date(currentDate)];
-      }
-  };
-
-  const calendarDays = getDaysForView();
-
-  const prevPeriod = () => {
-      const newDate = new Date(currentDate);
-      if (viewMode === 'month') newDate.setMonth(newDate.getMonth() - 1);
-      else if (viewMode === 'week') newDate.setDate(newDate.getDate() - 7);
-      else newDate.setDate(newDate.getDate() - 1);
-      setCurrentDate(newDate);
-  };
-
-  const nextPeriod = () => {
-      const newDate = new Date(currentDate);
-      if (viewMode === 'month') newDate.setMonth(newDate.getMonth() + 1);
-      else if (viewMode === 'week') newDate.setDate(newDate.getDate() + 7);
-      else newDate.setDate(newDate.getDate() + 1);
-      setCurrentDate(newDate);
-  };
-
-  const toLocalDateString = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-  };
-
-  const isDateInRange = (checkDate: string, start: string, end: string) => {
-      return checkDate >= start && checkDate <= end;
-  };
-
-  const parseDateString = (dateStr: string) => {
-      if (!dateStr) return new Date();
-      const [year, month, day] = dateStr.split('-').map(Number);
-      return new Date(year, month - 1, day);
-  };
-
-  const formatDateToString = (date: Date | null) => {
-      if (!date) return '';
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-  };
-
-  const getEventsForDate = (date: Date) => {
-      const dateStr = toLocalDateString(date);
-      const events: { type: 'visit' | 'timeoff', data: any }[] = [];
+      const matchesSearch = !term || 
+                            doc.name.toLowerCase().includes(term) || 
+                            doc.address.toLowerCase().includes(term) ||
+                            (doc.specialty || '').toLowerCase().includes(term) ||
+                            (doc.hospital || '').toLowerCase().includes(term);
+      const matchesExec = selectedExecutive === 'TODOS' || doc.executive === selectedExecutive;
       
-      myDoctors.forEach(doc => {
-          const visits = doc.visits || [];
-          visits.forEach(visit => {
-              if (visit.date === dateStr) {
-                  events.push({ type: 'visit', data: { docId: doc.id, docName: doc.name, docCategory: doc.category, visit, address: doc.address } });
-              }
-          });
-      });
+      return matchesSearch && matchesExec;
+    });
+  }, [doctors, searchTerm, selectedExecutive, activeTab]);
 
-      myTimeOffs.forEach(toff => {
-          if (isDateInRange(dateStr, toff.startDate, toff.endDate)) {
-              events.push({ type: 'timeoff', data: toff });
-          }
-      });
+  const itemsToShow = useMemo(() => filteredItems.slice(0, visibleCount), [filteredItems, visibleCount]);
 
-      return events.sort((a, b) => {
-          if (a.type === 'timeoff' && b.type !== 'timeoff') return -1;
-          if (a.type !== 'timeoff' && b.type === 'timeoff') return 1;
-
-          if (a.type === 'visit' && b.type === 'visit') {
-              const timeA = a.data.visit.time || '23:59';
-              const timeB = b.data.visit.time || '23:59';
-              if (timeA !== timeB) return timeA.localeCompare(timeB);
-              if (a.data.visit.status === 'completed' && b.data.visit.status !== 'completed') return 1;
-              if (a.data.visit.status !== 'completed' && b.data.visit.status === 'completed') return -1;
-          }
-          return 0;
-      });
-  };
-
-  const handleDayClick = (date: Date, asAppointment = false, initialTime?: string) => {
-      setSelectedDayForPlan(date.getDate());
-      setCurrentDate(new Date(date));
-      setPlanDate(new Date(date)); // Sincronizar fecha del modal
-      setIsAppointmentMode(asAppointment);
-      setIsModalOpen(true); 
-      setSelectedDoctorId('');
-      setSearchDoctorTerm('');
-      setEditingAppointment(null); // Reset editing state
-      
-      if (asAppointment) {
-          setPlanObjective('CITA DE CONTACTO');
-          setAppointmentTime(initialTime || '09:00'); // Default to allowed slot
-      } else {
-          setPlanObjective('');
-          setAppointmentTime(initialTime || '09:00');
-      }
-  };
-
-  const handleTimeSlotClick = (time: string) => {
-      handleDayClick(currentDate, false, time);
-  };
-
-  const handleEditAppointment = (docId: string, visit: Visit) => {
-      const doc = doctors.find(d => d.id === docId);
-      
-      const dateOfVisit = parseDateString(visit.date);
-      setSelectedDayForPlan(dateOfVisit.getDate());
-      setCurrentDate(dateOfVisit);
-      setPlanDate(dateOfVisit);
-
-      setIsAppointmentMode(true);
-      setIsModalOpen(true);
-      
-      setSelectedDoctorId(docId);
-      setSearchDoctorTerm(doc ? doc.name : '');
-      setAppointmentTime(visit.time || '09:00');
-      setPlanObjective(visit.objective || 'CITA DE CONTACTO');
-      
-      setEditingAppointment({ docId, visit });
-  };
-
-  const savePlan = () => {
-      if (!selectedDayForPlan || !selectedDoctorId) {
-          alert("Seleccione un contacto.");
-          return;
-      }
-      if (!planObjective.trim()) {
-          alert("El objetivo es obligatorio.");
-          return;
-      }
-      
-      // Usar la fecha seleccionada en el modal (planDate)
-      const dateStr = formatDateToString(planDate);
-      
-      if (editingAppointment) {
-          const oldDoc = doctors.find(d => d.id === editingAppointment.docId);
-          const newDoc = doctors.find(d => d.id === selectedDoctorId);
-
-          // Si el doctor cambió
-          if (editingAppointment.docId !== selectedDoctorId) {
-             if (oldDoc) {
-                 const updatedOld = { ...oldDoc, visits: oldDoc.visits.filter(v => v.id !== editingAppointment.visit.id) };
-                 onUpdateDoctor(updatedOld);
-             }
-             if (newDoc) {
-                 const updatedVisit: Visit = {
-                     ...editingAppointment.visit,
-                     date: dateStr,
-                     time: appointmentTime, 
-                     objective: planObjective.toUpperCase(), 
-                     outcome: 'CITA',
-                     status: 'planned'
-                 };
-                 onUpdateDoctor({ ...newDoc, visits: [...newDoc.visits, updatedVisit] });
-             }
-          } else {
-             // Mismo doctor
-             if (newDoc) {
-                 const updatedVisits = newDoc.visits.map(v => 
-                     v.id === editingAppointment.visit.id 
-                     ? { ...editingAppointment.visit, date: dateStr, time: appointmentTime, objective: planObjective.toUpperCase(), outcome: 'CITA' as const, status: 'planned' as const }
-                     : v
-                 );
-                 onUpdateDoctor({ ...newDoc, visits: updatedVisits });
-             }
-          }
-
-          setIsModalOpen(false);
-          alert("Cita actualizada correctamente.");
-
-      } else {
-          const doc = doctors.find(d => d.id === selectedDoctorId);
-          if (doc) {
-              const newVisit: Visit = {
-                  id: Date.now().toString(),
-                  date: dateStr, 
-                  time: appointmentTime,
-                  note: isAppointmentMode ? 'CITA PROGRAMADA' : 'Visita Planeada',
-                  objective: planObjective.toUpperCase(),
-                  outcome: isAppointmentMode ? 'CITA' : 'PLANEADA',
-                  status: 'planned'
-              };
-              const currentVisits = doc.visits || [];
-              onUpdateDoctor({ ...doc, visits: [...currentVisits, newVisit] });
-          }
-
-          setIsModalOpen(false);
-          alert(isAppointmentMode ? "Cita programada correctamente." : "Visita agendada correctamente.");
-      }
-  };
-
-  const openReportModal = (docId: string, visit: Visit) => {
-      if ((visit.outcome as string) === 'CITA') return; 
-
-      setSelectedVisitToReport({ docId, visit });
-      setReportNote(visit.note === 'Visita Planeada' || visit.note === 'CITA PROGRAMADA' ? '' : visit.note);
-      
-      const outcome = visit.outcome as string;
-      setReportOutcome(outcome === 'PLANEADA' || outcome === 'CITA' ? 'SEGUIMIENTO' : outcome);
-      
-      setReportFollowUp(visit.followUp || '');
-      setReportDate(visit.date);
-      setReportTime(visit.time || '');
-      setIsEditingPlan(false);
-      setEditObjective(visit.objective || '');
-      setNextVisitDate(null); // User must select a date
-      setNextVisitTime('09:00'); 
-      setReportModalOpen(true);
-  };
-
-  const confirmDeleteVisit = () => {
-      if (!selectedVisitToReport) return;
-      const { docId, visit } = selectedVisitToReport;
-      if (window.confirm("¿Eliminar este registro permanentemente del calendario y sistema?")) {
-          onDeleteVisit(docId, visit.id);
-          setReportModalOpen(false);
-          setSelectedVisitToReport(null);
-      }
-  }
-
-  const savePlanChanges = () => {
-      if (!selectedVisitToReport) return;
-      if (!editObjective.trim()) {
-          alert("El objetivo es obligatorio.");
-          return;
-      }
-
-      const doc = doctors.find(d => d.id === selectedVisitToReport.docId);
-      if (doc) {
-          const updatedVisits = (doc.visits || []).map(v => {
-              if (v.id === selectedVisitToReport.visit.id) {
-                  return { ...v, date: reportDate, time: reportTime, objective: editObjective.toUpperCase() };
-              }
-              return v;
-          });
-          onUpdateDoctor({ ...doc, visits: updatedVisits });
-      }
-      setReportModalOpen(false);
-  }
-
-  const saveReport = () => {
-      if (!selectedVisitToReport) return;
-      if (!reportNote.trim() || !reportFollowUp.trim()) {
-          alert("Reporte y Siguiente Paso son obligatorios.");
-          return;
-      }
-      if (!nextVisitDate) {
-          alert("Es obligatorio agendar la fecha de la próxima visita.");
-          return;
-      }
-
-      // Validación de tiempo: No sea mayor a 24 horas una vez realizada la visita
-      const visitDateTime = new Date(`${reportDate}T${reportTime || '00:00'}`);
-      const now = new Date();
-      const diffInHours = (now.getTime() - visitDateTime.getTime()) / (1000 * 60 * 60);
-
-      if (user.role !== 'admin' && user.role !== 'admin_restricted') {
-          if (diffInHours > 24) {
-              alert("⚠️ RESTRICCIÓN: Han pasado más de 24 horas desde la fecha/hora de la visita. El reporte ha quedado restringido.");
-              return;
-          }
-
-          if (diffInHours < -2) { // Pequeño margen para zonas horarias o errores de reloj, pero bloquea futuro lejano
-              alert("⚠️ RESTRICCIÓN: No puedes reportar visitas futuras.");
-              return;
-          }
-      }
-      
-      const doc = doctors.find(d => d.id === selectedVisitToReport.docId);
-      if (doc) {
-          let updatedVisits = (doc.visits || []).map(v => {
-              if (v.id === selectedVisitToReport.visit.id) {
-                  return {
-                      ...v,
-                      date: reportDate,
-                      time: reportTime, 
-                      note: reportNote.toUpperCase(),
-                      outcome: reportOutcome as any,
-                      followUp: reportFollowUp.toUpperCase(),
-                      status: 'completed' as const
-                  };
-              }
-              return v;
-          });
-
-          // Create Next Visit (Mandatory)
-          const newVisit: Visit = {
-              id: `nv-${Date.now()}`,
-              date: formatDateToString(nextVisitDate),
-              time: nextVisitTime, 
-              note: 'Visita Planeada',
-              objective: reportFollowUp.toUpperCase(), 
-              outcome: 'PLANEADA',
-              status: 'planned'
-          };
-          updatedVisits = [...updatedVisits, newVisit];
-
-          onUpdateDoctor({ ...doc, visits: updatedVisits });
-      }
-
-      setReportModalOpen(false);
-      alert("Reporte guardado y próxima visita agendada.");
-  };
-
-  const handleDragStart = (e: React.DragEvent, docId: string, visit: Visit) => {
-      setIsDragging(true);
-      const data = JSON.stringify({ docId, visitId: visit.id });
-      e.dataTransfer.setData("text/plain", data);
-      e.dataTransfer.effectAllowed = "move";
-  };
-  
-  const handleDragEnd = () => setIsDragging(false);
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; };
-  
-  const handleDrop = (e: React.DragEvent, targetDate: Date, targetTime?: string) => {
+  const handleAddSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      setIsDragging(false);
-      try {
-          const data = e.dataTransfer.getData("text/plain");
-          if (!data) return;
-          const { docId, visitId } = JSON.parse(data);
-          const newDateStr = toLocalDateString(targetDate);
-          
-          const doc = doctors.find(d => d.id === docId);
-          if (doc) {
-              const updatedVisits = (doc.visits || []).map(v => {
-                  if (v.id === visitId) {
-                      return { ...v, date: newDateStr, time: targetTime || v.time };
-                  }
-                  return v;
-              });
-              onUpdateDoctor({ ...doc, visits: updatedVisits });
-          }
-      } catch (error) { console.error("Drop error:", error); }
-  };
+      if (!formData.name?.trim()) return;
+      if (!onAddDoctor) return;
 
-  const handleTrashDrop = (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      const data = e.dataTransfer.getData("text/plain");
-      if (!data) return;
-      
-      try {
-          const parsed = JSON.parse(data);
-          const { docId, visitId } = parsed;
-          
-          if (docId && visitId) {
-              if (window.confirm("¿Confirmas que deseas eliminar este elemento permanentemente del sistema?")) {
-                  onDeleteVisit(docId, visitId);
-              }
-          }
-      } catch (error) {
-          console.error("Error al eliminar elemento:", error);
-      }
-  };
-
-  // --- HELPER FUNCTIONS ---
-
-  const handleOpenTimeOffModal = () => {
-      setNewTimeOff({
-          startDate: new Date().toISOString().split('T')[0],
-          endDate: new Date().toISOString().split('T')[0],
-          duration: 'TODO EL DÍA',
-          reason: 'JUNTA',
-          notes: ''
-      });
-      setIsTimeOffModalOpen(true);
-  };
-
-  const handleSaveTimeOff = () => {
-      const event: TimeOffEvent = {
-          id: `toff-${Date.now()}`,
-          executive: selectedExecutive,
-          startDate: newTimeOff.startDate || new Date().toISOString().split('T')[0],
-          endDate: newTimeOff.endDate || new Date().toISOString().split('T')[0],
-          duration: newTimeOff.duration as any || 'TODO EL DÍA',
-          reason: newTimeOff.reason as any || 'JUNTA',
-          notes: newTimeOff.notes || ''
+      const newDoctor: Doctor = {
+          id: `new-${Date.now()}`,
+          category: activeTab,
+          name: formData.name.toUpperCase(),
+          executive: formData.executive?.toUpperCase() || 'SIN ASIGNAR',
+          specialty: formData.specialty?.toUpperCase() || (activeTab === 'HOSPITAL' ? 'HOSPITAL' : 'GENERAL'),
+          address: formData.address?.toUpperCase() || '',
+          visits: [],
+          schedule: Array(7).fill(null).map((_, i) => ({ 
+              day: ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'][i], 
+              time: '', 
+              active: false 
+          })),
+          isInsuranceDoctor: false
       };
-      onSaveTimeOff(event);
-      setIsTimeOffModalOpen(false);
+      
+      onAddDoctor(newDoctor);
+      setIsAddModalOpen(false);
+      setFormData({ name: '', specialty: '', address: '', executive: user.name, category: activeTab });
   };
 
-  const handleDeleteTimeOff = (id: string) => {
-      if (window.confirm("¿Eliminar este registro?")) {
-          onDeleteTimeOff(id);
-          setSelectedTimeOff(null);
+  const handleExport = () => {
+      if (filteredItems.length === 0) {
+          alert("No hay datos para exportar");
+          return;
+      }
+
+      // Preparar datos para CSV
+      const csvData = filteredItems.map(doc => ({
+          NOMBRE: doc.name,
+          CATEGORIA: doc.category,
+          ESPECIALIDAD: doc.specialty,
+          EJECUTIVO: doc.executive,
+          DIRECCION: doc.address.replace(/,/g, ' '), // Evitar conflictos con comas
+          HOSPITAL: doc.hospital || '',
+          TELEFONO: doc.phone || '',
+          EMAIL: doc.email || '',
+          CLASIFICACION: doc.classification || 'C'
+      }));
+
+      // Generar CSV
+      const headers = Object.keys(csvData[0]);
+      const csvContent = [
+          headers.join(','),
+          ...csvData.map(row => headers.map(header => `"${(row as any)[header]}"`).join(','))
+      ].join('\n');
+
+      // Descargar archivo
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Directorio_RC_MediCall_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
+
+  const handleImportClick = () => {
+      fileInputRef.current?.click();
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, id: string, name: string) => {
+      e.stopPropagation();
+      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE a ${name}?\n\nEsta acción no se puede deshacer.`)) {
+          if (onDeleteDoctor) onDeleteDoctor(id); 
       }
   };
 
-  const getHeaderTitle = () => {
-      if (viewMode === 'day') return currentDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-      return currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-  }
-
-  const isCita = (visit: Visit) => (visit.outcome as string) === 'CITA';
-
-  const renderEventChip = (evt: any, i: number, isSlot: boolean = false) => {
-      const isTimeOff = evt.type === 'timeoff';
-      const isCompleted = !isTimeOff && evt.data.visit.status === 'completed';
-      const isAppointment = !isTimeOff && isCita(evt.data.visit);
+  const handleBulkArchive = () => {
+      if (selectedExecutive === 'TODOS') return;
       
-      const chipClasses = isSlot 
-        ? `absolute left-0 right-0 mx-2 p-2 rounded shadow-sm cursor-pointer transition-colors z-10 border-l-4 ${
-            isAppointment 
-            ? 'bg-pink-600 border-pink-700 hover:bg-pink-700 text-white' 
-            : (isCompleted 
-                ? 'bg-emerald-600 border-emerald-700 hover:bg-emerald-700 text-white' 
-                : 'bg-blue-600 border-blue-700 hover:bg-blue-700 text-white')
-          }`
-        : `px-2 py-1 rounded text-[8px] font-bold border shadow-sm flex items-center gap-1 transition-all hover:scale-[1.02] relative pr-1 cursor-grab active:cursor-grabbing w-full mb-1 ${
-            isTimeOff 
-            ? 'bg-gradient-to-r from-orange-500 to-orange-600 border-transparent text-white shadow-orange-200'
-            : (isAppointment 
-                ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-transparent shadow-pink-300' 
-                : (isCompleted
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-transparent shadow-emerald-300' 
-                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-transparent shadow-blue-200'))
-        }`;
+      const count = doctors.filter(d => d.executive === selectedExecutive && d.status !== 'archived').length;
+      
+      if (count === 0) {
+          alert(`No hay registros activos asignados a ${selectedExecutive}.`);
+          return;
+      }
 
-      return (
-        <div 
-            key={i}
-            draggable
-            onDragStart={(e) => handleDragStart(e, evt.data.docId, evt.data.visit)}
-            onDragEnd={handleDragEnd}
-            onClick={(e) => { 
-                e.stopPropagation(); 
-                if (isTimeOff) setSelectedTimeOff(evt.data);
-                else if (isAppointment) handleEditAppointment(evt.data.docId, evt.data.visit);
-                else openReportModal(evt.data.docId, evt.data.visit); 
-            }}
-            className={chipClasses}
-        >
-            {isSlot ? (
-                <>
-                    <span className="text-xs font-bold block text-white">{evt.data.docName} ({evt.data.docCategory || 'MEDICO'})</span>
-                    <span className={`text-[10px] uppercase ${
-                        isAppointment ? 'text-pink-100' : (isCompleted ? 'text-emerald-100' : 'text-blue-100')
-                    }`}>{evt.data.visit.objective}</span>
-                </>
-            ) : (
-                <>
-                    <span className="truncate leading-tight flex-1">
-                        {!isTimeOff && <span className="font-black mr-1 opacity-90">{evt.data.visit.time || '??:??'}</span>}
-                        {isTimeOff ? evt.data.reason : evt.data.docName}
-                    </span>
-                    {isCompleted && <CheckCircle2 className="w-2.5 h-2.5 text-white flex-shrink-0" />}
-                    {isAppointment && <Lock className="w-2 h-2 text-white/80 ml-1" />}
-                </>
-            )}
-        </div>
+      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE toda la cartera de ${selectedExecutive}?\n\nSe eliminarán ${count} registros. Esta acción no se puede deshacer.`)) {
+          const idsToDelete = doctors
+              .filter(d => d.executive === selectedExecutive && d.status !== 'archived')
+              .map(d => d.id);
+          
+          if (onBulkDeleteDoctors) {
+              onBulkDeleteDoctors(idsToDelete);
+          } else if (onDeleteDoctor) {
+              idsToDelete.forEach(id => onDeleteDoctor(id));
+          }
+          alert(`Se han eliminado ${count} registros de ${selectedExecutive}.`);
+      }
+  };
+
+  const handleSelectedBulkDelete = () => {
+      if (selectedIds.length === 0) return;
+
+      if (window.confirm(`⚠️ ADVERTENCIA ⚠️\n\n¿Estás seguro de que deseas ELIMINAR PERMANENTEMENTE los ${selectedIds.length} registros seleccionados?\n\nEsta acción no se puede deshacer.`)) {
+          if (onBulkDeleteDoctors) {
+              onBulkDeleteDoctors(selectedIds);
+          } else if (onDeleteDoctor) {
+              selectedIds.forEach(id => onDeleteDoctor(id));
+          }
+          setSelectedIds([]);
+          alert(`Se han eliminado ${selectedIds.length} registros.`);
+      }
+  };
+
+  const toggleSelectAll = () => {
+      if (selectedIds.length === filteredItems.length) {
+          setSelectedIds([]);
+      } else {
+          setSelectedIds(filteredItems.map(i => i.id));
+      }
+  };
+
+  const toggleSelectId = (e: React.MouseEvent, id: string) => {
+      e.stopPropagation();
+      setSelectedIds(prev => 
+          prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
       );
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+          const text = event.target?.result as string;
+          if (!text) return;
+
+          const lines = text.split('\n');
+          if (lines.length < 2) return;
+
+          // Obtener headers y normalizarlos
+          const headers = lines[0].split(',').map(h => h.trim().toUpperCase().replace(/^"|"$/g, ''));
+          
+          const newDoctors: Doctor[] = [];
+
+          // Procesar cada línea
+          lines.slice(1).forEach((line, index) => {
+              if (!line.trim()) return;
+
+              // Parser robusto para CSV con comillas
+              const parts: string[] = [];
+              let currentPart = '';
+              let inQuotes = false;
+              for (let i = 0; i < line.length; i++) {
+                  const char = line[i];
+                  if (char === '"') inQuotes = !inQuotes;
+                  else if (char === ',' && !inQuotes) {
+                      parts.push(currentPart.trim().replace(/^"|"$/g, ''));
+                      currentPart = '';
+                  } else {
+                      currentPart += char;
+                  }
+              }
+              parts.push(currentPart.trim().replace(/^"|"$/g, ''));
+
+              // Mapear datos
+              const getData = (headerName: string) => {
+                  const idx = headers.indexOf(headerName);
+                  return idx !== -1 && parts[idx] ? parts[idx] : '';
+              };
+
+              const name = getData('NOMBRE');
+              if (!name) return;
+
+              // Determinar Categoría
+              let category: 'MEDICO' | 'HOSPITAL' | 'ADMINISTRATIVO' = 'MEDICO';
+              const rawCat = getData('CATEGORIA').toUpperCase();
+              if (rawCat.includes('HOSPITAL')) category = 'HOSPITAL';
+              else if (rawCat.includes('ADMIN') || rawCat.includes('PERSONAL')) category = 'ADMINISTRATIVO';
+              else if (rawCat.includes('MEDICO') || rawCat.includes('DOCTOR')) category = 'MEDICO';
+
+              const initialSchedule: ScheduleSlot[] = [
+                { day: 'LUNES', time: '', active: false },
+                { day: 'MARTES', time: '', active: false },
+                { day: 'MIÉRCOLES', time: '', active: false },
+                { day: 'JUEVES', time: '', active: false },
+                { day: 'VIERNES', time: '', active: false },
+                { day: 'SÁBADO', time: '', active: false },
+                { day: 'DOMINGO', time: '', active: false }
+              ];
+
+              const newDoc: Doctor = {
+                  id: `imp-${Date.now()}-${index}`,
+                  name: name.toUpperCase(),
+                  category: category,
+                  executive: getData('EJECUTIVO').toUpperCase() || 'SIN ASIGNAR',
+                  specialty: getData('ESPECIALIDAD').toUpperCase() || (category === 'MEDICO' ? 'GENERAL' : ''),
+                  subSpecialty: getData('SUB ESPECIALIDAD').toUpperCase(),
+                  address: getData('DIRECCION').toUpperCase(),
+                  phone: getData('TELEFONO'),
+                  email: getData('EMAIL'),
+                  hospital: getData('HOSPITAL').toUpperCase(),
+                  officeNumber: getData('CONSULTORIO'),
+                  floor: getData('PISO'),
+                  cedula: getData('CEDULA'),
+                  birthDate: getData('FECHA DE NACIMIENTO'),
+                  classification: (getData('CLASIFICACION').toUpperCase() as any) || 'C',
+                  isInsuranceDoctor: getData('ASEGURADORA').toUpperCase() === 'SI' || getData('ASEGURADORA').toUpperCase() === 'TRUE',
+                  importantNotes: getData('OBSERVACIONES').toUpperCase(),
+                  socialStyle: getData('ESTILO SOCIAL').toUpperCase() as any,
+                  attitudinalSegment: getData('SEGMENTO ACTITUDINAL').toUpperCase() as any,
+                  visits: [],
+                  schedule: initialSchedule
+              };
+
+              newDoctors.push(newDoc);
+          });
+
+          if (newDoctors.length > 0) {
+              if (onBulkAddDoctors) {
+                  onBulkAddDoctors(newDoctors);
+              } else if (onAddDoctor) {
+                  // Fallback si no existe la función bulk (legacy)
+                  newDoctors.forEach(doc => onAddDoctor(doc));
+              }
+              alert(`Importación completada: ${newDoctors.length} registros procesados.`);
+          } else {
+              alert("No se encontraron registros válidos o el formato CSV es incorrecto.");
+          }
+
+          if (fileInputRef.current) fileInputRef.current.value = '';
+      };
+      reader.readAsText(file);
+  };
+
   return (
-    <div className="space-y-6 md:space-y-8 pb-10 relative animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn pb-12">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-200 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-full blur-3xl -z-10 opacity-60"></div>
+        
+        <div className="relative z-10">
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100 backdrop-blur-md">
+                    <Database className="w-6 h-6" />
+                </div>
+                Directorio <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Central</span>
+            </h1>
+            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] ml-[4.5rem] mt-1">
+                {filteredItems.length} registros activos
+            </p>
+        </div>
+        
+        <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 md:gap-3 relative z-10">
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                accept=".csv" 
+                className="hidden" 
+            />
+            {user.role === 'admin' && selectedIds.length > 0 && (
+                <button 
+                    onClick={handleSelectedBulkDelete}
+                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-lg font-black text-[10px] uppercase tracking-widest active:scale-95 border border-red-100"
+                >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar ({selectedIds.length})
+                </button>
+            )}
+            {user.role === 'admin' && onClearCategory && (
+                <button 
+                    onClick={() => onClearCategory(activeTab)}
+                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 py-3 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-rose-100"
+                >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Limpiar
+                </button>
+            )}
+            {user.role === 'admin' && selectedExecutive !== 'TODOS' && (
+                <button 
+                    onClick={handleBulkArchive}
+                    className="col-span-2 md:col-span-1 flex items-center justify-center px-4 py-3 bg-orange-50 text-orange-600 rounded-xl hover:bg-orange-600 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-orange-100"
+                >
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Eliminar {selectedExecutive}
+                </button>
+            )}
+            <button 
+                onClick={handleImportClick}
+                className="flex items-center justify-center px-4 py-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-indigo-100"
+            >
+                <Upload className="h-4 w-4 mr-2" />
+                Importar
+            </button>
+            
+            <button 
+                onClick={handleExport}
+                className="flex items-center justify-center px-4 py-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm font-black text-[10px] uppercase tracking-widest active:scale-95 border border-emerald-100"
+            >
+                <Download className="h-4 w-4 mr-2" />
+                Excel
+            </button>
+            <button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="col-span-2 md:col-span-1 flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-500 hover:to-blue-600 transition-all shadow-lg shadow-blue-500/20 font-black text-[10px] uppercase tracking-widest active:scale-95 border border-white/10"
+            >
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo
+            </button>
+        </div>
+      </div>
 
-       {/* TOOLBAR */}
-       <div className="flex flex-col xl:flex-row justify-between items-center bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-200 shadow-xl gap-6">
-           <div className="text-center xl:text-left w-full xl:w-auto">
-               <h1 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight flex items-center justify-center xl:justify-start gap-3">
-                   <CalendarClock className="w-8 h-8 md:w-10 md:h-10 text-blue-600" />
-                   CALENDARIO <span className="text-blue-600">EJECUTIVO</span>
-               </h1>
-               <p className="text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest mt-2">Gestión de rutas y tiempos operativos.</p>
-           </div>
-           
-           <div className="flex flex-col md:flex-row gap-4 items-center w-full xl:w-auto">
-               <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full md:w-auto border border-slate-200">
-                   {(['month', 'week', 'day'] as ViewMode[]).map(mode => (
-                       <button
-                           key={mode}
-                           onClick={() => setViewMode(mode)}
-                           className={`flex-1 md:flex-none px-6 md:px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-white text-blue-600 shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
-                       >
-                           {mode === 'month' ? 'Mes' : (mode === 'week' ? 'Semana' : 'Día')}
-                       </button>
-                   ))}
-               </div>
+      {/* FILTROS INTEGRADOS */}
+      <div className="bg-white p-4 md:p-6 rounded-[2.5rem] shadow-lg border border-slate-200 space-y-4 md:space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-2 p-1.5 bg-slate-50 rounded-2xl w-full md:w-fit overflow-x-auto no-scrollbar border border-slate-100">
+                {(['MEDICO', 'ADMINISTRATIVO', 'HOSPITAL'] as TabType[]).map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20 ring-1 ring-white/20' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                    >
+                        {tab === 'MEDICO' ? 'Médicos' : (tab === 'ADMINISTRATIVO' ? 'Admin' : 'Hospitales')}
+                    </button>
+                ))}
+            </div>
 
-               <div className="flex gap-3 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
-                   <button 
-                       onClick={() => handleDayClick(currentDate, false)}
-                       className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white px-6 md:px-8 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-95 flex items-center justify-center whitespace-nowrap"
-                   >
-                       <Plus className="w-5 h-5 mr-2" />
-                       Visita
-                   </button>
-                   <button 
-                       onClick={() => handleDayClick(currentDate, true)}
-                       className="flex-1 md:flex-none bg-pink-600 hover:bg-pink-500 text-white px-6 md:px-8 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-pink-500/20 transition-all active:scale-95 flex items-center justify-center whitespace-nowrap"
-                   >
-                       <Lock className="w-4 h-4 mr-2" />
-                       Cita
-                   </button>
-                   <button 
-                       onClick={handleOpenTimeOffModal}
-                       className="flex-1 md:flex-none bg-white/10 hover:bg-white/20 text-white px-6 md:px-8 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl transition-all border border-white/10 active:scale-95 flex items-center justify-center whitespace-nowrap"
-                   >
-                       <Coffee className="w-4 h-4 mr-2" />
-                       Ausencia
-                   </button>
-                   <div 
-                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
-                        onDrop={handleTrashDrop}
-                        className={`w-14 md:w-16 rounded-2xl flex items-center justify-center transition-all border-2 border-dashed flex-shrink-0 ${isDragging ? 'bg-red-500/20 border-red-500 text-red-500 scale-110 shadow-lg shadow-red-500/20' : 'bg-white/5 border-white/10 text-slate-500 hover:border-red-500/50 hover:text-red-400'}`}
-                        title="Arrastra aquí para eliminar"
-                   >
-                       <Trash2 className="h-6 w-6 pointer-events-none" />
-                   </div>
-               </div>
-           </div>
-       </div>
-
-       {/* CALENDAR HEADER CONTROLS */}
-       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-200 gap-6">
-           <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-               <button onClick={prevPeriod} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors text-slate-400 hover:text-blue-600"><ChevronLeft className="w-6 h-6" /></button>
-               <h2 className="text-lg md:text-2xl font-black text-slate-800 uppercase tracking-tight text-center flex-1 md:flex-none">{getHeaderTitle()}</h2>
-               <button onClick={nextPeriod} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors text-slate-400 hover:text-blue-600"><ChevronRight className="w-6 h-6" /></button>
-           </div>
-           
-           <div className="flex items-center gap-3 w-full md:w-auto">
-               <div className="relative flex-1 md:flex-none">
-                   <select 
-                       value={selectedExecutive} 
-                       onChange={(e) => setSelectedExecutive(e.target.value)}
-                       className="w-full md:w-64 appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-xs font-black uppercase tracking-wide rounded-2xl py-3 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                       disabled={user.role === 'executive'}
-                   >
-                       {executives.map(e => <option key={e} value={e}>{e}</option>)}
-                   </select>
-                   <UserIcon className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
-               </div>
-               <button onClick={() => setCurrentDate(new Date())} className="px-4 py-3 bg-blue-50 text-blue-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-colors whitespace-nowrap">
-                   Hoy
-               </button>
-           </div>
-       </div>
-
-
-
-
-
-
-
-
-
-
-
-       {/* CALENDAR VIEW */}
-       <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl overflow-hidden flex flex-col h-[65vh] md:h-[75vh] min-h-[500px]">
-
-
-           <div className="flex-1 overflow-auto bg-white">
-               <div className={`h-full flex flex-col ${viewMode !== 'day' ? 'min-w-[800px]' : 'min-w-full'}`}>
-                   {viewMode !== 'day' && (
-                       <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
-                           {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
-                               <div key={d} className="py-3 text-center text-[10px] font-black text-slate-500 uppercase tracking-widest">{d}</div>
-                           ))}
-                       </div>
-                   )}
-
-                   <div className={`flex-1 ${viewMode === 'day' ? 'flex flex-col' : 'grid grid-cols-7 auto-rows-fr gap-px bg-slate-100'}`}>
-                       {calendarDays.map((day, idx) => {
-                           if (viewMode !== 'day' && day === null) return <div key={`empty-${idx}`} className="bg-slate-50 min-h-[100px]"></div>;
-                           
-                           const events = day ? getEventsForDate(day) : [];
-                           const isToday = day ? new Date().toDateString() === day.toDateString() : false;
-
-                           if (viewMode === 'day' && day) {
-                               return (
-                                   <div key={idx} className="flex-1 bg-white p-4 md:p-8 animate-fadeIn flex">
-                                       <div className="w-24 flex-shrink-0 border-r border-slate-100 pr-4 pt-2 bg-slate-50/30">
-                                           {visitTimeSlots.map(time => (
-                                               <div key={time} className="h-24 text-xs font-bold text-slate-500 flex items-start justify-between group relative">
-                                                   <span className="-mt-3 bg-white pr-2 z-10">{time}</span>
-                                                   <button 
-                                                        onClick={(e) => { e.stopPropagation(); handleTimeSlotClick(time); }}
-                                                        className="absolute right-0 top-0 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-full p-1.5 transition-all transform active:scale-95 z-20 md:opacity-0 md:group-hover:opacity-100 border border-blue-100"
-                                                        title="Planear Visita aquí"
-                                                   >
-                                                       <Plus className="h-3 w-3" />
-                                                   </button>
-                                               </div>
-                                           ))}
-                                       </div>
-
-                                       <div className="flex-1 pl-4 relative pt-2">
-                                            {visitTimeSlots.map((time, tIdx) => (
-                                                 <div 
-                                                    key={`line-${time}`} 
-                                                    className="absolute w-full border-t border-slate-100"
-                                                    style={{ top: `${tIdx * 6}rem` }}
-                                                 ></div>
-                                            ))}
-                                            
-                                            {visitTimeSlots.map((time, tIdx) => {
-                                                const slotEvents = events.filter(e => e.type === 'visit' && e.data.visit.time === time);
-                                                return (
-                                                    <div 
-                                                        key={time} 
-                                                        onClick={() => handleTimeSlotClick(time)}
-                                                        onDragOver={handleDragOver}
-                                                        onDrop={(e) => handleDrop(e, day, time)}
-                                                        className="absolute w-full hover:bg-slate-50 transition-colors z-0 cursor-pointer rounded-xl"
-                                                        style={{ top: `${tIdx * 6}rem`, height: '6rem' }}
-                                                    >
-                                                        {slotEvents.map((evt, i) => renderEventChip(evt, i, true))}
-                                                    </div>
-                                                )
-                                            })}
-                                       </div>
-                                   </div>
-                               )
-                           }
-                           
-                           if (!day) return null;
-
-                           return (
-                               <div key={idx} 
-                                   onDragOver={handleDragOver}
-                                   onDrop={(e) => handleDrop(e, day)}
-                                   onClick={() => handleDayClick(day)}
-                                   className={`min-h-[140px] bg-white p-3 border-b border-r border-slate-100 hover:bg-slate-50 transition-all cursor-pointer relative group flex flex-col gap-2 ${isToday ? 'bg-blue-50 ring-1 ring-inset ring-blue-100' : ''}`}
-                               >
-                                   <div className="flex justify-between items-start">
-                                        <span className={`text-xs font-black w-7 h-7 flex items-center justify-center rounded-full transition-all ${isToday ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 group-hover:text-slate-800'}`}>
-                                            {day.getDate()}
-                                        </span>
-                                        <button className="opacity-0 group-hover:opacity-100 bg-slate-100 p-1.5 rounded-xl text-slate-500 hover:text-blue-600 transition-all border border-slate-200">
-                                            <Plus className="h-3.5 w-3.5" />
-                                        </button>
-                                   </div>
-                                   
-                                   <div className="flex-1 w-full space-y-1.5">
-                                       {events.map((evt, i) => renderEventChip(evt, i))}
-                                   </div>
-                               </div>
-                           )
-                       })}
-                   </div>
-               </div>
-           </div>
-       </div>
-
-       {/* 1. Plan Visit Modal */}
-       {isModalOpen && (
-           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-               <div className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                   <div className="p-8 border-b border-white/10 flex justify-between items-center bg-white/5">
-                       <h3 className="text-xl font-black text-white flex items-center gap-3">
-                           {isAppointmentMode ? <Clock className="w-6 h-6 text-pink-500" /> : <Calendar className="w-6 h-6 text-blue-500" />}
-                           {isAppointmentMode ? (editingAppointment ? 'EDITAR CITA' : 'PROGRAMAR CITA') : 'PLANEAR VISITA'}
-                       </h3>
-                       <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all text-slate-400 hover:text-white">
-                           <X className="w-6 h-6" />
-                       </button>
-                   </div>
-                   <div className="p-8 space-y-6 overflow-y-auto">
-                        {isAppointmentMode && (
-                           <div className="bg-pink-500/10 p-4 rounded-2xl border border-pink-500/20 flex items-center text-pink-400 text-xs font-bold">
-                               <Lock className="w-4 h-4 mr-3" />
-                               {editingAppointment ? 'Modo Edición - Cambio de Contacto' : 'Cita Bloqueada - Prioridad Alta'}
-                           </div>
-                        )}
-
-                        <div className="space-y-2">
-                            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Contacto</label>
-                            <div className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                                <input 
-                                    type="text" 
-                                    placeholder="BUSCAR MÉDICO..." 
-                                    value={searchDoctorTerm} 
-                                    onChange={(e) => setSearchDoctorTerm(e.target.value.toUpperCase())}
-                                    className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold text-white placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                />
-                            </div>
-                            {searchDoctorTerm && (
-                                <div className="mt-2 max-h-48 overflow-y-auto border border-white/10 rounded-2xl bg-slate-900/90 backdrop-blur-xl shadow-2xl">
-                                    {filteredDoctorsForModal.map(doc => (
-                                        <div 
-                                            key={doc.id} 
-                                            onClick={() => { setSelectedDoctorId(doc.id); setSearchDoctorTerm(doc.name); }}
-                                            className={`p-4 text-xs font-bold border-b border-white/5 last:border-0 cursor-pointer transition-colors ${selectedDoctorId === doc.id ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
-                                        >
-                                            <div className="uppercase tracking-wide">{doc.name}</div>
-                                            <div className="text-[10px] text-slate-500 font-medium flex items-center mt-1.5">
-                                                <Building className="w-3 h-3 mr-1.5" /> {doc.hospital || doc.address}
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {filteredDoctorsForModal.length === 0 && <div className="p-6 text-xs text-slate-500 text-center font-bold">No se encontraron resultados</div>}
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           <div className="space-y-2">
-                               <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Fecha</label>
-                               <DatePicker
-                                   selected={planDate}
-                                   onChange={(date) => date && setPlanDate(date)}
-                                   disabled={!!editingAppointment}
-                                   dateFormat="dd/MM/yyyy"
-                                   locale="es"
-                                   className={`w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all ${!!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
-                               />
-                           </div>
-
-                           <div className="space-y-2">
-                               <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Hora</label>
-                               <select 
-                                   value={appointmentTime} 
-                                   onChange={(e) => setAppointmentTime(e.target.value)}
-                                   disabled={!!editingAppointment}
-                                   className={`w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none ${!!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
-                               >
-                                   {(isAppointmentMode ? appointmentTimeSlots : visitTimeSlots).map(t => <option key={t} value={t} className="bg-slate-900 text-white">{t}</option>)}
-                               </select>
-                           </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">{isAppointmentMode ? 'Objetivo Cita' : 'Objetivo SMART'}</label>
-                            <textarea 
-                                rows={3}
-                                value={planObjective}
-                                onChange={(e) => setPlanObjective(e.target.value.toUpperCase())}
-                                disabled={isAppointmentMode || !!editingAppointment}
-                                className={`w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm uppercase font-bold text-white placeholder:text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all ${isAppointmentMode || !!editingAppointment ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
-                                placeholder={isAppointmentMode ? "MOTIVO DE LA CITA..." : "ESPECÍFICO, MEDIBLE, ALCANZABLE..."}
-                            />
-                        </div>
-                   </div>
-                   <div className="p-8 border-t border-white/10 flex justify-end gap-4 bg-white/5">
-                       <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 text-sm font-black text-slate-400 hover:text-white hover:bg-white/5 rounded-2xl transition-all uppercase tracking-widest">Cancelar</button>
-                       <button onClick={savePlan} className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-95">Guardar Plan</button>
-                   </div>
-               </div>
-           </div>
-       )}
-
-       {/* 2. Report/Edit Modal */}
-       {reportModalOpen && selectedVisitToReport && (
-           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-               <div className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl w-[95%] md:w-full md:max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                   <div className="p-8 border-b border-white/10 flex justify-between items-center bg-white/5">
-                       <div>
-                           <div className="flex space-x-6 mb-3">
-                                <button onClick={() => setIsEditingPlan(false)} className={`text-sm font-black uppercase border-b-2 pb-2 transition-all tracking-widest ${!isEditingPlan ? 'text-blue-500 border-blue-500' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
-                                     Reportar
-                                </button>
-                                <button onClick={() => setIsEditingPlan(true)} className={`text-sm font-black uppercase border-b-2 pb-2 transition-all tracking-widest ${isEditingPlan ? 'text-blue-500 border-blue-500' : 'text-slate-500 border-transparent hover:text-slate-300'}`}>
-                                     Reprogramar
-                                </button>
-                           </div>
-                           <h3 className="text-xl font-black text-white uppercase flex items-center gap-3">
-                               {isEditingPlan ? 'Modificar Planificación' : 'Reportar Resultado'}
-                           </h3>
-                       </div>
-                       <div className="flex items-center gap-3">
-                            <button onClick={confirmDeleteVisit} className="p-3 text-red-500 hover:bg-red-500/10 rounded-2xl transition-all" title="Eliminar Visita">
-                                <Trash2 className="w-6 h-6" />
-                            </button>
-                            <button onClick={() => setReportModalOpen(false)} className="p-3 text-slate-500 hover:text-white hover:bg-white/10 rounded-2xl transition-all">
-                                <X className="w-7 h-7" />
-                            </button>
-                       </div>
-                   </div>
-
-                   {/* Doctor Info Header Fixed */}
-                   {selectedVisitToReport && (() => {
-                       const doc = doctors.find(d => d.id === selectedVisitToReport.docId);
-                       return doc ? (
-                           <div className="px-8 py-6 bg-blue-500/5 border-b border-white/10 flex items-center gap-4">
-                               <div className="p-3 bg-white/5 rounded-2xl border border-white/10 text-blue-400 shadow-xl">
-                                   <UserIcon className="w-6 h-6" />
-                               </div>
-                               <div>
-                                   <h4 className="text-base font-black text-white uppercase leading-tight tracking-wide">{doc.name}</h4>
-                                   <p className="text-xs font-bold text-blue-400 uppercase flex items-center gap-2 mt-1">
-                                       <Stethoscope className="w-4 h-4" />
-                                       {doc.specialty || 'GENERAL'}
-                                   </p>
-                               </div>
-                           </div>
-                       ) : null;
-                   })()}
-
-                   <div className="p-8 space-y-8 overflow-y-auto">
-                        {/* Common Fields */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Fecha</label>
-                                <input type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Hora</label>
-                                <select value={reportTime} onChange={(e) => setReportTime(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none">
-                                    {visitTimeSlots.map(t => <option key={t} value={t} className="bg-slate-900 text-white">{t}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
-                        {isEditingPlan ? (
-                            <div className="space-y-2">
-                                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Objetivo (Editar)</label>
-                                <textarea 
-                                    rows={3}
-                                    value={editObjective}
-                                    onChange={(e) => setEditObjective(e.target.value.toUpperCase())}
-                                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none transition-all hover:bg-white/10"
-                                />
-                            </div>
-                        ) : (
-                            <>
-                                <div className="bg-white/5 p-5 rounded-2xl border border-white/10">
-                                    <span className="text-xs font-black text-slate-500 uppercase tracking-widest block mb-2">Objetivo Original</span>
-                                    <p className="text-sm font-bold text-slate-300 uppercase leading-relaxed">{editObjective}</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Resultado</label>
-                                    <select value={reportOutcome} onChange={(e) => setReportOutcome(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none">
-                                        <option value="SEGUIMIENTO" className="bg-slate-900 text-white">SEGUIMIENTO</option>
-                                        <option value="COTIZACIÓN" className="bg-slate-900 text-white">COTIZACIÓN</option>
-                                        <option value="INTERESADO" className="bg-slate-900 text-white">INTERESADO</option>
-                                        <option value="PROGRAMAR PROCEDIMIENTO" className="bg-slate-900 text-white">PROGRAMAR PROCEDIMIENTO</option>
-                                    </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Reporte / Notas</label>
-                                    <textarea 
-                                        rows={3}
-                                        value={reportNote}
-                                        onChange={(e) => setReportNote(e.target.value.toUpperCase())}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none transition-all hover:bg-white/10"
-                                        placeholder="DETALLES DE LA VISITA..."
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Siguiente Paso</label>
-                                    <textarea 
-                                        rows={2}
-                                        value={reportFollowUp}
-                                        onChange={(e) => setReportFollowUp(e.target.value.toUpperCase())}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none uppercase resize-none transition-all hover:bg-white/10"
-                                        placeholder="COMPROMISOS..."
-                                    />
-                                </div>
-
-                                <div className="border-t border-white/10 pt-8 bg-blue-500/5 p-6 rounded-[2rem] border border-white/5">
-                                    <div className="mb-4">
-                                        <span className="text-sm font-black text-white uppercase flex items-center tracking-widest">
-                                             <Calendar className="w-5 h-5 mr-3 text-blue-500" />
-                                             Agendar Próxima Visita
-                                        </span>
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                                        <div className="space-y-2">
-                                            <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Fecha</label>
-                                            <DatePicker 
-                                                 selected={nextVisitDate} 
-                                                 onChange={(date) => setNextVisitDate(date)} 
-                                                 dateFormat="dd/MM/yyyy"
-                                                 locale="es"
-                                                 placeholderText="SELECCIONE FECHA"
-                                                 className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xs font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all hover:bg-white/10"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest ml-1">Hora</label>
-                                            <select 
-                                                 value={nextVisitTime} 
-                                                 onChange={(e) => setNextVisitTime(e.target.value)}
-                                                 className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xs font-bold text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none"
-                                            >
-                                                {visitTimeSlots.map(t => <option key={t} value={t} className="bg-slate-900 text-white">{t}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                   </div>
-
-                   <div className="p-8 border-t border-white/10 flex justify-end gap-4 bg-white/5">
-                       <button onClick={() => setReportModalOpen(false)} className="px-6 py-3 text-sm font-black text-slate-400 hover:text-white hover:bg-white/5 rounded-2xl transition-all uppercase tracking-widest">Cancelar</button>
-                       {isEditingPlan ? (
-                           <button onClick={savePlanChanges} className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-95">Guardar Cambios</button>
-                       ) : (
-                           <button onClick={saveReport} className="px-8 py-3 bg-green-600 hover:bg-green-500 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-green-500/20 transition-all active:scale-95">Finalizar Reporte</button>
-                       )}
-                   </div>
-               </div>
-           </div>
-       )}
-
-       {/* 3. Time Off Modal */}
-       {isTimeOffModalOpen && (
-           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-               <div className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl w-[95%] md:w-full md:max-w-md overflow-hidden flex flex-col">
-                   <div className="p-8 border-b border-white/10 flex justify-between items-center bg-white/5">
-                       <h3 className="text-xl font-black text-white uppercase flex items-center gap-3">
-                           <Coffee className="w-6 h-6 text-orange-500" />
-                           Registrar Ausencia
-                       </h3>
-                       <button onClick={() => setIsTimeOffModalOpen(false)} className="p-3 text-slate-500 hover:text-white hover:bg-white/10 rounded-2xl transition-all">
-                           <X className="w-7 h-7" />
-                       </button>
-                   </div>
-                   <div className="p-8 space-y-8">
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           <div className="space-y-2">
-                               <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Desde</label>
-                               <DatePicker
-                                   selected={parseDateString(newTimeOff.startDate || '')}
-                                   onChange={(date) => setNewTimeOff({...newTimeOff, startDate: formatDateToString(date)})}
-                                   dateFormat="dd/MM/yyyy"
-                                   locale="es"
-                                   className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all hover:bg-white/10"
-                               />
-                           </div>
-                           <div className="space-y-2">
-                               <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Hasta</label>
-                               <DatePicker
-                                   selected={parseDateString(newTimeOff.endDate || '')}
-                                   onChange={(date) => setNewTimeOff({...newTimeOff, endDate: formatDateToString(date)})}
-                                   dateFormat="dd/MM/yyyy"
-                                   locale="es"
-                                   className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all hover:bg-white/10"
-                               />
-                           </div>
-                       </div>
-                       
-                       <div className="space-y-2">
-                           <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Duración</label>
-                           <select 
-                               value={newTimeOff.duration} 
-                               onChange={(e) => setNewTimeOff({...newTimeOff, duration: e.target.value as any})} 
-                               className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all appearance-none hover:bg-white/10"
-                           >
-                               <option value="TODO EL DÍA" className="bg-slate-900 text-white">TODO EL DÍA</option>
-                               <option value="2 A 4 HRS" className="bg-slate-900 text-white">2 A 4 HRS</option>
-                               <option value="6 A 8 HRS" className="bg-slate-900 text-white">6 A 8 HRS</option>
-                           </select>
-                       </div>
-
-                       <div className="space-y-2">
-                           <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Motivo</label>
-                           <select 
-                               value={newTimeOff.reason} 
-                               onChange={(e) => setNewTimeOff({...newTimeOff, reason: e.target.value as any})} 
-                               className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all appearance-none hover:bg-white/10"
-                           >
-                               <option value="JUNTA" className="bg-slate-900 text-white">JUNTA</option>
-                               <option value="CAPACITACIÓN" className="bg-slate-900 text-white">CAPACITACIÓN</option>
-                               <option value="PERMISO" className="bg-slate-900 text-white">PERMISO</option>
-                               <option value="ADMINISTRATIVO" className="bg-slate-900 text-white">ADMINISTRATIVO</option>
-                           </select>
-                       </div>
-
-                       <div className="space-y-2">
-                           <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Notas</label>
-                           <textarea 
-                               rows={3} 
-                               value={newTimeOff.notes} 
-                               onChange={(e) => setNewTimeOff({...newTimeOff, notes: e.target.value.toUpperCase()})} 
-                               className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:ring-2 focus:ring-orange-500 outline-none uppercase resize-none transition-all hover:bg-white/10" 
-                               placeholder="DETALLES ADICIONALES..."
-                           />
-                       </div>
-                   </div>
-                   <div className="p-8 border-t border-white/10 flex justify-end gap-4 bg-white/5">
-                       <button onClick={() => setIsTimeOffModalOpen(false)} className="px-6 py-3 text-sm font-black text-slate-400 hover:text-white hover:bg-white/5 rounded-2xl transition-all uppercase tracking-widest">Cancelar</button>
-                       <button onClick={handleSaveTimeOff} className="px-8 py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-xl shadow-orange-500/20 transition-all active:scale-95">Guardar Ausencia</button>
-                   </div>
-               </div>
-           </div>
-       )}
-
-       {/* 4. Time Off Detail/Delete Modal */}
-       {selectedTimeOff && (
-            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-                <div className="bg-slate-900/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-2xl p-10 w-[95%] md:w-full max-w-md">
-                    <div className="flex justify-between items-start mb-8">
-                        <h3 className="text-2xl font-black text-white uppercase tracking-tight">{selectedTimeOff.reason}</h3>
-                        <button onClick={() => setSelectedTimeOff(null)} className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all">
-                            <X className="w-6 h-6" />
-                        </button>
+            {user.role === 'admin' && filteredItems.length > 0 && (
+                <button 
+                    onClick={toggleSelectAll}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-all font-black text-[10px] uppercase tracking-widest border border-slate-100"
+                >
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedIds.length === filteredItems.length ? 'bg-blue-600 border-blue-500' : 'bg-white border-slate-200'}`}>
+                        {selectedIds.length === filteredItems.length && <Plus className="w-3 h-3 text-white rotate-45" />}
                     </div>
-                    <div className="space-y-4 mb-10">
-                        <div className="flex items-center gap-4 text-slate-300">
-                            <Calendar className="w-5 h-5 text-blue-500" />
-                            <span className="text-sm font-bold uppercase tracking-wide">{selectedTimeOff.startDate} - {selectedTimeOff.endDate}</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-slate-300">
-                            <Clock className="w-5 h-5 text-blue-500" />
-                            <span className="text-sm font-bold uppercase tracking-wide">{selectedTimeOff.duration}</span>
-                        </div>
-                        {selectedTimeOff.notes && (
-                            <div className="mt-6 p-5 bg-white/5 rounded-2xl border border-white/10">
-                                <p className="text-sm font-medium text-slate-400 italic leading-relaxed">"{selectedTimeOff.notes}"</p>
-                            </div>
-                        )}
-                    </div>
-                    <div className="flex justify-end">
-                        <button 
-                            onClick={() => handleDeleteTimeOff(selectedTimeOff.id)}
-                            className="flex items-center gap-3 text-red-500 hover:text-red-400 font-black text-xs uppercase tracking-widest px-6 py-3 hover:bg-red-500/10 rounded-2xl transition-all"
-                        >
-                            <Trash2 className="w-5 h-5" /> Eliminar Evento
-                        </button>
-                    </div>
+                    {selectedIds.length === filteredItems.length ? 'Desmarcar Todo' : 'Seleccionar Todo'}
+                </button>
+            )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
+                </div>
+                <input
+                    type="text"
+                    className="block w-full pl-14 pr-4 py-4 border border-slate-200 rounded-2xl bg-slate-50 text-slate-900 font-bold placeholder-slate-300 focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm"
+                    placeholder="BUSCAR POR NOMBRE, ESPECIALIDAD O DIRECCIÓN..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                    <Filter className="h-5 w-5 text-slate-300 group-focus-within:text-blue-600 transition-colors" />
+                </div>
+                <select
+                    className="block w-full pl-14 pr-10 py-4 border border-slate-200 rounded-2xl bg-slate-50 text-slate-900 font-bold focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all uppercase text-sm appearance-none cursor-pointer"
+                    value={selectedExecutive}
+                    onChange={(e) => setSelectedExecutive(e.target.value)}
+                    disabled={user.role === 'executive'}
+                >
+                    {executivesList.map(exec => <option key={exec} value={exec} className="bg-white text-slate-900">{exec}</option>)}
+                </select>
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                    <div className="h-1.5 w-1.5 rounded-full bg-slate-200"></div>
                 </div>
             </div>
-       )}
+        </div>
+      </div>
 
+      {isFiltering ? (
+          <div className="flex flex-col items-center justify-center py-40 animate-pulse">
+              <Loader2 className="w-12 h-12 text-blue-400 animate-spin mb-4" />
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Cargando resultados...</p>
+          </div>
+      ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {itemsToShow.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => navigate(`/doctors/${item.id}`)}
+                className={`bg-white rounded-[2.5rem] shadow-lg border p-8 hover:shadow-blue-500/10 hover:-translate-y-2 transition-all cursor-pointer group flex flex-col h-full relative overflow-hidden ${selectedIds.includes(item.id) ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-100'}`}
+              >
+                <div className={`absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 rounded-full opacity-5 group-hover:opacity-10 transition-opacity ${activeTab === 'MEDICO' ? 'bg-blue-600' : 'bg-emerald-600'}`}></div>
+                
+                <div className="flex justify-between items-start mb-6">
+                    <div className="flex items-center gap-4">
+                        {user.role === 'admin' && (
+                            <div 
+                                onClick={(e) => toggleSelectId(e, item.id)}
+                                className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all z-20 ${selectedIds.includes(item.id) ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/30' : 'bg-slate-50 border-slate-200 hover:border-blue-400'}`}
+                            >
+                                {selectedIds.includes(item.id) && <Plus className="w-4 h-4 text-white rotate-45" />}
+                            </div>
+                        )}
+                        <div className={`p-4 rounded-2xl text-white shadow-lg ${activeTab === 'MEDICO' ? 'bg-gradient-to-br from-blue-600 to-blue-700' : activeTab === 'ADMINISTRATIVO' ? 'bg-gradient-to-br from-indigo-600 to-blue-700' : 'bg-gradient-to-br from-emerald-600 to-teal-700'}`}>
+                            {activeTab === 'MEDICO' ? <Stethoscope className="h-6 w-6" /> : activeTab === 'ADMINISTRATIVO' ? <Briefcase className="h-6 w-6" /> : <Building2 className="h-6 w-6" />}
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-end gap-2">
+                        <div className="flex gap-1">
+                            <span className="text-[9px] font-black bg-slate-50 text-slate-400 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-100">{item.category}</span>
+                            <span className="text-[9px] font-black bg-slate-50 text-slate-400 px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-100">{item.executive}</span>
+                        </div>
+                        {user.role === 'admin' && (
+                            <button 
+                                onClick={(e) => handleDeleteClick(e, item.id, item.name)}
+                                className="p-2 rounded-lg transition-colors z-10 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white"
+                                title="Eliminar Permanentemente"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+                
+                <h3 className="text-base font-black text-slate-900 uppercase leading-tight group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">{item.name}</h3>
+                <div className="flex items-center gap-2 mb-4">
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">{item.specialty || 'GENERAL'}</p>
+                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
+                        item.classification === 'A' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        item.classification === 'B' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        item.classification === 'C' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
+                        'bg-slate-50 text-slate-400 border-slate-100'
+                    }`}>
+                        {item.classification || 'C'}
+                    </span>
+                </div>
+
+                {item.hospital && (
+                    <div className="flex items-center gap-2 mb-4 text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                        <Building2 className="w-3 h-3" />
+                        <span className="truncate">{item.hospital}</span>
+                    </div>
+                )}
+                
+                <div className="mt-auto flex items-start text-[11px] text-slate-600 font-bold uppercase border-t border-slate-100 pt-6">
+                    <MapPin className="h-4 w-4 mr-2 text-slate-300 flex-shrink-0" />
+                    <span className="line-clamp-2 leading-relaxed">{item.address}</span>
+                </div>
+                
+                <div className="mt-6 flex justify-end">
+                    <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center transform translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all shadow-xl shadow-blue-500/20">
+                        <ArrowRight className="h-5 w-5" />
+                    </div>
+                </div>
+              </div>
+            ))}
+          </div>
+      )}
+
+      {filteredItems.length === 0 && !isFiltering && (
+          <div className="py-40 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
+              <Database className="w-16 h-16 text-slate-100 mx-auto mb-4" />
+              <p className="text-slate-300 font-black uppercase tracking-widest text-xs">No se encontraron registros</p>
+          </div>
+      )}
+
+      <div ref={observerRef} className="h-10"></div>
+
+      {/* MODAL NUEVO REGISTRO */}
+      {isAddModalOpen && (
+          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-lg overflow-hidden animate-fadeIn border border-slate-200">
+                  <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                      <div>
+                        <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Nuevo Registro</h3>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Categoría: {activeTab}</p>
+                      </div>
+                      <button onClick={() => setIsAddModalOpen(false)} className="p-3 bg-slate-100 rounded-2xl text-slate-400 hover:text-rose-500 transition-all border border-slate-200"><X className="h-6 w-6" /></button>
+                  </div>
+                  <form onSubmit={handleAddSubmit} className="p-10 space-y-6">
+                      <div>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Nombre Completo</label>
+                          <input type="text" required className="w-full border border-slate-200 bg-slate-50 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                      </div>
+                      <div>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Especialidad</label>
+                          <input type="text" className="w-full border border-slate-200 bg-slate-50 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner" value={formData.specialty} onChange={e => setFormData({...formData, specialty: e.target.value})} />
+                      </div>
+                      <div>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Dirección</label>
+                          <textarea required rows={3} className="w-full border border-slate-200 bg-slate-50 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner resize-none" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+                      </div>
+                      {user.role === 'admin' && (
+                          <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Ejecutivo Asignado</label>
+                              <select 
+                                  className="w-full border border-slate-200 bg-slate-50 rounded-2xl p-4.5 font-black uppercase text-sm text-slate-900 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-inner appearance-none cursor-pointer"
+                                  value={formData.executive}
+                                  onChange={e => setFormData({...formData, executive: e.target.value})}
+                              >
+                                  <option value="LUIS" className="bg-white">LUIS</option>
+                                  <option value="ORALIA" className="bg-white">ORALIA</option>
+                                  <option value="TALINA" className="bg-white">TALINA</option>
+                                  <option value="LIZ" className="bg-white">LIZ</option>
+                                  <option value="SIN ASIGNAR" className="bg-white">SIN ASIGNAR</option>
+                              </select>
+                          </div>
+                      )}
+                      <div className="flex justify-end gap-4 mt-8">
+                          <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-8 py-4 font-black text-slate-400 hover:text-slate-600 transition-colors uppercase text-xs tracking-widest">Cancelar</button>
+                          <button type="submit" className="px-10 py-4 bg-blue-600 text-white rounded-[1.5rem] font-black uppercase text-xs tracking-widest shadow-xl shadow-blue-500/30 active:scale-95 transition-all border border-white/10">Guardar</button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      )}
     </div>
   );
 };
 
-export default ExecutiveCalendar;
+export default DoctorList;

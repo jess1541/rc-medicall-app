@@ -1,189 +1,177 @@
+import React, { useState, useMemo } from 'react';
+import { Doctor, Visit } from '../types';
+import { MapPin, User as UserIcon, ExternalLink, Filter } from 'lucide-react';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import { es } from 'date-fns/locale';
 
-import React, { useState, useEffect } from 'react';
-import { User } from '../types';
-import { Lock, UserCircle, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
-import ParticleBackground from './ParticleBackground';
-import Logo from './Logo';
+registerLocale('es', es);
 
-interface LoginProps {
-  onLogin: (user: User) => void;
+interface LocationHistoryProps {
+  doctors: Doctor[];
 }
 
-const DEFAULT_USERS: User[] = [
-  { name: 'Administrador', role: 'admin', password: 'admin' },
-  { name: 'LUIS', role: 'executive', password: 'luis01' },
-  { name: 'ORALIA', role: 'executive', password: 'oralia02' },
-  { name: 'TALINA', role: 'executive', password: 'talina03' },
-  { name: 'ALBERTO', role: 'admin_restricted', password: 'alberto01' },
-  { name: 'NAYELY', role: 'admin_restricted', password: 'nayely01' },
-  { name: 'LIZ', role: 'admin_restricted', password: 'liz01' },
-];
+const LocationHistory: React.FC<LocationHistoryProps> = ({ doctors }) => {
+  const [selectedExecutive, setSelectedExecutive] = useState<string>('TODOS');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  const executivesList = useMemo(() => {
+    const execs = new Set(doctors.map(d => d.executive));
+    return ['TODOS', ...Array.from(execs).sort()];
+  }, [doctors]);
 
-const API_BASE_URL = '/api';
+  const visitsWithLocation = useMemo(() => {
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    const allVisits: { docName: string; docAddress: string; visit: Visit; executive: string }[] = [];
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [selectedUser, setSelectedUser] = useState<string>('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [dbStatus, setDbStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
-
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/status`);
-        if (res.ok) {
-          const data = await res.json();
-          setDbStatus(data.database);
-        } else {
-          setDbStatus('disconnected');
+    doctors.forEach(doc => {
+      if (selectedExecutive !== 'TODOS' && doc.executive !== selectedExecutive) return;
+      
+      (doc.visits || []).forEach(visit => {
+        if (visit.date === dateStr && visit.checkIn) {
+          allVisits.push({
+            docName: doc.name,
+            docAddress: doc.address,
+            visit: visit,
+            executive: doc.executive
+          });
         }
-      } catch (e) {
-        setDbStatus('disconnected');
-      }
-    };
-    checkStatus();
-  }, []);
+      });
+    });
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/users`);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setUsers(data);
-          } else {
-            // Seed default users if DB is empty
-            await fetch(`${API_BASE_URL}/users/init`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(DEFAULT_USERS)
-            });
-            setUsers(DEFAULT_USERS);
-          }
-        } else {
-            // Fallback to defaults if API fails
-            setUsers(DEFAULT_USERS);
-        }
-      } catch (e) {
-        console.error("Error fetching users:", e);
-        setUsers(DEFAULT_USERS);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUsers();
-  }, []);
+    // Sort by timestamp
+    return allVisits.sort((a, b) => {
+        const timeA = new Date(a.visit.checkIn!.timestamp).getTime();
+        const timeB = new Date(b.visit.checkIn!.timestamp).getTime();
+        return timeA - timeB;
+    });
+  }, [doctors, selectedExecutive, selectedDate]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const user = users.find(u => u.name === selectedUser);
-    
-    if (user && user.password === password) {
-      setIsAnimating(true);
-      setTimeout(() => {
-          onLogin(user);
-      }, 800); // Wait for animation
-    } else {
-      setError('Contraseña incorrecta o usuario no seleccionado.');
-    }
+  const generateRouteLink = () => {
+      if (visitsWithLocation.length < 2) return '';
+      
+      const baseUrl = "https://www.google.com/maps/dir/?api=1";
+      const origin = `${visitsWithLocation[0].visit.checkIn!.lat},${visitsWithLocation[0].visit.checkIn!.lng}`;
+      const destination = `${visitsWithLocation[visitsWithLocation.length - 1].visit.checkIn!.lat},${visitsWithLocation[visitsWithLocation.length - 1].visit.checkIn!.lng}`;
+      
+      let waypoints = '';
+      if (visitsWithLocation.length > 2) {
+          const points = visitsWithLocation.slice(1, -1).map(v => `${v.visit.checkIn!.lat},${v.visit.checkIn!.lng}`).join('|');
+          waypoints = `&waypoints=${points}`;
+      }
+
+      return `${baseUrl}&origin=${origin}&destination=${destination}${waypoints}`;
   };
 
-  if (loading) {
-      return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-widest animate-pulse">Cargando sistema...</div>;
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 relative overflow-hidden">
-      <ParticleBackground />
-
-      <div className={`relative bg-white border border-slate-300 p-8 rounded-3xl shadow-2xl w-full max-w-md transform transition-all duration-700 ${isAnimating ? 'scale-110 opacity-0 translate-y-[-50px]' : 'scale-100 opacity-100'}`}>
-        
-        <div className="text-center mb-8">
-          <div className="flex flex-col items-center justify-center mb-8">
-                <Logo className="h-28 w-auto" />
-          </div>
-          <p className="text-slate-700 text-sm mt-4 font-bold uppercase tracking-widest">Plataforma de Gestión Comercial</p>
-          
-          {dbStatus === 'disconnected' && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-2xl">
-              <p className="text-[10px] text-red-700 font-black uppercase tracking-widest leading-relaxed">
-                ⚠️ Error de Conexión MongoDB<br/>
-                <span className="font-bold normal-case text-red-600">El sistema está operando en modo lectura/escritura local temporal. Los datos no se guardarán permanentemente hasta que se configure MONGO_URI.</span>
-              </p>
-            </div>
-          )}
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-600 uppercase tracking-widest ml-1">Quién eres</label>
-            <div className="relative">
-                <UserCircle className="absolute left-3 top-3.5 h-5 w-5 text-slate-500" />
-                <select 
-                  value={selectedUser}
-                  onChange={(e) => { setSelectedUser(e.target.value); setError(''); }}
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-bold rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent block pl-10 p-3 appearance-none transition-all hover:bg-white"
-                >
-                  <option value="" disabled>-- Selecciona tu perfil --</option>
-                  {users.map(u => (
-                    <option key={u.name} value={u.name} className="text-slate-900">{u.name}</option>
-                  ))}
-                </select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-600 uppercase tracking-widest ml-1">Contraseña</label>
-            <div className="relative">
-                <Lock className="absolute left-3 top-3.5 h-5 w-5 text-slate-500" />
-                <input 
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                  placeholder="••••••••"
-                  className="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm font-bold rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent block pl-10 pr-10 p-3 transition-all hover:bg-white placeholder-slate-400"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3.5 text-slate-500 hover:text-slate-900 transition-colors focus:outline-none"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-            </div>
-          </div>
-
-          {error && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-black flex items-center animate-fadeIn uppercase tracking-wider">
-                <ShieldCheck className="w-4 h-4 mr-2" />
-                {error}
-            </div>
-          )}
-
-          <button 
-            type="submit"
-            className="w-full group relative flex justify-center py-4 px-4 border border-transparent text-sm font-black uppercase tracking-widest rounded-xl text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-xl shadow-blue-500/20 transition-all duration-300 transform hover:-translate-y-1"
-          >
-            <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-              <ArrowRight className="h-5 w-5 text-blue-200 group-hover:text-white transition-colors" />
-            </span>
-            Iniciar Sesión
-          </button>
-        </form>
-        
-        <div className="mt-8 text-center">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                Acceso restringido. Solo personal autorizado.
+    <div className="space-y-6 animate-fadeIn pb-12">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <MapPin className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
+                Historial de Ubicaciones
+            </h1>
+            <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] ml-9 md:ml-11">
+                Auditoría de visitas geolocalizadas.
             </p>
         </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-slate-100 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Fecha</label>
+                  <DatePicker 
+                      selected={selectedDate} 
+                      onChange={(date) => date && setSelectedDate(date)} 
+                      dateFormat="dd/MM/yyyy"
+                      locale="es"
+                      className="w-full border border-slate-200 bg-slate-50 rounded-xl p-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none uppercase"
+                  />
+              </div>
+              <div>
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Ejecutivo</label>
+                  <div className="relative">
+                      <select
+                          className="w-full border border-slate-200 bg-slate-50 rounded-xl p-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none uppercase appearance-none"
+                          value={selectedExecutive}
+                          onChange={(e) => setSelectedExecutive(e.target.value)}
+                      >
+                          {executivesList.map(exec => <option key={exec} value={exec}>{exec}</option>)}
+                      </select>
+                      <Filter className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
+              </div>
+              <div className="flex items-end">
+                  {visitsWithLocation.length > 1 ? (
+                      <a 
+                          href={generateRouteLink()} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="w-full flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-500/30"
+                      >
+                          <MapPin className="w-4 h-4 mr-2" />
+                          Ver Ruta Completa en Maps
+                      </a>
+                  ) : (
+                      <button disabled className="w-full flex items-center justify-center px-6 py-3 bg-slate-100 text-slate-400 rounded-xl font-black text-xs uppercase tracking-widest cursor-not-allowed">
+                          <MapPin className="w-4 h-4 mr-2" />
+                          Ruta no disponible
+                      </button>
+                  )}
+              </div>
+          </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4">
+          {visitsWithLocation.length > 0 ? (
+              visitsWithLocation.map((item, index) => (
+                  <div key={`${item.visit.id}-${index}`} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-md transition-all">
+                      <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-black text-sm border border-blue-100 shrink-0">
+                              {index + 1}
+                          </div>
+                          <div>
+                              <h3 className="text-sm font-black text-slate-900 uppercase">{item.docName}</h3>
+                              <p className="text-xs text-slate-500 font-bold uppercase flex items-center mt-1">
+                                  <UserIcon className="w-3 h-3 mr-1" /> {item.executive}
+                              </p>
+                              <p className="text-[10px] text-slate-400 font-medium uppercase mt-1">
+                                  {item.docAddress}
+                              </p>
+                          </div>
+                      </div>
+                      
+                      <div className="flex flex-col items-end gap-2 w-full md:w-auto">
+                          <div className="flex items-center gap-2">
+                              <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-black uppercase">
+                                  {new Date(item.visit.checkIn!.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </span>
+                              <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide ${item.visit.checkIn!.accuracy < 50 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                  Precisión: {Math.round(item.visit.checkIn!.accuracy)}m
+                              </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <a 
+                                href={`https://www.google.com/maps?q=${item.visit.checkIn!.lat},${item.visit.checkIn!.lng}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-bold text-blue-500 hover:text-blue-700 flex items-center uppercase tracking-wide"
+                            >
+                                Ver Ubicación <ExternalLink className="w-3 h-3 ml-1" />
+                            </a>
+                          </div>
+                      </div>
+                  </div>
+              ))
+          ) : (
+              <div className="py-20 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
+                  <MapPin className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+                  <p className="text-slate-400 font-black uppercase tracking-widest text-xs">No hay registros de ubicación para esta selección</p>
+              </div>
+          )}
       </div>
     </div>
   );
 };
 
-export default Login;
+export default LocationHistory;
